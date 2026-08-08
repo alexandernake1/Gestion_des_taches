@@ -325,8 +325,8 @@ class Command(BaseCommand):
                 due_date = start_date + timedelta(days=random.randint(5, 28))
                 if status in {Status.TODO, Status.IN_PROGRESS, Status.ON_HOLD} and random.random() < 0.22:
                     due_date = today - timedelta(days=random.randint(1, 18))
-                    if due_date < start_date:
-                        start_date = due_date - timedelta(days=random.randint(1, 7))
+                if due_date < start_date:
+                    due_date = start_date + timedelta(days=random.randint(1, 7))
                 assignee = random.choice(list(team.members.all()))
                 creator = team.leader
                 completed_at = None

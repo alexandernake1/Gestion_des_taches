@@ -28,6 +28,8 @@ services:
       - redis
     env_file:
       - .env
+    volumes:
+      - ./backend:/app
     # We expose port 8000 internally, but nginx will route to it. No need to bind to host port 8000 unless desired.
     ports:
       - "8000:8000"
