@@ -1,0 +1,37 @@
+from django.urls import path
+from .views import (
+    CompanyListCreateView,
+    CompanyDetailView,
+    my_company,
+    SubscriptionPlanListView,
+    my_subscription,
+    change_subscription_plan,
+    AdminSubscriptionPlanListCreateView,
+    AdminSubscriptionPlanDetailView,
+    AdminCompanySubscriptionListView,
+    AdminCompanySubscriptionDetailView,
+    payment_history,
+    simulate_payment,
+    start_payment,
+    SystemAnnouncementListView,
+    AdminSystemAnnouncementViewSet,
+)
+
+urlpatterns = [
+    path('', CompanyListCreateView.as_view(), name='company_list_create'),
+    path('<int:id>/', CompanyDetailView.as_view(), name='company_detail'),
+    path('my/', my_company, name='my_company'),
+    path('plans/', SubscriptionPlanListView.as_view(), name='subscription_plan_list'),
+    path('subscription/', my_subscription, name='my_subscription'),
+    path('subscription/change-plan/', change_subscription_plan, name='change_subscription_plan'),
+    path('subscription/payments/', payment_history, name='payment_history'),
+    path('subscription/payments/start/', start_payment, name='start_payment'),
+    path('subscription/payments/<str:reference>/simulate/', simulate_payment, name='simulate_payment'),
+    path('admin/plans/', AdminSubscriptionPlanListCreateView.as_view(), name='admin_subscription_plans'),
+    path('admin/plans/<int:id>/', AdminSubscriptionPlanDetailView.as_view(), name='admin_subscription_plan_detail'),
+    path('admin/subscriptions/', AdminCompanySubscriptionListView.as_view(), name='admin_company_subscriptions'),
+    path('admin/subscriptions/<int:id>/', AdminCompanySubscriptionDetailView.as_view(), name='admin_company_subscription_detail'),
+    path('announcements/active/', SystemAnnouncementListView.as_view(), name='active_announcements'),
+    path('admin/announcements/', AdminSystemAnnouncementViewSet.as_view({'get': 'list', 'post': 'create'}), name='admin_announcements_list'),
+    path('admin/announcements/<int:pk>/', AdminSystemAnnouncementViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='admin_announcements_detail'),
+]
