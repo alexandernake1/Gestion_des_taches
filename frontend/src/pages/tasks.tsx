@@ -228,17 +228,17 @@ function TasksPage() {
                   : 'Suivez la charge, repérez les retards et faites avancer le travail de l’équipe depuis un seul écran.'}
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="flex flex-col sm:flex-row shrink-0 items-stretch sm:items-center gap-2.5 sm:gap-3 w-full xl:w-auto">
               {hasExports && (
-                <Button size="lg" variant="secondary" onClick={handleExport} className="shrink-0">
+                <Button size="lg" variant="secondary" onClick={handleExport} className="w-full sm:w-auto justify-center">
                   Exporter (Excel)
                 </Button>
               )}
-              <Button size="lg" variant="secondary" onClick={() => navigate({ to: '/tasks/templates' })} className="shrink-0">
+              <Button size="lg" variant="secondary" onClick={() => navigate({ to: '/tasks/templates' })} className="w-full sm:w-auto justify-center">
                 <LayoutTemplate className="mr-2 h-4 w-4 text-indigo-500" />
                 Modèles
               </Button>
-              <Button size="lg" onClick={() => navigate({ to: '/tasks/create' })} className="shrink-0">
+              <Button size="lg" onClick={() => navigate({ to: '/tasks/create' })} className="w-full sm:w-auto justify-center">
                 <Plus className="mr-2 h-4 w-4" />
                 {isEmployee ? 'Créer une tâche personnelle' : 'Créer et assigner une tâche'}
               </Button>
@@ -253,13 +253,13 @@ function TasksPage() {
         </section>
 
         <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-          <div className="flex w-full overflow-x-auto rounded-xl border border-border bg-card p-1 lg:w-fit">
+          <div className="flex w-full overflow-x-auto rounded-xl border border-border bg-card p-1 scrollbar-none lg:w-fit">
             {scopes.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setScope(item.id)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+                className={`whitespace-nowrap shrink-0 rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all ${
                   scope === item.id
                     ? 'text-white shadow-sm'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -270,7 +270,7 @@ function TasksPage() {
               </button>
             ))}
           </div>
-          <div className="flex w-full overflow-x-auto rounded-xl border border-border bg-card p-1 lg:w-fit">
+          <div className="flex w-full overflow-x-auto rounded-xl border border-border bg-card p-1 scrollbar-none lg:w-fit">
             {[
               { id: 'list', label: 'Liste', icon: List },
               ...(hasKanban ? [{ id: 'kanban', label: 'Kanban', icon: Columns3 }] : []),
@@ -281,7 +281,7 @@ function TasksPage() {
                 key={item.id}
                 type="button"
                 onClick={() => setView(item.id as typeof view)}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                className={`whitespace-nowrap shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium transition-all ${
                   view === item.id
                     ? 'text-white shadow-sm'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'

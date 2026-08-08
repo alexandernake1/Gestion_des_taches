@@ -40,13 +40,13 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="grid lg:grid-cols-3 gap-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
         
         {/* Left Column: Main Details */}
-        <div className="lg:col-span-2 space-y-5">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1.5">
+            <label className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
               Titre de la tâche
             </label>
             <input
@@ -54,35 +54,35 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
               required
               defaultValue={initialData?.title}
               placeholder="Ex: Refonte de la page d'accueil"
-              className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground transition-all"
+              className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-[15px] sm:text-sm text-foreground transition-all"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1.5">
+            <label className="block text-xs sm:text-sm font-semibold text-foreground mb-1.5">
               Description
             </label>
             <textarea
               name="description"
-              rows={4}
-              className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground transition-all resize-y"
+              rows={3}
+              className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-[15px] sm:text-sm text-foreground transition-all resize-y"
               defaultValue={initialData?.description}
               placeholder="Détails de la tâche, étapes clés, contexte..."
             />
           </div>
 
           {!canAssign && (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary font-medium">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-xs sm:text-sm text-primary font-medium">
               Cette tâche sera automatiquement enregistrée comme tâche personnelle.
             </div>
           )}
         </div>
 
         {/* Right Column: Settings */}
-        <div className="space-y-4 rounded-2xl border border-border bg-muted/30 p-4">
-          <h3 className="font-bold text-foreground mb-2">Paramètres</h3>
+        <div className="space-y-4 rounded-2xl border border-border bg-muted/30 p-3.5 sm:p-4">
+          <h3 className="font-bold text-sm sm:text-base text-foreground mb-2">Paramètres</h3>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
             <div>
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                 Statut
@@ -90,7 +90,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
               <select
                 name="status"
                 defaultValue={initialData?.status || 'todo'}
-                className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-[15px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                 required
               >
                 <option value="todo">À faire</option>
@@ -108,7 +108,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
               <select
                 name="priority"
                 defaultValue={initialData?.priority || 'normal'}
-                className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-[15px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                 required
               >
                 <option value="low">Faible</option>
@@ -128,7 +128,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
                     <select
                       name="assigned_to"
                       defaultValue={initialData?.assigned_to || ''}
-                      className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-[15px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                     >
                       <option value="">Moi-même</option>
                       {users.map((u) => (
@@ -143,7 +143,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
                       placeholder="ID user"
                       type="number"
                       defaultValue={initialData?.assigned_to}
-                      className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-[15px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                     />
                   )}
                 </div>
@@ -156,7 +156,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
                     <select
                       name="team"
                       defaultValue={initialData?.team || ''}
-                      className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-[15px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                     >
                       <option value="">Aucune</option>
                       {teams.map((t) => (
@@ -171,7 +171,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
                       placeholder="ID équipe"
                       type="number"
                       defaultValue={initialData?.team}
-                      className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-[15px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                     />
                   )}
                 </div>
@@ -186,7 +186,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
                 name="start_date"
                 type="date"
                 defaultValue={initialData?.start_date}
-                className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-[15px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
               />
             </div>
             
@@ -198,11 +198,11 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
                 name="due_date"
                 type="date"
                 defaultValue={initialData?.due_date}
-                className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-[15px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
               />
             </div>
             
-            <div className="col-span-2">
+            <div className="sm:col-span-2 lg:col-span-1">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                 Charge estimée (heures)
               </label>
@@ -212,7 +212,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
                 min="0.25"
                 step="0.25"
                 defaultValue={initialData?.estimated_hours || 1}
-                className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-[15px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
               />
             </div>
           </div>
@@ -221,35 +221,35 @@ export function TaskForm({ onSubmit, onCancel, initialData, isEdit, users = [], 
       </div>
       
       {/* Recurrence (Bottom Width) */}
-      <div className="mt-6 rounded-2xl border border-border bg-background p-4 sm:p-5">
-        <p className="mb-3 text-sm font-bold text-foreground">Récurrence</p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <label className="text-sm font-medium text-muted-foreground">Fréquence
-            <select name="recurrence_frequency" defaultValue={initialData?.recurrence_frequency || ''} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 focus:outline-none">
+      <div className="rounded-2xl border border-border bg-background p-3.5 sm:p-5">
+        <p className="mb-2.5 text-xs sm:text-sm font-bold text-foreground">Récurrence</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="text-xs sm:text-sm font-medium text-muted-foreground">Fréquence
+            <select name="recurrence_frequency" defaultValue={initialData?.recurrence_frequency || ''} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[15px] sm:text-sm text-foreground focus:ring-2 focus:ring-primary/50 focus:outline-none">
               <option value="">Aucune</option>
               <option value="daily">Quotidienne</option>
               <option value="weekly">Hebdomadaire</option>
               <option value="monthly">Mensuelle</option>
             </select>
           </label>
-          <label className="text-sm font-medium text-muted-foreground">Tous les
-            <input name="recurrence_interval" type="number" min={1} max={365} defaultValue={initialData?.recurrence_interval || 1} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+          <label className="text-xs sm:text-sm font-medium text-muted-foreground">Tous les
+            <input name="recurrence_interval" type="number" min={1} max={365} defaultValue={initialData?.recurrence_interval || 1} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[15px] sm:text-sm text-foreground focus:ring-2 focus:ring-primary/50 focus:outline-none" />
           </label>
-          <label className="text-sm font-medium text-muted-foreground">Fin de récurrence
-            <input name="recurrence_end_date" type="date" defaultValue={initialData?.recurrence_end_date} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+          <label className="text-xs sm:text-sm font-medium text-muted-foreground">Fin de récurrence
+            <input name="recurrence_end_date" type="date" defaultValue={initialData?.recurrence_end_date} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-[15px] sm:text-sm text-foreground focus:ring-2 focus:ring-primary/50 focus:outline-none" />
           </label>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">La prochaine occurrence sera créée lorsque cette tâche sera terminée.</p>
+        <p className="mt-2.5 text-xs text-muted-foreground">La prochaine occurrence sera créée lorsque cette tâche sera terminée.</p>
       </div>
 
       {error && (
-        <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-xs sm:text-sm text-destructive">
           {error}
         </div>
       )}
 
       {/* Action Buttons */}
-      <div className="mt-8 flex flex-col-reverse justify-end gap-3 sm:flex-row pt-5 border-t border-border/50">
+      <div className="sticky bottom-0 z-10 bg-card pt-3 pb-1 border-t border-border/60 flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3">
         <Button type="button" variant="secondary" onClick={onCancel} className="w-full sm:w-auto">
           Annuler
         </Button>

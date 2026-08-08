@@ -446,11 +446,25 @@
 }
 
 @layer utilities {
-  .hide-scrollbar {
+  .hide-scrollbar, .scrollbar-none {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  .hide-scrollbar::-webkit-scrollbar {
+  .hide-scrollbar::-webkit-scrollbar, .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* Mobile Touch & Viewport Optimizations */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 640px) {
+  /* Prevent iOS Safari / Android Chrome auto-zoom on input focus */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }
