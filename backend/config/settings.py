@@ -173,25 +173,27 @@ SIMPLE_JWT = {
 
 JWT_COOKIE_NAME = 'access_token'
 JWT_REFRESH_COOKIE_NAME = 'refresh_token'
-JWT_COOKIE_SECURE = not DEBUG  # True in prod
+JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', 'False').lower() == 'true'
 JWT_COOKIE_HTTP_ONLY = True
 JWT_COOKIE_SAMESITE = 'Lax'
 
-
-# CORS Settings
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+# CORS & CSRF Settings
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = [
+    'http://152.228.233.72',
+    'http://vps-fee050cb.vps.ovh.net',
+    'http://localhost',
+    'http://127.0.0.1',
+]
 
 if not DEBUG:
-    # Enable at the edge in production. Keeping the default off also prevents
-    # redirect loops behind proxies that have not forwarded the scheme yet.
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
-    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+    CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False').lower() == 'true'
+
+
+
 
 # Base security headers, active even locally
 SECURE_CONTENT_TYPE_NOSNIFF = True
