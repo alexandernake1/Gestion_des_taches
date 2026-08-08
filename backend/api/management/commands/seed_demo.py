@@ -516,6 +516,7 @@ class Command(BaseCommand):
         superadmin, _ = User.objects.get_or_create(
             email="admin@platform.test",
             defaults={
+                "username": "admin@platform.test",
                 "first_name": "Super",
                 "last_name": "Admin",
                 "role": Role.OWNER,
@@ -533,7 +534,7 @@ class Command(BaseCommand):
         task_filter = {"company": company} if company else {}
         recent_tasks = list(
             Task.objects.filter(**task_filter)
-            .select_related("assigned_to")
+            .select_related("assigned_to", "team")
             .order_by("-created_at")[:35]
         )
         notification_types = [
@@ -544,7 +545,7 @@ class Command(BaseCommand):
         ]
         for index, task in enumerate(recent_tasks[:30]):
             Notification.objects.get_or_create(
-                recipient=demo,
+                recipient=superadmin,
                 task=task,
                 title=f"Suivi de direction · {task.title}",
                 defaults={
@@ -557,24 +558,27 @@ class Command(BaseCommand):
                 },
             )
 
-        existing_attachments = TaskAttachment.objects.filter(
-            task__company=company
-        ).count()
+        existing_attachments = (
+            TaskAttachment.objects.filter(task__company=company).count()
+            if company
+            else TaskAttachment.objects.count()
+        )
         attachments_to_add = max(0, 50 - existing_attachments)
         for index, task in enumerate(recent_tasks[:attachments_to_add]):
             filename = f"document_suivi_direction_{index + 1:02d}.txt"
             if TaskAttachment.objects.filter(task=task, filename=filename).exists():
                 continue
+            assigned_name = task.assigned_to.full_name if task.assigned_to else "Non assigné"
             content = (
                 f"Fiche de suivi de direction\n\nActivité : {task.title}\n"
                 f"Équipe : {task.team.name}\nResponsable : "
-                f"{task.assigned_to.full_name}\n\n"
+                f"{assigned_name}\n\n"
                 "Ce document de démonstration présente les décisions, risques "
                 "et prochaines étapes liés à cette activité."
             ).encode("utf-8")
             attachment = TaskAttachment(
                 task=task,
-                uploaded_by=demo,
+                uploaded_by=superadmin,
                 filename=filename,
                 file_size=len(content),
                 mime_type="text/plain",
