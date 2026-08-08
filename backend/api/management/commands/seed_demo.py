@@ -510,9 +510,9 @@ class Command(BaseCommand):
                 status='active',
             )
 
-        self._ensure_platform_superadmin()
+        self._ensure_platform_superadmin(company)
 
-    def _ensure_platform_superadmin(self):
+    def _ensure_platform_superadmin(self, company=None):
         superadmin, _ = User.objects.get_or_create(
             email="admin@platform.test",
             defaults={
@@ -530,8 +530,9 @@ class Command(BaseCommand):
         superadmin.is_active = True
         superadmin.save()
 
+        task_filter = {"company": company} if company else {}
         recent_tasks = list(
-            Task.objects.filter(company=company)
+            Task.objects.filter(**task_filter)
             .select_related("assigned_to")
             .order_by("-created_at")[:35]
         )
