@@ -484,7 +484,17 @@ class Command(BaseCommand):
         Notification.objects.bulk_create(notifications)
 
     def _attach_demo_account(self, company):
-        demo = User.objects.get(email="demo@local.test")
+        demo = User.objects.filter(email="demo@local.test").first()
+        if not demo:
+            demo = User.objects.create(
+                email="demo@local.test",
+                username="demo@local.test",
+                first_name="Demo",
+                last_name="User",
+                company=company,
+                role=Role.OWNER,
+                is_active=True
+            )
         demo.company = company
         demo.role = Role.OWNER
         demo.is_active = True
