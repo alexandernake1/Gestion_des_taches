@@ -1,0 +1,380 @@
+from rest_framework import generics, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from django.conf import settings
+from drf_spectacular.utils import extend_schema
+from common.permissions.permissions import IsAdministrator, IsSameCompany, IsSuperUser
+from common.utils import get_requested_company
+from .models import Company, SubscriptionPlan, CompanySubscription, PaymentTransaction, SystemAnnouncement
+from .serializers import (
+    CompanySerializer,
+    CompanyCreateSerializer,
+    CompanyUpdateSerializer,
+    SubscriptionPlanSerializer,
+    CompanySubscriptionSerializer,
+    ChangePlanSerializer,
+    CompleteTestPaymentSerializer,
+    PaymentTransactionSerializer,
+    StartTestPaymentSerializer,
+    SystemAnnouncementSerializer,
+)
+from .services import complete_test_payment, start_test_payment
+
+
+class CompanyListCreateView(generics.ListCreateAPIView):
+    """List and create companies."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Company.objects.none()
+        user = self.request.user
+        if user.is_superuser:
+            return Company.objects.all()
+        if user.company:
+            return Company.objects.filter(id=user.company.id)
+        return Company.objects.none()
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return CompanyCreateSerializer
+        return CompanySerializer
+
+    @extend_schema(
+        description="List companies (super-admin sees all, others see their own)",
+        responses=CompanySerializer(many=True)
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @extend_schema(
+        description="Create a new company (platform super-admin only)",
+        request=CompanyCreateSerializer,
+        responses=CompanySerializer
+    )
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            return Response(
+                {"detail": "Only platform super-administrators can create companies."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().post(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        company = serializer.save()
+        # Create seed data for the new company to make it look "plausible"
+        from .seed import seed_company_data
+        seed_company_data(company, self.request.user)
+
+
+class CompanyDetailView(generics.RetrieveUpdateAPIView):
+    """Retrieve and update a company."""
+
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_permissions(self):
+        if self.request.user.is_superuser:
+            permission_classes = [IsAuthenticated]
+        elif self.request.method in ['PUT', 'PATCH']:
+            permission_classes = [IsAuthenticated, IsAdministrator, IsSameCompany]
+        else:
+            permission_classes = [IsAuthenticated, IsSameCompany]
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        if self.request.user.is_superuser:
+            return Company.objects.all()
+        if self.request.user.company_id:
+            return Company.objects.filter(id=self.request.user.company_id)
+        return Company.objects.none()
+
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return CompanyUpdateSerializer
+        return CompanySerializer
+
+    @extend_schema(description="Get company details", responses=CompanySerializer)
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @extend_schema(description="Update company details", request=CompanyUpdateSerializer, responses=CompanySerializer)
+    def put(self, request, *args, **kwargs):
+        return super().put(request, *args, **kwargs)
+
+    @extend_schema(description="Partially update company details", request=CompanyUpdateSerializer, responses=CompanySerializer)
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
+
+
+@extend_schema(description="Get current user's company", responses=CompanySerializer)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_company(request):
+    """Get the current user's company."""
+    company = get_requested_company(request)
+    if not company:
+        return Response(
+            {"detail": "You are not associated with any company or none selected."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    serializer = CompanySerializer(company)
+    return Response(serializer.data)
+
+
+class SubscriptionPlanListView(generics.ListAPIView):
+    """List available subscription plans."""
+    permission_classes = [AllowAny]
+    serializer_class = SubscriptionPlanSerializer
+    queryset = SubscriptionPlan.objects.filter(is_active=True)
+    pagination_class = None
+
+
+@extend_schema(
+    description="Get current company's subscription",
+    responses=CompanySubscriptionSerializer
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_subscription(request):
+    """Get the subscription details for the current user's company."""
+    company = get_requested_company(request)
+    if not company:
+        return Response(
+            {"detail": "You are not associated with any company or none selected."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    subscription, _ = CompanySubscription.objects.get_or_create(
+        company=company,
+        defaults={
+            'plan': SubscriptionPlan.objects.filter(code='free').first() or SubscriptionPlan.objects.first(),
+            'status': 'trial',
+        }
+    )
+    serializer = CompanySubscriptionSerializer(subscription)
+    return Response(serializer.data)
+
+
+@extend_schema(
+    description="Change company subscription plan (Owner or Super-admin)",
+    request=ChangePlanSerializer,
+    responses={200: CompanySubscriptionSerializer}
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_subscription_plan(request):
+    """Change a company's subscription plan.
+    - Company owner: changes their own company's plan.
+    - Platform super-admin: can change any company's plan by passing ?company_id=<id>.
+    """
+    user = request.user
+
+    if user.is_superuser:
+        company_id = request.query_params.get('company_id') or request.data.get('company_id')
+        if company_id:
+            try:
+                company = Company.objects.get(id=company_id)
+            except Company.DoesNotExist:
+                return Response(
+                    {"detail": f"Company {company_id} not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+        elif user.company:
+            company = user.company
+        else:
+            return Response(
+                {"detail": "Provide a company_id query parameter."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    else:
+        if not user.is_owner():
+            return Response(
+                {"detail": "Only the company owner can change the subscription plan."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not user.company:
+            return Response(
+                {"detail": "You are not associated with any company."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        company = user.company
+
+    serializer = ChangePlanSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    plan_code = serializer.validated_data['plan_code']
+
+    try:
+        new_plan = SubscriptionPlan.objects.get(code=plan_code, is_active=True)
+    except SubscriptionPlan.DoesNotExist:
+        return Response(
+            {"detail": f"Subscription plan '{plan_code}' not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    subscription, _ = CompanySubscription.objects.get_or_create(
+        company=company,
+        defaults={'plan': new_plan, 'status': 'pending_verification'}
+    )
+    if subscription.plan != new_plan:
+        subscription.plan = new_plan
+        subscription.status = 'pending_verification'
+        subscription.save(update_fields=['plan', 'status', 'updated_at'])
+
+    return Response(CompanySubscriptionSerializer(subscription).data)
+
+
+class AdminSubscriptionPlanListCreateView(generics.ListCreateAPIView):
+    """Platform super-admin endpoint to manage subscription plans."""
+    permission_classes = [IsAuthenticated, IsSuperUser]
+    serializer_class = SubscriptionPlanSerializer
+    queryset = SubscriptionPlan.objects.all()
+
+
+class AdminSubscriptionPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Platform super-admin endpoint to manage a specific subscription plan."""
+    permission_classes = [IsAuthenticated, IsSuperUser]
+    serializer_class = SubscriptionPlanSerializer
+    queryset = SubscriptionPlan.objects.all()
+    lookup_field = 'id'
+
+    def perform_destroy(self, instance):
+        # Soft delete: mark as inactive to preserve foreign key relations
+        instance.is_active = False
+        instance.save(update_fields=['is_active', 'updated_at'])
+
+
+class AdminCompanySubscriptionListView(generics.ListAPIView):
+    """Platform super-admin endpoint to list all company subscriptions."""
+    permission_classes = [IsAuthenticated, IsSuperUser]
+    serializer_class = CompanySubscriptionSerializer
+    queryset = CompanySubscription.objects.all()
+
+
+class AdminCompanySubscriptionDetailView(generics.RetrieveUpdateAPIView):
+    """Platform super-admin endpoint to inspect or update an automated subscription."""
+    permission_classes = [IsAuthenticated, IsSuperUser]
+    queryset = CompanySubscription.objects.all()
+    lookup_field = 'id'
+    
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return AdminCompanySubscriptionUpdateSerializer
+        return CompanySubscriptionSerializer
+
+
+@extend_schema(
+    description="List payment history for the owner company or all companies for super-admin",
+    responses=PaymentTransactionSerializer(many=True),
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def payment_history(request):
+    if request.user.is_superuser:
+        queryset = PaymentTransaction.objects.select_related(
+            'company', 'plan', 'subscription',
+        )
+    elif request.user.is_owner() and request.user.company_id:
+        queryset = PaymentTransaction.objects.filter(
+            company=request.user.company,
+        ).select_related('company', 'plan', 'subscription')
+    else:
+        return Response(
+            {'detail': "Seul le propriétaire peut consulter les paiements."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    return Response(PaymentTransactionSerializer(queryset, many=True).data)
+
+
+@extend_schema(
+    request=StartTestPaymentSerializer,
+    responses={201: PaymentTransactionSerializer},
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_payment(request):
+    if not request.user.is_owner() or not request.user.company_id:
+        return Response(
+            {'detail': "Seul le propriétaire peut démarrer un paiement."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    serializer = StartTestPaymentSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    try:
+        plan = SubscriptionPlan.objects.get(
+            code=serializer.validated_data['plan_code'],
+            is_active=True,
+        )
+    except SubscriptionPlan.DoesNotExist:
+        return Response({'detail': 'Forfait indisponible.'}, status=404)
+    if plan.price == 0:
+        return Response(
+            {'detail': 'Le forfait gratuit ne nécessite aucun paiement.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    payment = start_test_payment(request.user.company, plan)
+    return Response(
+        PaymentTransactionSerializer(payment).data,
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@extend_schema(
+    request=CompleteTestPaymentSerializer,
+    responses=PaymentTransactionSerializer,
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def simulate_payment(request, reference):
+    if not settings.DEBUG:
+        return Response(
+            {'detail': 'Le simulateur est désactivé hors environnement de test.'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    if not request.user.is_owner() or not request.user.company_id:
+        return Response(status=status.HTTP_403_FORBIDDEN)
+    try:
+        payment = PaymentTransaction.objects.get(
+            reference=reference,
+            company=request.user.company,
+        )
+    except PaymentTransaction.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    serializer = CompleteTestPaymentSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    payment = complete_test_payment(
+        payment,
+        serializer.validated_data['outcome'],
+    )
+    return Response(PaymentTransactionSerializer(payment).data)
+
+
+class SystemAnnouncementListView(generics.ListAPIView):
+    """Public endpoint to fetch active system announcements."""
+    permission_classes = []
+    serializer_class = SystemAnnouncementSerializer
+    
+    def get_queryset(self):
+        from .models import SystemAnnouncement, AnnouncementTarget
+        qs = SystemAnnouncement.objects.filter(is_active=True)
+        user = self.request.user
+        
+        if not user.is_authenticated:
+            return qs.filter(target_audience=AnnouncementTarget.ALL)
+            
+        if user.is_superuser or user.is_owner():
+            return qs
+            
+        return qs.filter(target_audience=AnnouncementTarget.ALL)
+
+
+from rest_framework import viewsets
+class AdminSystemAnnouncementViewSet(viewsets.ModelViewSet):
+    """Platform super-admin endpoint to manage announcements."""
+    permission_classes = [IsAuthenticated, IsSuperUser]
+    serializer_class = SystemAnnouncementSerializer
+    
+    def get_queryset(self):
+        from .models import SystemAnnouncement
+        return SystemAnnouncement.objects.all()

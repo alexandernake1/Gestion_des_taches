@@ -1,0 +1,4837 @@
+openapi: 3.0.3
+info:
+  title: Activity Tracking API
+  version: 1.0.0
+  description: Enterprise activity tracking platform API
+paths:
+  /api/auth/change-password/:
+    post:
+      operationId: api_auth_change_password_create
+      description: Change user password
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePasswordResponse'
+          description: ''
+  /api/auth/login/:
+    post:
+      operationId: api_auth_login_create
+      description: Authenticate user and return JWT tokens
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Login'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Login'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+  /api/auth/logout/:
+    post:
+      operationId: api_auth_logout_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/auth/me/:
+    get:
+      operationId: api_auth_me_retrieve
+      description: Get current user information
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/auth/profile/:
+    get:
+      operationId: api_auth_profile_retrieve
+      description: User profile endpoint.
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: api_auth_profile_update
+      description: User profile endpoint.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateProfile'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProfile'
+          description: ''
+    patch:
+      operationId: api_auth_profile_partial_update
+      description: User profile endpoint.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateProfile'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProfile'
+          description: ''
+  /api/auth/refresh/:
+    post:
+      operationId: api_auth_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/auth/register/company/:
+    post:
+      operationId: api_auth_register_company_create
+      description: Create a company, its owner account and its initial subscription
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyRegistration'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompanyRegistration'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompanyRegistration'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/auth/users/:
+    get:
+      operationId: api_auth_users_list
+      description: List users in the company (managers and admins only).
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          type: string
+          enum:
+          - administrator
+          - employee
+          - manager
+          - owner
+        description: |-
+          * `owner` - Owner
+          * `administrator` - Administrator
+          * `manager` - Manager
+          * `employee` - Employee
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserListList'
+          description: ''
+  /api/auth/users/{id}/:
+    get:
+      operationId: api_auth_users_retrieve
+      description: Retrieve and update user details (managers and admins only).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: api_auth_users_update
+      description: Retrieve and update user details (managers and admins only).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserManagement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserManagement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserManagement'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserManagement'
+          description: ''
+    patch:
+      operationId: api_auth_users_partial_update
+      description: Retrieve and update user details (managers and admins only).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserManagement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserManagement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserManagement'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserManagement'
+          description: ''
+  /api/auth/users/{user_id}/activate/:
+    post:
+      operationId: api_auth_users_activate_create
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivateUserResponse'
+          description: ''
+  /api/auth/users/{user_id}/deactivate/:
+    post:
+      operationId: api_auth_users_deactivate_create
+      description: Deactivate a user (administrators only)
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeactivateUserResponse'
+          description: ''
+  /api/auth/users/{user_id}/reset-password/:
+    post:
+      operationId: api_auth_users_reset_password_create
+      description: Reset a user's password and require a change at next login
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemporaryPasswordResponse'
+          description: ''
+  /api/auth/users/audit-log/:
+    get:
+      operationId: api_auth_users_audit_log_list
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: target
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserAuditLogList'
+          description: ''
+  /api/auth/users/invite/:
+    post:
+      operationId: api_auth_users_invite_create
+      description: Invite a user to the company (managers and admins only)
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InviteUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InviteUser'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/companies/:
+    get:
+      operationId: api_companies_list
+      description: List companies (super-admin sees all, others see their own)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCompanyList'
+          description: ''
+    post:
+      operationId: api_companies_create
+      description: Create a new company (platform super-admin only)
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompanyCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompanyCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+          description: ''
+  /api/companies/{id}/:
+    get:
+      operationId: api_companies_retrieve
+      description: Get company details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+          description: ''
+    put:
+      operationId: api_companies_update
+      description: Update company details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompanyUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompanyUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+          description: ''
+    patch:
+      operationId: api_companies_partial_update
+      description: Partially update company details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+          description: ''
+  /api/companies/admin/plans/:
+    get:
+      operationId: api_companies_admin_plans_list
+      description: Platform super-admin endpoint to manage subscription plans.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubscriptionPlanList'
+          description: ''
+    post:
+      operationId: api_companies_admin_plans_create
+      description: Platform super-admin endpoint to manage subscription plans.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPlan'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPlan'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPlan'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlan'
+          description: ''
+  /api/companies/admin/subscriptions/:
+    get:
+      operationId: api_companies_admin_subscriptions_list
+      description: Platform super-admin endpoint to list all company subscriptions.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCompanySubscriptionList'
+          description: ''
+  /api/companies/admin/subscriptions/{id}/:
+    get:
+      operationId: api_companies_admin_subscriptions_retrieve
+      description: Platform super-admin endpoint to inspect an automated subscription.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanySubscription'
+          description: ''
+  /api/companies/my/:
+    get:
+      operationId: api_companies_my_retrieve
+      description: Get current user's company
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+          description: ''
+  /api/companies/plans/:
+    get:
+      operationId: api_companies_plans_list
+      description: List available subscription plans.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionPlan'
+          description: ''
+  /api/companies/subscription/:
+    get:
+      operationId: api_companies_subscription_retrieve
+      description: Get current company's subscription
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanySubscription'
+          description: ''
+  /api/companies/subscription/change-plan/:
+    post:
+      operationId: api_companies_subscription_change_plan_create
+      description: Change company subscription plan (Owner or Super-admin)
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePlan'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePlan'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePlan'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanySubscription'
+          description: ''
+  /api/companies/subscription/payments/:
+    get:
+      operationId: api_companies_subscription_payments_list
+      description: List payment history for the owner company or all companies for
+        super-admin
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentTransaction'
+          description: ''
+  /api/companies/subscription/payments/{reference}/simulate/:
+    post:
+      operationId: api_companies_subscription_payments_simulate_create
+      parameters:
+      - in: path
+        name: reference
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteTestPayment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompleteTestPayment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompleteTestPayment'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentTransaction'
+          description: ''
+  /api/companies/subscription/payments/start/:
+    post:
+      operationId: api_companies_subscription_payments_start_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartTestPayment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StartTestPayment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StartTestPayment'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentTransaction'
+          description: ''
+  /api/dashboard/activity/:
+    get:
+      operationId: api_dashboard_activity_retrieve
+      description: Get recent activity
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/dashboard/company/:
+    get:
+      operationId: api_dashboard_company_retrieve
+      description: Get company dashboard statistics
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/dashboard/performance/:
+    get:
+      operationId: api_dashboard_performance_retrieve
+      description: Get performance metrics
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/dashboard/user/:
+    get:
+      operationId: api_dashboard_user_retrieve
+      description: Get user dashboard statistics
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/notifications/:
+    get:
+      operationId: api_notifications_list
+      description: List notifications for the current user
+      parameters:
+      - in: query
+        name: is_read
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - comment
+          - daily_digest
+          - new_assignment
+          - new_task
+          - payment_failed
+          - payment_succeeded
+          - report_approved
+          - report_rejected
+          - subscription_reminder
+          - subscription_suspended
+          - task_completed
+          - task_due_soon
+          - task_overdue
+        description: |-
+          * `new_task` - Nouvelle tâche
+          * `comment` - Commentaire
+          * `report_approved` - Report accepté
+          * `report_rejected` - Report refusé
+          * `new_assignment` - Nouvelle assignation
+          * `task_completed` - Tâche terminée
+          * `subscription_reminder` - Rappel d’abonnement
+          * `payment_succeeded` - Paiement réussi
+          * `payment_failed` - Paiement échoué
+          * `subscription_suspended` - Abonnement suspendu
+          * `task_due_soon` - Échéance proche
+          * `task_overdue` - Tâche en retard
+          * `daily_digest` - Résumé quotidien
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+  /api/notifications/{id}/:
+    get:
+      operationId: api_notifications_retrieve
+      description: Get notification details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    put:
+      operationId: api_notifications_update
+      description: Retrieve and update a notification.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationUpdate'
+          description: ''
+    patch:
+      operationId: api_notifications_partial_update
+      description: Update notification (mark as read/unread)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/mark-all-read/:
+    post:
+      operationId: api_notifications_mark_all_read_create
+      description: Mark all notifications as read
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarkAllNotificationsReadResponse'
+          description: ''
+  /api/notifications/preferences/:
+    get:
+      operationId: api_notifications_preferences_retrieve
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+    put:
+      operationId: api_notifications_preferences_update
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreference'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationPreference'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationPreference'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+    patch:
+      operationId: api_notifications_preferences_partial_update
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationPreference'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationPreference'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationPreference'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+  /api/notifications/unread-count/:
+    get:
+      operationId: api_notifications_unread_count_retrieve
+      description: Get unread notification count
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadNotificationCountResponse'
+          description: ''
+  /api/tasks/:
+    get:
+      operationId: api_tasks_list
+      description: List tasks (filtered by user role)
+      parameters:
+      - in: query
+        name: assigned_to
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: parent
+        schema:
+          type: integer
+      - in: query
+        name: priority
+        schema:
+          type: string
+          enum:
+          - high
+          - low
+          - normal
+          - urgent
+        description: |-
+          * `low` - Faible
+          * `normal` - Normale
+          * `high` - Haute
+          * `urgent` - Urgente
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - completed
+          - deferred
+          - in_progress
+          - on_hold
+          - todo
+        description: |-
+          * `todo` - À faire
+          * `in_progress` - En cours
+          * `on_hold` - En attente
+          * `deferred` - Reportée
+          * `completed` - Terminée
+      - in: query
+        name: team
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaskListList'
+          description: ''
+    post:
+      operationId: api_tasks_create
+      description: Create a new task
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/{id}/:
+    get:
+      operationId: api_tasks_retrieve
+      description: Get task details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+    put:
+      operationId: api_tasks_update
+      description: Update task details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+    patch:
+      operationId: api_tasks_partial_update
+      description: Partially update task details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+    delete:
+      operationId: api_tasks_destroy
+      description: Delete a task (soft delete by setting is_active=False)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Task archived
+  /api/tasks/{task_id}/attachments/:
+    get:
+      operationId: api_tasks_attachments_list
+      description: List and create task attachments.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaskAttachmentList'
+          description: ''
+    post:
+      operationId: api_tasks_attachments_create
+      description: List and create task attachments.
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskAttachmentCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskAttachmentCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskAttachmentCreate'
+          description: ''
+  /api/tasks/{task_id}/attachments/{attachment_id}/download/:
+    get:
+      operationId: api_tasks_attachments_download_retrieve
+      parameters:
+      - in: path
+        name: attachment_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/tasks/{task_id}/attachments/{id}/:
+    get:
+      operationId: api_tasks_attachments_retrieve
+      description: Retrieve and delete a task attachment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskAttachment'
+          description: ''
+    delete:
+      operationId: api_tasks_attachments_destroy
+      description: Retrieve and delete a task attachment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/tasks/{task_id}/comments/:
+    get:
+      operationId: api_tasks_comments_list
+      description: List and create task comments.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaskCommentList'
+          description: ''
+    post:
+      operationId: api_tasks_comments_create
+      description: List and create task comments.
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCommentCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskCommentCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskCommentCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCommentCreate'
+          description: ''
+  /api/tasks/{task_id}/comments/{id}/:
+    get:
+      operationId: api_tasks_comments_retrieve
+      description: Retrieve, update and delete a task comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskComment'
+          description: ''
+    put:
+      operationId: api_tasks_comments_update
+      description: Retrieve, update and delete a task comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCommentUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskCommentUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskCommentUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCommentUpdate'
+          description: ''
+    patch:
+      operationId: api_tasks_comments_partial_update
+      description: Retrieve, update and delete a task comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskCommentUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskCommentUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskCommentUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCommentUpdate'
+          description: ''
+    delete:
+      operationId: api_tasks_comments_destroy
+      description: Retrieve, update and delete a task comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/tasks/{task_id}/duplicate/:
+    post:
+      operationId: api_tasks_duplicate_create
+      description: Duplicate a task and its active subtasks
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/{task_id}/history/:
+    get:
+      operationId: api_tasks_history_list
+      description: List task history.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaskHistoryList'
+          description: ''
+  /api/tasks/{task_id}/reports/:
+    get:
+      operationId: api_tasks_reports_list
+      description: List and create task reports.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaskReportList'
+          description: ''
+    post:
+      operationId: api_tasks_reports_create
+      description: List and create task reports.
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskReportCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskReportCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskReportCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskReportCreate'
+          description: ''
+  /api/tasks/{task_id}/reports/{id}/:
+    get:
+      operationId: api_tasks_reports_retrieve
+      description: Retrieve and update a task report.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskReport'
+          description: ''
+    put:
+      operationId: api_tasks_reports_update
+      description: Retrieve and update a task report.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskReportReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskReportReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskReportReview'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskReportReview'
+          description: ''
+    patch:
+      operationId: api_tasks_reports_partial_update
+      description: Retrieve and update a task report.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskReportReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskReportReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskReportReview'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskReportReview'
+          description: ''
+  /api/tasks/{task_id}/restore/:
+    post:
+      operationId: api_tasks_restore_create
+      description: Restore an archived task
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/{task_id}/save-template/:
+    post:
+      operationId: api_tasks_save_template_create
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskTemplate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskTemplate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskTemplate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskTemplate'
+          description: ''
+  /api/tasks/assigned/:
+    get:
+      operationId: api_tasks_assigned_list
+      description: Get tasks assigned to me
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskList'
+          description: ''
+  /api/tasks/bulk/:
+    post:
+      operationId: api_tasks_bulk_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskBulkAction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskBulkAction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskBulkAction'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/daily-focus/:
+    get:
+      operationId: api_tasks_daily_focus_retrieve
+      description: Get the current user's daily focus
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/my/:
+    get:
+      operationId: api_tasks_my_list
+      description: Get tasks created by me
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskList'
+          description: ''
+  /api/tasks/reports/my/:
+    get:
+      operationId: api_tasks_reports_my_list
+      description: Get my pending reports
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskReport'
+          description: ''
+  /api/tasks/reports/pending/:
+    get:
+      operationId: api_tasks_reports_pending_list
+      description: Get pending reports to review (managers only)
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskReport'
+          description: ''
+  /api/tasks/templates/:
+    get:
+      operationId: api_tasks_templates_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskTemplate'
+          description: ''
+    post:
+      operationId: api_tasks_templates_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskTemplate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskTemplate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskTemplate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskTemplate'
+          description: ''
+  /api/tasks/templates/{id}/:
+    get:
+      operationId: api_tasks_templates_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskTemplate'
+          description: ''
+    put:
+      operationId: api_tasks_templates_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskTemplate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskTemplate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskTemplate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskTemplate'
+          description: ''
+    patch:
+      operationId: api_tasks_templates_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskTemplate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskTemplate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskTemplate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskTemplate'
+          description: ''
+    delete:
+      operationId: api_tasks_templates_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/tasks/templates/{template_id}/instantiate/:
+    post:
+      operationId: api_tasks_templates_instantiate_create
+      parameters:
+      - in: path
+        name: template_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskTemplateInstantiate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskTemplateInstantiate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskTemplateInstantiate'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/workload/:
+    get:
+      operationId: api_tasks_workload_retrieve
+      description: Weekly workload and capacity planning for company managers
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/teams/:
+    get:
+      operationId: api_teams_list
+      description: List teams in the company (managers and admins only)
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeamListList'
+          description: ''
+    post:
+      operationId: api_teams_create
+      description: Create a new team (managers and admins only)
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TeamCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TeamCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+  /api/teams/{id}/:
+    get:
+      operationId: api_teams_retrieve
+      description: Get team details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+    put:
+      operationId: api_teams_update
+      description: Update team details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TeamUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TeamUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+    patch:
+      operationId: api_teams_partial_update
+      description: Partially update team details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+    delete:
+      operationId: api_teams_destroy
+      description: Delete a team
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Team deleted
+  /api/teams/{team_id}/members/{user_id}/add/:
+    post:
+      operationId: api_teams_members_add_create
+      description: Add a member to a team (managers and admins only)
+      parameters:
+      - in: path
+        name: team_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddTeamMemberResponse'
+          description: ''
+  /api/teams/{team_id}/members/{user_id}/remove/:
+    post:
+      operationId: api_teams_members_remove_create
+      description: Remove a member from a team (managers and admins only)
+      parameters:
+      - in: path
+        name: team_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoveTeamMemberResponse'
+          description: ''
+components:
+  schemas:
+    ActionEnum:
+      enum:
+      - status
+      - archive
+      - restore
+      - assign
+      type: string
+      description: |-
+        * `status` - status
+        * `archive` - archive
+        * `restore` - restore
+        * `assign` - assign
+    ActivateUserResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    AddTeamMemberResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    BillingPeriodEnum:
+      enum:
+      - monthly
+      - yearly
+      type: string
+      description: |-
+        * `monthly` - Mensuel
+        * `yearly` - Annuel
+    BlankEnum:
+      enum:
+      - ''
+    ChangePassword:
+      type: object
+      description: Serializer for password change.
+      properties:
+        old_password:
+          type: string
+        new_password:
+          type: string
+        new_password_confirm:
+          type: string
+      required:
+      - new_password
+      - new_password_confirm
+      - old_password
+    ChangePasswordResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    ChangePlan:
+      type: object
+      properties:
+        plan_code:
+          type: string
+      required:
+      - plan_code
+    Company:
+      type: object
+      description: Serializer for Company model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+          maxLength: 254
+        contact_phone:
+          type: string
+          maxLength: 30
+        address:
+          type: string
+          maxLength: 255
+        timezone:
+          type: string
+          maxLength: 50
+        language:
+          type: string
+          maxLength: 10
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - slug
+      - updated_at
+    CompanyCreate:
+      type: object
+      description: Serializer for creating a company.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+          maxLength: 254
+        contact_phone:
+          type: string
+          maxLength: 30
+        address:
+          type: string
+          maxLength: 255
+        timezone:
+          type: string
+          maxLength: 50
+        language:
+          type: string
+          maxLength: 10
+      required:
+      - name
+      - slug
+    CompanyRegistration:
+      type: object
+      description: Atomic public onboarding for a company and its first owner.
+      properties:
+        company_name:
+          type: string
+          maxLength: 255
+        company_slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        website:
+          type: string
+          format: uri
+        contact_email:
+          type: string
+          format: email
+        contact_phone:
+          type: string
+          maxLength: 30
+        address:
+          type: string
+          maxLength: 255
+        plan_code:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          maxLength: 30
+        password:
+          type: string
+          writeOnly: true
+        password_confirm:
+          type: string
+          writeOnly: true
+        accept_terms:
+          type: boolean
+      required:
+      - accept_terms
+      - company_name
+      - contact_email
+      - contact_phone
+      - email
+      - first_name
+      - last_name
+      - password
+      - password_confirm
+      - plan_code
+    CompanySubscription:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        company:
+          type: integer
+          readOnly: true
+        company_name:
+          type: string
+          readOnly: true
+        plan:
+          type: integer
+        plan_details:
+          allOf:
+          - $ref: '#/components/schemas/SubscriptionPlan'
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/CompanySubscriptionStatusEnum'
+        status_display:
+          type: string
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        trial_ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        grace_ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        seats_override:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          description: Accorde une limite personnalisée de comptes si spécifié.
+        effective_max_users:
+          type: integer
+          readOnly: true
+        effective_max_teams:
+          type: integer
+          readOnly: true
+        is_suspended:
+          type: boolean
+          readOnly: true
+        active_users_count:
+          type: integer
+          readOnly: true
+        active_teams_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - active_teams_count
+      - active_users_count
+      - company
+      - company_name
+      - created_at
+      - effective_max_teams
+      - effective_max_users
+      - id
+      - is_suspended
+      - plan
+      - plan_details
+      - starts_at
+      - status_display
+      - updated_at
+    CompanySubscriptionStatusEnum:
+      enum:
+      - trial
+      - active
+      - pending_verification
+      - past_due
+      - suspended
+      - cancelled
+      type: string
+      description: |-
+        * `trial` - Essai
+        * `active` - Actif
+        * `pending_verification` - En attente de vérification
+        * `past_due` - Paiement en retard
+        * `suspended` - Suspendu
+        * `cancelled` - Annulé
+    CompanyUpdate:
+      type: object
+      description: Serializer for updating a company.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+          maxLength: 254
+        contact_phone:
+          type: string
+          maxLength: 30
+        address:
+          type: string
+          maxLength: 255
+        timezone:
+          type: string
+          maxLength: 50
+        language:
+          type: string
+          maxLength: 10
+        is_active:
+          type: boolean
+      required:
+      - name
+    CompleteTestPayment:
+      type: object
+      properties:
+        outcome:
+          $ref: '#/components/schemas/OutcomeEnum'
+      required:
+      - outcome
+    DeactivateUserResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    InviteUser:
+      type: object
+      description: Serializer for inviting a user to a company.
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          default: employee
+        phone:
+          type: string
+      required:
+      - email
+      - first_name
+      - last_name
+    Login:
+      type: object
+      description: Serializer for user login.
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+      - email
+      - password
+    LoginResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+      - access
+      - refresh
+      - user
+    LogoutRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+      required:
+      - refresh
+    MarkAllNotificationsReadResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    Notification:
+      type: object
+      description: Serializer for Notification model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        recipient:
+          type: integer
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        type_display:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        message:
+          type: string
+        task:
+          type: integer
+          nullable: true
+        task_title:
+          type: string
+          readOnly: true
+          nullable: true
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - message
+      - recipient
+      - task_title
+      - title
+      - type
+      - type_display
+    NotificationPreference:
+      type: object
+      properties:
+        assignments_enabled:
+          type: boolean
+        comments_enabled:
+          type: boolean
+        task_reminders_enabled:
+          type: boolean
+        overdue_alerts_enabled:
+          type: boolean
+        daily_digest_enabled:
+          type: boolean
+        subscription_alerts_enabled:
+          type: boolean
+        reminder_days_before:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        digest_hour:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - updated_at
+    NotificationUpdate:
+      type: object
+      description: Serializer for updating notification (mark as read).
+      properties:
+        is_read:
+          type: boolean
+    OutcomeEnum:
+      enum:
+      - succeeded
+      - failed
+      - cancelled
+      - pending
+      type: string
+      description: |-
+        * `succeeded` - succeeded
+        * `failed` - failed
+        * `cancelled` - cancelled
+        * `pending` - pending
+    PaginatedCompanyList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Company'
+    PaginatedCompanySubscriptionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompanySubscription'
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+    PaginatedSubscriptionPlanList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionPlan'
+    PaginatedTaskAttachmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskAttachment'
+    PaginatedTaskCommentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskComment'
+    PaginatedTaskHistoryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskHistory'
+    PaginatedTaskListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskList'
+    PaginatedTaskReportList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskReport'
+    PaginatedTeamListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamList'
+    PaginatedUserAuditLogList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAuditLog'
+    PaginatedUserListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserList'
+    PatchedCompanyUpdate:
+      type: object
+      description: Serializer for updating a company.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        contact_email:
+          type: string
+          format: email
+          maxLength: 254
+        contact_phone:
+          type: string
+          maxLength: 30
+        address:
+          type: string
+          maxLength: 255
+        timezone:
+          type: string
+          maxLength: 50
+        language:
+          type: string
+          maxLength: 10
+        is_active:
+          type: boolean
+    PatchedNotificationPreference:
+      type: object
+      properties:
+        assignments_enabled:
+          type: boolean
+        comments_enabled:
+          type: boolean
+        task_reminders_enabled:
+          type: boolean
+        overdue_alerts_enabled:
+          type: boolean
+        daily_digest_enabled:
+          type: boolean
+        subscription_alerts_enabled:
+          type: boolean
+        reminder_days_before:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        digest_hour:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedNotificationUpdate:
+      type: object
+      description: Serializer for updating notification (mark as read).
+      properties:
+        is_read:
+          type: boolean
+    PatchedTaskCommentUpdate:
+      type: object
+      description: Serializer for updating a task comment.
+      properties:
+        content:
+          type: string
+    PatchedTaskReportReview:
+      type: object
+      description: Serializer for reviewing a task report.
+      properties:
+        status:
+          $ref: '#/components/schemas/TaskReportStatusEnum'
+        review_comment:
+          type: string
+          nullable: true
+    PatchedTaskTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        default_duration_days:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        estimated_hours:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+    PatchedTaskUpdate:
+      type: object
+      description: Serializer for updating a task.
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        assigned_to:
+          type: integer
+          nullable: true
+        team:
+          type: integer
+          nullable: true
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        status:
+          $ref: '#/components/schemas/TaskStatusEnum'
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        parent:
+          type: integer
+          nullable: true
+        dependencies:
+          type: array
+          items:
+            type: integer
+        is_active:
+          type: boolean
+        recurrence_frequency:
+          oneOf:
+          - $ref: '#/components/schemas/RecurrenceFrequencyEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        recurrence_interval:
+          type: integer
+          maximum: 365
+          minimum: 1
+        recurrence_end_date:
+          type: string
+          format: date
+          nullable: true
+        estimated_hours:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+    PatchedTeamUpdate:
+      type: object
+      description: Serializer for updating a team.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        leader:
+          type: integer
+          nullable: true
+        is_active:
+          type: boolean
+        member_ids:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
+    PatchedUpdateProfile:
+      type: object
+      description: Serializer for profile update.
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+    PatchedUserManagement:
+      type: object
+      description: Serializer for user management (admin/manager).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        full_name:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        role_display:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        weekly_capacity_hours:
+          type: integer
+          maximum: 32767
+          minimum: 0
+    PaymentTransaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        reference:
+          type: string
+          readOnly: true
+        provider:
+          type: string
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PaymentTransactionStatusEnum'
+          readOnly: true
+        status_display:
+          type: string
+          readOnly: true
+        plan:
+          type: integer
+          readOnly: true
+        plan_name:
+          type: string
+          readOnly: true
+        company:
+          type: integer
+          readOnly: true
+        company_name:
+          type: string
+          readOnly: true
+        paid_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        failure_reason:
+          type: string
+          readOnly: true
+      required:
+      - amount
+      - company
+      - company_name
+      - created_at
+      - currency
+      - failure_reason
+      - id
+      - paid_at
+      - plan
+      - plan_name
+      - provider
+      - reference
+      - status
+      - status_display
+    PaymentTransactionStatusEnum:
+      enum:
+      - pending
+      - succeeded
+      - failed
+      - cancelled
+      type: string
+      description: |-
+        * `pending` - En attente
+        * `succeeded` - Réussi
+        * `failed` - Échoué
+        * `cancelled` - Annulé
+    PriorityEnum:
+      enum:
+      - low
+      - normal
+      - high
+      - urgent
+      type: string
+      description: |-
+        * `low` - Faible
+        * `normal` - Normale
+        * `high` - Haute
+        * `urgent` - Urgente
+    RecurrenceFrequencyEnum:
+      enum:
+      - daily
+      - weekly
+      - monthly
+      type: string
+      description: |-
+        * `daily` - Quotidienne
+        * `weekly` - Hebdomadaire
+        * `monthly` - Mensuelle
+    RemoveTeamMemberResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    RoleEnum:
+      enum:
+      - owner
+      - administrator
+      - manager
+      - employee
+      type: string
+      description: |-
+        * `owner` - Owner
+        * `administrator` - Administrator
+        * `manager` - Manager
+        * `employee` - Employee
+    StartTestPayment:
+      type: object
+      properties:
+        plan_code:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - plan_code
+    SubscriptionPlan:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        code:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        billing_period:
+          $ref: '#/components/schemas/BillingPeriodEnum'
+        billing_period_display:
+          type: string
+          readOnly: true
+        max_users:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 0 pour illimité
+        max_teams:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 0 pour illimité
+        storage_limit_mb:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 0 pour illimité
+        feature_flags: {}
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - billing_period_display
+      - code
+      - created_at
+      - id
+      - name
+      - updated_at
+    Task:
+      type: object
+      description: Serializer for Task model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        company:
+          type: integer
+          readOnly: true
+        creator:
+          type: integer
+          readOnly: true
+          nullable: true
+        creator_name:
+          type: string
+          readOnly: true
+        assigned_to:
+          type: integer
+          nullable: true
+        assigned_to_name:
+          type: string
+          readOnly: true
+        team:
+          type: integer
+          nullable: true
+        team_name:
+          type: string
+          readOnly: true
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        priority_display:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/TaskStatusEnum'
+        status_display:
+          type: string
+          readOnly: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        is_overdue:
+          type: boolean
+          readOnly: true
+        is_blocked:
+          type: boolean
+          readOnly: true
+        progress_percent:
+          type: integer
+          readOnly: true
+        parent:
+          type: integer
+          nullable: true
+        dependencies:
+          type: array
+          items:
+            type: integer
+        dependency_details:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        subtask_count:
+          type: integer
+          readOnly: true
+        is_active:
+          type: boolean
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        recurrence_frequency:
+          oneOf:
+          - $ref: '#/components/schemas/RecurrenceFrequencyEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        recurrence_interval:
+          type: integer
+          maximum: 365
+          minimum: 1
+        recurrence_end_date:
+          type: string
+          format: date
+          nullable: true
+        next_occurrence:
+          type: integer
+          readOnly: true
+          nullable: true
+        estimated_hours:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+      required:
+      - archived_at
+      - assigned_to_name
+      - company
+      - completed_at
+      - created_at
+      - creator
+      - creator_name
+      - dependency_details
+      - id
+      - is_blocked
+      - is_overdue
+      - next_occurrence
+      - priority_display
+      - progress_percent
+      - status_display
+      - subtask_count
+      - team_name
+      - title
+      - updated_at
+    TaskAttachment:
+      type: object
+      description: Serializer for TaskAttachment.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        task:
+          type: integer
+        uploaded_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        uploaded_by_name:
+          type: string
+          readOnly: true
+        file:
+          type: string
+          format: uri
+          writeOnly: true
+        file_url:
+          type: string
+          nullable: true
+          readOnly: true
+        filename:
+          type: string
+          readOnly: true
+        file_size:
+          type: integer
+          readOnly: true
+        mime_type:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - file
+      - file_size
+      - file_url
+      - filename
+      - id
+      - mime_type
+      - task
+      - uploaded_by
+      - uploaded_by_name
+    TaskAttachmentCreate:
+      type: object
+      description: Serializer for creating a task attachment.
+      properties:
+        file:
+          type: string
+          format: uri
+      required:
+      - file
+    TaskBulkAction:
+      type: object
+      properties:
+        task_ids:
+          type: array
+          items:
+            type: integer
+          maxItems: 100
+          minItems: 1
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        status:
+          $ref: '#/components/schemas/TaskStatusEnum'
+        assigned_to:
+          type: integer
+          nullable: true
+      required:
+      - action
+      - task_ids
+    TaskComment:
+      type: object
+      description: Serializer for TaskComment.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        task:
+          type: integer
+        author:
+          type: integer
+          readOnly: true
+          nullable: true
+        author_name:
+          type: string
+          readOnly: true
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - author_name
+      - content
+      - created_at
+      - id
+      - task
+      - updated_at
+    TaskCommentCreate:
+      type: object
+      description: Serializer for creating a task comment.
+      properties:
+        content:
+          type: string
+      required:
+      - content
+    TaskCommentUpdate:
+      type: object
+      description: Serializer for updating a task comment.
+      properties:
+        content:
+          type: string
+      required:
+      - content
+    TaskCreate:
+      type: object
+      description: Serializer for creating a task.
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        assigned_to:
+          type: integer
+          nullable: true
+        team:
+          type: integer
+          nullable: true
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        status:
+          $ref: '#/components/schemas/TaskStatusEnum'
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        parent:
+          type: integer
+          nullable: true
+        dependencies:
+          type: array
+          items:
+            type: integer
+        recurrence_frequency:
+          oneOf:
+          - $ref: '#/components/schemas/RecurrenceFrequencyEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        recurrence_interval:
+          type: integer
+          maximum: 365
+          minimum: 1
+        recurrence_end_date:
+          type: string
+          format: date
+          nullable: true
+        estimated_hours:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+      required:
+      - title
+    TaskHistory:
+      type: object
+      description: Serializer for TaskHistory.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        task:
+          type: integer
+        changed_by:
+          type: integer
+          nullable: true
+        changed_by_name:
+          type: string
+          readOnly: true
+        field_name:
+          type: string
+          maxLength: 100
+        old_value:
+          type: string
+          nullable: true
+        new_value:
+          type: string
+          nullable: true
+        changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - changed_at
+      - changed_by_name
+      - field_name
+      - id
+      - task
+    TaskList:
+      type: object
+      description: Lightweight serializer for task lists.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        creator:
+          type: integer
+          nullable: true
+        creator_name:
+          type: string
+          readOnly: true
+        assigned_to:
+          type: integer
+          nullable: true
+        assigned_to_name:
+          type: string
+          readOnly: true
+        team:
+          type: integer
+          nullable: true
+        team_name:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/TaskStatusEnum'
+        status_display:
+          type: string
+          readOnly: true
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        priority_display:
+          type: string
+          readOnly: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        is_overdue:
+          type: boolean
+          readOnly: true
+        is_blocked:
+          type: boolean
+          readOnly: true
+        progress_percent:
+          type: integer
+          readOnly: true
+        parent:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        recurrence_frequency:
+          oneOf:
+          - $ref: '#/components/schemas/RecurrenceFrequencyEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        estimated_hours:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+      required:
+      - assigned_to_name
+      - created_at
+      - creator_name
+      - id
+      - is_blocked
+      - is_overdue
+      - priority_display
+      - progress_percent
+      - status_display
+      - team_name
+      - title
+    TaskReport:
+      type: object
+      description: Serializer for TaskReport.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        task:
+          type: integer
+          readOnly: true
+        task_title:
+          type: string
+          readOnly: true
+        requested_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        requested_by_name:
+          type: string
+          readOnly: true
+        reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          readOnly: true
+        old_due_date:
+          type: string
+          format: date
+        new_due_date:
+          type: string
+          format: date
+        reason:
+          type: string
+        status:
+          $ref: '#/components/schemas/TaskReportStatusEnum'
+        status_display:
+          type: string
+          readOnly: true
+        review_comment:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - id
+      - new_due_date
+      - old_due_date
+      - reason
+      - requested_by
+      - requested_by_name
+      - reviewed_at
+      - reviewed_by
+      - reviewed_by_name
+      - status_display
+      - task
+      - task_title
+    TaskReportCreate:
+      type: object
+      description: Serializer for creating a task report.
+      properties:
+        new_due_date:
+          type: string
+          format: date
+        reason:
+          type: string
+      required:
+      - new_due_date
+      - reason
+    TaskReportReview:
+      type: object
+      description: Serializer for reviewing a task report.
+      properties:
+        status:
+          $ref: '#/components/schemas/TaskReportStatusEnum'
+        review_comment:
+          type: string
+          nullable: true
+    TaskReportStatusEnum:
+      enum:
+      - pending
+      - approved
+      - rejected
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `approved` - Approved
+        * `rejected` - Rejected
+    TaskStatusEnum:
+      enum:
+      - todo
+      - in_progress
+      - on_hold
+      - deferred
+      - completed
+      type: string
+      description: |-
+        * `todo` - À faire
+        * `in_progress` - En cours
+        * `on_hold` - En attente
+        * `deferred` - Reportée
+        * `completed` - Terminée
+    TaskTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        default_duration_days:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        estimated_hours:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+      required:
+      - created_at
+      - id
+      - name
+      - title
+      - updated_at
+    TaskTemplateInstantiate:
+      type: object
+      properties:
+        assigned_to:
+          type: integer
+          nullable: true
+        team:
+          type: integer
+          nullable: true
+        start_date:
+          type: string
+          format: date
+    TaskUpdate:
+      type: object
+      description: Serializer for updating a task.
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        assigned_to:
+          type: integer
+          nullable: true
+        team:
+          type: integer
+          nullable: true
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        status:
+          $ref: '#/components/schemas/TaskStatusEnum'
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        parent:
+          type: integer
+          nullable: true
+        dependencies:
+          type: array
+          items:
+            type: integer
+        is_active:
+          type: boolean
+        recurrence_frequency:
+          oneOf:
+          - $ref: '#/components/schemas/RecurrenceFrequencyEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        recurrence_interval:
+          type: integer
+          maximum: 365
+          minimum: 1
+        recurrence_end_date:
+          type: string
+          format: date
+          nullable: true
+        estimated_hours:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+      required:
+      - title
+    Team:
+      type: object
+      description: Serializer for Team model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        company:
+          type: integer
+          readOnly: true
+        leader:
+          type: integer
+          nullable: true
+        leader_name:
+          type: string
+          readOnly: true
+        members:
+          type: array
+          items:
+            type: integer
+        member_details:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        member_count:
+          type: integer
+          readOnly: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - company
+      - created_at
+      - id
+      - leader_name
+      - member_count
+      - member_details
+      - name
+      - updated_at
+    TeamCreate:
+      type: object
+      description: Serializer for creating a team.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        leader:
+          type: integer
+          nullable: true
+        member_ids:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
+      required:
+      - name
+    TeamList:
+      type: object
+      description: Lightweight serializer for team lists.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        leader_name:
+          type: string
+          readOnly: true
+        member_count:
+          type: integer
+          readOnly: true
+        is_active:
+          type: boolean
+      required:
+      - id
+      - leader_name
+      - member_count
+      - name
+    TeamUpdate:
+      type: object
+      description: Serializer for updating a team.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        leader:
+          type: integer
+          nullable: true
+        is_active:
+          type: boolean
+        member_ids:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
+      required:
+      - name
+    TemporaryPasswordResponse:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        temporary_password:
+          type: string
+      required:
+      - email
+      - temporary_password
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TypeEnum:
+      enum:
+      - new_task
+      - comment
+      - report_approved
+      - report_rejected
+      - new_assignment
+      - task_completed
+      - subscription_reminder
+      - payment_succeeded
+      - payment_failed
+      - subscription_suspended
+      - task_due_soon
+      - task_overdue
+      - daily_digest
+      type: string
+      description: |-
+        * `new_task` - Nouvelle tâche
+        * `comment` - Commentaire
+        * `report_approved` - Report accepté
+        * `report_rejected` - Report refusé
+        * `new_assignment` - Nouvelle assignation
+        * `task_completed` - Tâche terminée
+        * `subscription_reminder` - Rappel d’abonnement
+        * `payment_succeeded` - Paiement réussi
+        * `payment_failed` - Paiement échoué
+        * `subscription_suspended` - Abonnement suspendu
+        * `task_due_soon` - Échéance proche
+        * `task_overdue` - Tâche en retard
+        * `daily_digest` - Résumé quotidien
+    UnreadNotificationCountResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+      required:
+      - count
+    UpdateProfile:
+      type: object
+      description: Serializer for profile update.
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+      required:
+      - first_name
+      - last_name
+    User:
+      type: object
+      description: Serializer for user profile.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        full_name:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        company:
+          type: integer
+          readOnly: true
+          nullable: true
+        company_name:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        role_display:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        is_superuser:
+          type: boolean
+          readOnly: true
+          title: Superuser status
+          description: Designates that this user has all permissions without explicitly
+            assigning them.
+        must_change_password:
+          type: boolean
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        weekly_capacity_hours:
+          type: integer
+          maximum: 32767
+          minimum: 0
+      required:
+      - company
+      - company_name
+      - created_at
+      - email
+      - first_name
+      - full_name
+      - id
+      - is_superuser
+      - last_name
+      - must_change_password
+      - role_display
+      - updated_at
+    UserAuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        actor:
+          type: integer
+          nullable: true
+        actor_name:
+          type: string
+          readOnly: true
+        target:
+          type: integer
+        target_name:
+          type: string
+          readOnly: true
+        action:
+          type: string
+          maxLength: 50
+        details: {}
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - actor_name
+      - created_at
+      - id
+      - target
+      - target_name
+    UserList:
+      type: object
+      description: Lightweight serializer for user lists.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        full_name:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        role_display:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        must_change_password:
+          type: boolean
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        weekly_capacity_hours:
+          type: integer
+          maximum: 32767
+          minimum: 0
+      required:
+      - created_at
+      - email
+      - first_name
+      - full_name
+      - id
+      - last_name
+      - role_display
+    UserManagement:
+      type: object
+      description: Serializer for user management (admin/manager).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        full_name:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        role_display:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        weekly_capacity_hours:
+          type: integer
+          maximum: 32767
+          minimum: 0
+      required:
+      - email
+      - first_name
+      - full_name
+      - id
+      - last_name
+      - role_display
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
