@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { notificationsService } from '@/services/notifications'
 import type { Notification } from '@/domain/types'
-import { AlertTriangle, Bell, CalendarClock, Check, CheckCheck } from 'lucide-react'
+import { AlertTriangle, Bell, CalendarClock, Check, CheckCheck, ArrowLeft } from 'lucide-react'
 import { requireCompanyMember } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Modal } from '@/components/ui/Modal'
+import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/notifications')({
   beforeLoad: requireCompanyMember,
@@ -20,6 +21,7 @@ export const Route = createFileRoute('/notifications')({
 function NotificationsPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const goBack = useSmartBack('/dashboard')
   const [filter, setFilter] = useState<'all' | 'unread' | 'action'>('all')
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
 
@@ -71,7 +73,11 @@ function NotificationsPage() {
 
   return (
     <Layout title="Notifications">
-      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-4">
+        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-semibold text-gray-900">Centre de notifications</h2>

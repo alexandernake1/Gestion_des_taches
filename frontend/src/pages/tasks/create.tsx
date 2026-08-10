@@ -11,6 +11,8 @@ import { requireCompanyMember } from '@/router/auth'
 import { Button } from '@/components/ui/Button'
 import { LayoutTemplate } from 'lucide-react'
 
+import { useSmartBack } from '@/utils/navigation'
+
 export const Route = createFileRoute('/tasks/create')({
   beforeLoad: requireCompanyMember,
   component: CreateTaskPage,
@@ -18,6 +20,7 @@ export const Route = createFileRoute('/tasks/create')({
 
 function CreateTaskPage() {
   const navigate = useNavigate()
+  const goBack = useSmartBack('/tasks')
   const queryClient = useQueryClient()
   const [isModalOpen, setIsModalOpen] = useState(true)
   const { data: currentUser, isLoading: isUserLoading } = useQuery({
@@ -61,7 +64,7 @@ function CreateTaskPage() {
 
   const handleClose = () => {
     setIsModalOpen(false)
-    navigate({ to: '/tasks' })
+    goBack()
   }
 
   if (isUserLoading) {

@@ -9,8 +9,9 @@ import { Modal } from '@/components/ui/Modal'
 import { announcementsService } from '@/services/announcements'
 import { requirePlatformAdmin } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Edit2, Plus, Trash2, Power, PowerOff } from 'lucide-react'
+import { Edit2, Plus, Trash2, Power, PowerOff, ArrowLeft } from 'lucide-react'
 import type { SystemAnnouncement, AnnouncementType, AnnouncementTarget } from '@/domain/types'
+import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/admin/announcements')({
   beforeLoad: requirePlatformAdmin,
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/admin/announcements')({
 })
 
 function AdminAnnouncementsPage() {
+  const goBack = useSmartBack('/dashboard')
   const queryClient = useQueryClient()
   const { data: announcements, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-announcements'],
@@ -80,7 +82,11 @@ function AdminAnnouncementsPage() {
 
   return (
     <Layout title="Communications & Annonces">
-      <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-8">
+      <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-6">
+        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">

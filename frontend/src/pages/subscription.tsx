@@ -10,8 +10,9 @@ import { subscriptionsService } from '@/services/subscriptions'
 import { authService } from '@/services/auth'
 import { requireOwner } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Check, ShieldAlert, Sparkles, Users, Layers, HardDrive, ReceiptText, XCircle, Clock3 } from 'lucide-react'
+import { Check, ShieldAlert, Sparkles, Users, Layers, HardDrive, ReceiptText, XCircle, Clock3, ArrowLeft } from 'lucide-react'
 import type { PaymentTransaction } from '@/domain/types'
+import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/subscription')({
   beforeLoad: requireOwner,
@@ -19,6 +20,7 @@ export const Route = createFileRoute('/subscription')({
 })
 
 function SubscriptionPage() {
+  const goBack = useSmartBack('/dashboard')
   const queryClient = useQueryClient()
 
   const { data: currentUser, isLoading: isUserLoading } = useQuery({
@@ -146,7 +148,11 @@ function SubscriptionPage() {
 
   return (
     <Layout title="Abonnement & Offres">
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-8">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-6">
+        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-950">Abonnement & Offres SaaS</h2>
           <p className="mt-1 text-sm text-slate-500">Gérez le forfait de votre entreprise et suivez vos consommations de ressources.</p>

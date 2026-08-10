@@ -9,7 +9,8 @@ import { Modal } from '@/components/ui/Modal'
 import { companiesService } from '@/services/companies'
 import { requirePlatformAdmin } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Plus, Globe, Calendar, Power } from 'lucide-react'
+import { Plus, Globe, Calendar, Power, ArrowLeft } from 'lucide-react'
+import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/admin/companies')({
   beforeLoad: requirePlatformAdmin,
@@ -17,6 +18,7 @@ export const Route = createFileRoute('/admin/companies')({
 })
 
 function AdminCompaniesPage() {
+  const goBack = useSmartBack('/dashboard')
   const queryClient = useQueryClient()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -99,7 +101,11 @@ function AdminCompaniesPage() {
 
   return (
     <Layout title="Administration des Entreprises">
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-8">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-6">
+        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">

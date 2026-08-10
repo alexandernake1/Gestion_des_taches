@@ -9,8 +9,9 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { requireCompanyMember } from '@/router/auth'
-import { Plus, Clock, Activity, Lock, Building2 } from 'lucide-react'
+import { Plus, Clock, Activity, Lock, Building2, ArrowLeft } from 'lucide-react'
 import type { Priority } from '@/domain/types'
+import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/tasks/templates')({
   beforeLoad: requireCompanyMember,
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/tasks/templates')({
 })
 
 function TaskTemplatesPage() {
+  const goBack = useSmartBack('/tasks')
   const queryClient = useQueryClient()
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
@@ -67,7 +69,11 @@ function TaskTemplatesPage() {
 
   return (
     <Layout title="Modèles de Tâches">
-      <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-8">
+      <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-6">
+        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">

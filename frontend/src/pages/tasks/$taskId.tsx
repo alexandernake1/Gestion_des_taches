@@ -15,6 +15,7 @@ import { useState } from 'react'
 import { requireCompanyMember } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { TaskActivityFeed } from '@/components/tasks/TaskActivityFeed'
+import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/tasks/$taskId')({
   beforeLoad: requireCompanyMember,
@@ -24,6 +25,7 @@ export const Route = createFileRoute('/tasks/$taskId')({
 function TaskDetailPage() {
   const { taskId } = Route.useParams()
   const navigate = useNavigate()
+  const goBack = useSmartBack('/tasks')
   const queryClient = useQueryClient()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'structure' | 'activity' | 'attachments' | 'reports'>('structure')
@@ -225,9 +227,9 @@ function TaskDetailPage() {
     <Layout title="Détails de la tâche">
       <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <div className="mb-6 flex items-center justify-between">
-          <Button variant="ghost" className="text-slate-500 hover:text-slate-900" onClick={() => navigate({ to: '/tasks' })}>
+          <Button variant="ghost" className="text-slate-500 hover:text-slate-900" onClick={goBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour aux tâches
+            Retour
           </Button>
         </div>
 

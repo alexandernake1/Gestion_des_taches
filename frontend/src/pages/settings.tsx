@@ -6,7 +6,8 @@ import { authService } from '@/services/auth'
 import { notificationsService } from '@/services/notifications'
 import { Button } from '@/components/ui/Button'
 import { requireAuthentication } from '@/router/auth'
-import { BellRing, Check, Key, ShieldCheck, Smartphone, UserRound } from 'lucide-react'
+import { BellRing, Check, Key, ShieldCheck, Smartphone, UserRound, ArrowLeft } from 'lucide-react'
+import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/settings')({
   beforeLoad: requireAuthentication,
@@ -14,6 +15,7 @@ export const Route = createFileRoute('/settings')({
 })
 
 function SettingsPage() {
+  const goBack = useSmartBack('/dashboard')
   const [profileSaved, setProfileSaved] = useState(false)
   const [passwordSaved, setPasswordSaved] = useState(false)
   const [notificationsSaved, setNotificationsSaved] = useState(false)
@@ -115,7 +117,11 @@ function SettingsPage() {
   return (
     <Layout title="Paramètres">
       <div className="mx-auto max-w-5xl py-8">
-        <div className="mb-8 px-4 sm:px-6 lg:px-8">
+        <div className="mb-6 px-4 sm:px-6 lg:px-8">
+          <Button variant="ghost" size="sm" className="mb-4 text-slate-500 hover:text-slate-900" onClick={goBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Retour
+          </Button>
           <h1 className="text-2xl font-bold text-foreground">Paramètres du compte</h1>
           <p className="mt-1 text-sm text-muted-foreground">Gérez vos informations personnelles et vos préférences de sécurité.</p>
         </div>

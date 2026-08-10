@@ -8,9 +8,10 @@ import { Modal } from '@/components/ui/Modal'
 import { subscriptionsService } from '@/services/subscriptions'
 import { requirePlatformAdmin } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Package, Plus, Settings2, Power, PowerOff } from 'lucide-react'
+import { Package, Plus, Settings2, Power, PowerOff, ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import type { SubscriptionPlan } from '@/domain/types'
+import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/admin/plans')({
   beforeLoad: requirePlatformAdmin,
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/admin/plans')({
 })
 
 function AdminPlansPage() {
+  const goBack = useSmartBack('/dashboard')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
   
@@ -66,7 +68,11 @@ function AdminPlansPage() {
 
   return (
     <Layout title="Forfaits SaaS">
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-8">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-6">
+        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">

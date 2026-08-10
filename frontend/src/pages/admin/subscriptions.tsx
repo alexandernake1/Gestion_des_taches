@@ -9,8 +9,9 @@ import { Modal } from '@/components/ui/Modal'
 import { subscriptionsService } from '@/services/subscriptions'
 import { requirePlatformAdmin } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { CircleDollarSign, RefreshCw, ShieldCheck, TimerReset, Edit2 } from 'lucide-react'
+import { CircleDollarSign, RefreshCw, ShieldCheck, TimerReset, Edit2, ArrowLeft } from 'lucide-react'
 import type { CompanySubscription } from '@/domain/types'
+import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/admin/subscriptions')({
   beforeLoad: requirePlatformAdmin,
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/admin/subscriptions')({
 })
 
 function AdminSubscriptionsPage() {
+  const goBack = useSmartBack('/dashboard')
   const queryClient = useQueryClient()
   const { data: subscriptions, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-subscriptions'],
@@ -97,7 +99,11 @@ function AdminSubscriptionsPage() {
 
   return (
     <Layout title="Administration des Abonnements SaaS">
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-8">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-6">
+        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Espace Super-Admin</span>
