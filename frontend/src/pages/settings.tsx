@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { requireAuthentication } from '@/router/auth'
 import { BellRing, Check, Key, ShieldCheck, Smartphone, UserRound, ArrowLeft } from 'lucide-react'
 import { useSmartBack } from '@/utils/navigation'
+import { requestPushPermission } from '@/utils/notifications'
 
 export const Route = createFileRoute('/settings')({
   beforeLoad: requireAuthentication,
@@ -89,6 +90,14 @@ function SettingsPage() {
     event.preventDefault()
     setNotificationsSaved(false)
     const data = new FormData(event.currentTarget)
+
+    localStorage.setItem('notification_sound_enabled', data.has('notification_sound_enabled') ? 'true' : 'false')
+    const desktopEnabled = data.has('notification_desktop_enabled')
+    localStorage.setItem('notification_desktop_enabled', desktopEnabled ? 'true' : 'false')
+    if (desktopEnabled) {
+      requestPushPermission()
+    }
+
     updateNotifications.mutate({
       assignments_enabled: data.has('assignments_enabled'),
       comments_enabled: data.has('comments_enabled'),
@@ -260,6 +269,8 @@ function SettingsPage() {
                   <p className="mt-1 text-sm text-muted-foreground">Choisissez les alertes utiles et leur fréquence. Les doublons sont automatiquement évités.</p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
+                  <PreferenceToggle name="notification_sound_enabled" label="Signal sonore SaaS" description="Émettre un son discret lors de la réception d'une notification." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_sound_enabled') !== 'false' : true} />
+                  <PreferenceToggle name="notification_desktop_enabled" label="Notifications Push bureau" description="Afficher une alerte Windows/OS quand l'application est en arrière-plan." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_desktop_enabled') !== 'false' : true} />
                   <PreferenceToggle name="assignments_enabled" label="Nouvelles assignations" description="Lorsqu'une tâche vous est confiée." defaultChecked={notificationPreferences.assignments_enabled} />
                   <PreferenceToggle name="comments_enabled" label="Commentaires" description="Activité sur les tâches qui vous concernent." defaultChecked={notificationPreferences.comments_enabled} />
                   <PreferenceToggle name="task_reminders_enabled" label="Échéances proches" description="Rappel avant la date limite." defaultChecked={notificationPreferences.task_reminders_enabled} />
