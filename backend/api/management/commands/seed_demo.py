@@ -2,7 +2,7 @@ import random
 from datetime import date, timedelta
 
 from django.core.files.base import ContentFile
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -24,7 +24,12 @@ from domain.users.models import Role, User
 class Command(BaseCommand):
     help = "Create a realistic, comprehensive demo company dataset."
 
-    PASSWORD = "Demo1234!"
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--password',
+            required=True,
+            help='Mot de passe temporaire à utiliser pour les comptes de démonstration.',
+        )
 
     FIRST_NAMES = [
         "Aïcha", "Mariam", "Fatoumata", "Clarisse", "Aminata", "Rasmata",
@@ -197,6 +202,9 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        self.password = options['password']
+        if len(self.password) < 12:
+            raise CommandError('Le mot de passe de démonstration doit contenir au moins 12 caractères.')
         random.seed(20260727)
         company, _ = Company.objects.update_or_create(
             slug="sahel-digital-solutions",
@@ -272,7 +280,7 @@ class Command(BaseCommand):
             user.company = company
             user.role = role
             user.is_active = index not in {39, 41}
-            user.set_password(self.PASSWORD)
+            user.set_password(self.password)
             user.save()
             users.append(user)
         return users
@@ -497,7 +505,7 @@ class Command(BaseCommand):
         demo.company = company
         demo.role = Role.OWNER
         demo.is_active = True
-        demo.set_password(self.PASSWORD)
+        demo.set_password(self.password)
         demo.save()
 
         from domain.companies.models import SubscriptionPlan, CompanySubscription
@@ -523,7 +531,7 @@ class Command(BaseCommand):
                 "is_active": True,
             }
         )
-        superadmin.set_password(self.PASSWORD)
+        superadmin.set_password(self.password)
         superadmin.is_superuser = True
         superadmin.is_staff = True
         superadmin.is_active = True

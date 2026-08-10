@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Clock, Edit3, ArrowRight, MessageSquare, Send, Trash2, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { useConfirmation } from '@/components/ui/confirmation'
 import type { TaskHistory, TaskComment } from '@/domain/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { tasksService } from '@/services/tasks'
@@ -68,6 +69,7 @@ function formatValue(field: string, value?: string) {
 
 export function TaskActivityFeed({ taskId, history, comments, currentUserId }: TaskActivityFeedProps) {
   const queryClient = useQueryClient()
+  const confirmAction = useConfirmation()
   const [commentText, setCommentText] = useState('')
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null)
   const [editContent, setEditContent] = useState('')
@@ -240,7 +242,15 @@ export function TaskActivityFeed({ taskId, history, comments, currentUserId }: T
                                 <Edit2 className="h-3.5 w-3.5" />
                               </button>
                               <button 
-                                onClick={() => { if(window.confirm('Supprimer ce commentaire ?')) deleteCommentMutation.mutate(comment.id) }}
+                                onClick={async () => {
+                                  const { confirmed } = await confirmAction({
+                                    title: 'Supprimer ce commentaire ?',
+                                    description: 'Le commentaire sera supprimé définitivement de cette activité.',
+                                    confirmLabel: 'Supprimer',
+                                    tone: 'danger',
+                                  })
+                                  if (confirmed) deleteCommentMutation.mutate(comment.id)
+                                }}
                                 className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600"
                                 title="Supprimer"
                               >

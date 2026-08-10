@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { useConfirmation } from '@/components/ui/confirmation'
 import { subscriptionsService } from '@/services/subscriptions'
 import { requirePlatformAdmin } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -22,6 +23,7 @@ function AdminPlansPage() {
   const goBack = useSmartBack('/dashboard')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
+  const confirmAction = useConfirmation()
   
   const queryClient = useQueryClient()
   const { data: plans, isLoading, isError, refetch } = useQuery({
@@ -43,6 +45,23 @@ function AdminPlansPage() {
   const handleCreate = () => {
     setSelectedPlan(null)
     setModalOpen(true)
+  }
+
+  const handleToggleStatus = async (plan: SubscriptionPlan) => {
+    const deactivating = plan.is_active
+    const { confirmed } = await confirmAction({
+      title: `${deactivating ? 'Désactiver' : 'Activer'} le forfait « ${plan.name} » ?`,
+      description: deactivating
+        ? 'Ce forfait ne pourra plus être choisi pour de nouveaux abonnements.'
+        : 'Ce forfait redeviendra disponible dans le catalogue.',
+      confirmLabel: deactivating ? 'Désactiver le forfait' : 'Activer le forfait',
+      tone: deactivating ? 'danger' : 'warning',
+      impacts: deactivating
+        ? ['Les abonnements existants à ce forfait ne sont pas automatiquement résiliés.']
+        : ['Les limites et fonctionnalités configurées seront immédiatement proposées.'],
+      requireText: deactivating ? 'DÉSACTIVER' : undefined,
+    })
+    if (confirmed) toggleStatusMutation.mutate(plan)
   }
 
   if (isLoading) {
@@ -147,7 +166,8 @@ function AdminPlansPage() {
                   <Button 
                     variant={plan.is_active ? 'danger' : 'secondary'} 
                     size="sm" 
-                    onClick={() => toggleStatusMutation.mutate(plan)}
+                    onClick={() => handleToggleStatus(plan)}
+                    disabled={toggleStatusMutation.isPending}
                     className="px-3"
                     title={plan.is_active ? 'Désactiver' : 'Activer'}
                   >
@@ -198,6 +218,7 @@ function PlanModal({ isOpen, plan, onClose, onSuccess }: { isOpen: boolean; plan
         has_kanban_view: data.get('has_kanban_view') === 'on',
         has_calendar_view: data.get('has_calendar_view') === 'on',
         has_timeline_view: data.get('has_timeline_view') === 'on',
+        has_projects: data.get('has_projects') === 'on',
         has_reports: data.get('has_reports') === 'on',
         has_exports: data.get('has_exports') === 'on',
         custom_branding: data.get('custom_branding') === 'on',
@@ -270,6 +291,10 @@ function PlanModal({ isOpen, plan, onClose, onSuccess }: { isOpen: boolean; plan
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" name="has_timeline_view" defaultChecked={plan?.feature_flags?.has_timeline_view ?? false} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 h-4 w-4" />
               <span className="text-sm font-medium text-slate-700">Vue Chronologie</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="has_projects" defaultChecked={plan?.feature_flags?.has_projects ?? false} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 h-4 w-4" />
+              <span className="text-sm font-medium text-slate-700">🗂️ Gestion de Projets</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" name="has_reports" defaultChecked={plan?.feature_flags?.has_reports ?? false} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 h-4 w-4" />

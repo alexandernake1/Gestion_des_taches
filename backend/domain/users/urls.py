@@ -15,10 +15,12 @@ from .views import (
     UserAuditLogListView,
     logout,
     register_company,
+    company_email_availability,
 )
 
 urlpatterns = [
     path('register/company/', register_company, name='register_company'),
+    path('register/company/email-availability/', company_email_availability, name='company_email_availability'),
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', logout, name='logout'),

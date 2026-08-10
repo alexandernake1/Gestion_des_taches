@@ -25,6 +25,16 @@ class ReportStatus(models.TextChoices):
     REJECTED = 'rejected', 'Rejected'
 
 
+class ApprovalAction(models.TextChoices):
+    TASK_COMPLETION = 'task_completion', 'Clôture de tâche'
+
+
+class ApprovalStatus(models.TextChoices):
+    PENDING = 'pending', 'En attente'
+    APPROVED = 'approved', 'Approuvée'
+    REJECTED = 'rejected', 'Refusée'
+
+
 class RecurrenceFrequency(models.TextChoices):
     DAILY = 'daily', 'Quotidienne'
     WEEKLY = 'weekly', 'Hebdomadaire'
@@ -77,6 +87,11 @@ class Project(models.Model):
         User,
         blank=True,
         related_name='joined_projects'
+    )
+    teams = models.ManyToManyField(
+        Team,
+        blank=True,
+        related_name='projects'
     )
     budget_hours = models.PositiveIntegerField(default=0, help_text="Volume d'heures estimé")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -193,6 +208,10 @@ class Task(models.Model):
         decimal_places=2,
         default=1,
     )
+    requires_completion_approval = models.BooleanField(
+        default=False,
+        help_text="Exige la validation d'un responsable avant la clôture par un collaborateur.",
+    )
     recurrence_end_date = models.DateField(null=True, blank=True)
     next_occurrence = models.OneToOneField(
         'self',
@@ -255,6 +274,67 @@ class Task(models.Model):
             status=Status.COMPLETED,
         ).count()
         return round(completed * 100 / total)
+
+
+class ApprovalRequest(models.Model):
+    """Trace a sensitive task action submitted for managerial approval."""
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='approval_requests',
+    )
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name='approval_requests',
+    )
+    requested_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='submitted_approval_requests',
+        null=True,
+    )
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='reviewed_approval_requests',
+        null=True,
+        blank=True,
+    )
+    action = models.CharField(
+        max_length=40,
+        choices=ApprovalAction.choices,
+        default=ApprovalAction.TASK_COMPLETION,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=ApprovalStatus.choices,
+        default=ApprovalStatus.PENDING,
+    )
+    reason = models.TextField()
+    review_comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'approval_requests'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['company', 'status']),
+            models.Index(fields=['task', 'status']),
+            models.Index(fields=['requested_by', 'status']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['task', 'action'],
+                condition=models.Q(status=ApprovalStatus.PENDING),
+                name='uniq_pending_task_approval',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_action_display()} - {self.task.title} ({self.status})"
 
 
 class TaskTemplate(models.Model):

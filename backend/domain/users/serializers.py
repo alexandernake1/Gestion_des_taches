@@ -109,6 +109,12 @@ class CompanyRegistrationSerializer(serializers.Serializer):
             raise serializers.ValidationError("Un compte utilise déjà cette adresse email.")
         return value.lower()
 
+    def validate_contact_email(self, value):
+        normalized_email = value.lower()
+        if Company.objects.filter(contact_email__iexact=normalized_email).exists():
+            raise serializers.ValidationError("Cet email d'entreprise est déjà utilisé.")
+        return normalized_email
+
     def validate_plan_code(self, value):
         try:
             return SubscriptionPlan.objects.get(code=value, is_active=True)
@@ -129,7 +135,7 @@ class CompanyRegistrationSerializer(serializers.Serializer):
             raise serializers.ValidationError({'company_name': "Nom d'entreprise invalide."})
         if Company.objects.filter(slug=candidate).exists():
             raise serializers.ValidationError({
-                'company_slug': "Cette adresse d'entreprise est déjà utilisée.",
+                'company_slug': "Cet identifiant d'espace est déjà utilisé.",
             })
         attrs['company_slug'] = candidate
         return attrs

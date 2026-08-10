@@ -5,11 +5,12 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
+import { useConfirmation } from '@/components/ui/confirmation'
 import { teamsService } from '@/services/teams'
 import { authService } from '@/services/auth'
 import { tasksService } from '@/services/tasks'
 import type { Team, User } from '@/domain/types'
-import { CheckCircle2, Plus, Search, ShieldCheck, UserRound, Users, X } from 'lucide-react'
+import { Archive, ArchiveRestore, CheckCircle2, Plus, Search, ShieldCheck, Trash2, UserRound, Users, X } from 'lucide-react'
 import { useState } from 'react'
 import { requireManagement } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -33,6 +34,49 @@ function TeamsPage() {
     queryKey: ['users', 'team-management'],
     queryFn: () => authService.list({ is_active: true }),
   })
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: authService.getCurrentUser,
+  })
+  const canDeleteTeams = Boolean(currentUser?.is_superuser || currentUser?.role === 'owner')
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: number; is_active: boolean }) => teamsService.update(id, { is_active }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teams'] }),
+  })
+  const confirmAction = useConfirmation()
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => teamsService.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teams'] }),
+  })
+  const handleToggleStatus = async (team: Team) => {
+    const archiving = team.is_active
+    const { confirmed } = await confirmAction({
+      title: `${archiving ? 'Archiver' : 'Réactiver'} l’équipe « ${team.name} » ?`,
+      description: archiving
+        ? 'L’équipe sera conservée, mais ne pourra plus être choisie pour de nouvelles assignations.'
+        : 'L’équipe redeviendra disponible pour les nouvelles assignations.',
+      confirmLabel: archiving ? 'Archiver l’équipe' : 'Réactiver l’équipe',
+      tone: archiving ? 'danger' : 'warning',
+      impacts: archiving
+        ? ['Les membres, projets et tâches déjà rattachés sont conservés.']
+        : ['La composition actuelle de l’équipe sera conservée.'],
+    })
+    if (confirmed) toggleStatusMutation.mutate({ id: Number(team.id), is_active: !team.is_active })
+  }
+  const handleDelete = async (team: Team) => {
+    const { confirmed } = await confirmAction({
+      title: `Supprimer définitivement l’équipe « ${team.name} » ?`,
+      description: 'Cette action est réservée au propriétaire et ne peut pas être annulée.',
+      confirmLabel: 'Supprimer définitivement',
+      tone: 'danger',
+      impacts: [
+        'Les membres seront retirés de cette équipe.',
+        'Les tâches existantes seront conservées mais ne seront plus rattachées à cette équipe.',
+      ],
+      requireText: 'SUPPRIMER',
+    })
+    if (confirmed) deleteMutation.mutate(Number(team.id))
+  }
   const normalizedSearch = search.trim().toLocaleLowerCase('fr')
   const visibleTeams = teams?.filter((team) => (
     !normalizedSearch
@@ -98,7 +142,15 @@ function TeamsPage() {
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {visibleTeams?.map((team) => (
-              <TeamCard key={team.id} team={team} onManage={() => setSelectedTeam(team)} />
+              <TeamCard
+                key={team.id}
+                team={team}
+                onManage={() => setSelectedTeam(team)}
+                onToggleStatus={() => void handleToggleStatus(team)}
+                isToggling={toggleStatusMutation.isPending}
+                onDelete={canDeleteTeams ? () => void handleDelete(team) : undefined}
+                isDeleting={deleteMutation.isPending}
+              />
             ))}
             {visibleTeams?.length === 0 && (
               <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center xl:col-span-2">
@@ -155,7 +207,7 @@ function TeamMetric({ icon: Icon, label, value }: { icon: typeof Users; label: s
   )
 }
 
-function TeamCard({ team, onManage }: { team: Team; onManage: () => void }) {
+function TeamCard({ team, onManage, onToggleStatus, isToggling, onDelete, isDeleting }: { team: Team; onManage: () => void; onToggleStatus: () => void; isToggling: boolean; onDelete?: () => void; isDeleting: boolean }) {
   return (
     <Card className="group relative cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-card">
       <CardContent className="p-5 sm:p-6">
@@ -193,6 +245,15 @@ function TeamCard({ team, onManage }: { team: Team; onManage: () => void }) {
             </div>
           </div>
           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity mt-4 sm:mt-0">
+            <Button variant="ghost" size="sm" onClick={onToggleStatus} disabled={isToggling} className="rounded-full">
+              {team.is_active ? <Archive className="mr-1.5 h-3.5 w-3.5" /> : <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" />}
+              {team.is_active ? 'Archiver' : 'Réactiver'}
+            </Button>
+            {onDelete && (
+              <Button variant="ghost" size="sm" onClick={onDelete} disabled={isDeleting} className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive">
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />Supprimer
+              </Button>
+            )}
             <Button variant="secondary" size="sm" onClick={onManage} className="rounded-full shadow-sm hover:bg-white hover:shadow">
               Gérer <ShieldCheck className="ml-1.5 h-3.5 w-3.5" />
             </Button>
@@ -204,6 +265,7 @@ function TeamCard({ team, onManage }: { team: Team; onManage: () => void }) {
 }
 
 function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | null; onClose: () => void; onSuccess: () => void; users: User[] }) {
+  const confirmAction = useConfirmation()
   const { data: details, isLoading } = useQuery({
     queryKey: ['team', team?.id],
     queryFn: () => teamsService.get(Number(team!.id)),
@@ -220,17 +282,35 @@ function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | nul
     enabled: team !== null,
   })
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
     const leader = data.get('leader') as string
-    mutation.mutate({
+    const payload = {
       name: data.get('name') as string,
       description: data.get('description') as string || undefined,
       leader: leader ? Number(leader) : undefined,
       is_active: data.get('is_active') === 'on',
       member_ids: data.getAll('member_ids').map((value) => Number(value)),
-    })
+    }
+
+    if (details && details.is_active !== payload.is_active) {
+      const deactivating = details.is_active
+      const { confirmed } = await confirmAction({
+        title: `${deactivating ? 'Désactiver' : 'Réactiver'} l’équipe « ${details.name} » ?`,
+        description: deactivating
+          ? 'Cette équipe ne sera plus disponible pour de nouvelles assignations.'
+          : 'Cette équipe redeviendra disponible pour les assignations.',
+        confirmLabel: deactivating ? 'Désactiver l’équipe' : 'Réactiver l’équipe',
+        tone: deactivating ? 'danger' : 'warning',
+        impacts: deactivating
+          ? [`Les ${teamTasks.length} tâche${teamTasks.length > 1 ? 's' : ''} déjà rattachée${teamTasks.length > 1 ? 's' : ''} seront conservées.`]
+          : ['Les membres et le responsable configurés seront conservés.'],
+      })
+      if (!confirmed) return
+    }
+
+    mutation.mutate(payload)
   }
 
   return (

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { useConfirmation } from '@/components/ui/confirmation'
 import { announcementsService } from '@/services/announcements'
 import { requirePlatformAdmin } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -21,6 +22,7 @@ export const Route = createFileRoute('/admin/announcements')({
 function AdminAnnouncementsPage() {
   const goBack = useSmartBack('/dashboard')
   const queryClient = useQueryClient()
+  const confirmAction = useConfirmation()
   const { data: announcements, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-announcements'],
     queryFn: announcementsService.listAnnouncements,
@@ -34,10 +36,15 @@ function AdminAnnouncementsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-announcements'] }),
   })
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Voulez-vous vraiment supprimer cette annonce ?')) {
-      deleteMutation.mutate(id)
-    }
+  const handleDelete = async (announcement: SystemAnnouncement) => {
+    const { confirmed } = await confirmAction({
+      title: 'Supprimer cette annonce ?',
+      description: 'Cette annonce sera retirée définitivement de la plateforme.',
+      confirmLabel: "Supprimer l'annonce",
+      tone: 'danger',
+      impacts: [`Message concerné : « ${announcement.message} »`],
+    })
+    if (confirmed) deleteMutation.mutate(announcement.id)
   }
 
   const handleEdit = (ann: SystemAnnouncement) => {
@@ -50,8 +57,18 @@ function AdminAnnouncementsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-announcements'] }),
   })
 
-  const handleToggleActive = (ann: SystemAnnouncement) => {
-    toggleMutation.mutate(ann)
+  const handleToggleActive = async (ann: SystemAnnouncement) => {
+    const nextStatus = ann.is_active ? 'désactiver' : 'activer'
+    const { confirmed } = await confirmAction({
+      title: `${ann.is_active ? 'Désactiver' : 'Activer'} cette annonce ?`,
+      description: ann.is_active
+        ? "Elle ne sera plus visible par les utilisateurs ciblés."
+        : "Elle deviendra visible par les utilisateurs ciblés.",
+      confirmLabel: ann.is_active ? 'Désactiver' : 'Activer',
+      tone: 'warning',
+      impacts: [`Vous allez ${nextStatus} l'annonce « ${ann.message} ».`],
+    })
+    if (confirmed) toggleMutation.mutate(ann)
   }
 
   const handleCreate = () => {
@@ -163,7 +180,7 @@ function AdminAnnouncementsPage() {
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(ann)} title="Modifier">
                           <Edit2 className="h-4 w-4 text-slate-500 hover:text-indigo-600" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(ann.id)} title="Supprimer">
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(ann)} title="Supprimer">
                           <Trash2 className="h-4 w-4 text-slate-500 hover:text-rose-600" />
                         </Button>
                       </div>

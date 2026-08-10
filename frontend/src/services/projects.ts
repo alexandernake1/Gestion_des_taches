@@ -10,6 +10,7 @@ export interface CreateProjectPayload {
   due_date?: string
   manager?: number
   members?: number[]
+  teams?: number[]
   budget_hours?: number
 }
 

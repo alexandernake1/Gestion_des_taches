@@ -131,7 +131,7 @@ export function NotificationDropdown() {
             ) : (
               <div className="flex flex-col gap-1">
                 {notifications.slice(0, 5).map((notification) => {
-                  const requiresAction = ['task_overdue', 'payment_failed', 'subscription_suspended'].includes(notification.type)
+                  const requiresAction = ['approval_requested', 'task_overdue', 'payment_failed', 'subscription_suspended'].includes(notification.type)
                   const isReminder = notification.type === 'task_due_soon'
                   
                   return (

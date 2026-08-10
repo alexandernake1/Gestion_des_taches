@@ -1,8 +1,8 @@
 import { api } from '@/utils/api'
-import type { Status, Task, TaskCreateRequest, TaskUpdateRequest, TaskHistory, TaskComment, TaskCommentCreateRequest, TaskAttachment, TaskReport, TaskReportCreateRequest, TaskTemplate } from '@/domain/types'
+import type { ApprovalRequest, ApprovalStatus, Status, Task, TaskCreateRequest, TaskUpdateRequest, TaskHistory, TaskComment, TaskCommentCreateRequest, TaskAttachment, TaskReport, TaskReportCreateRequest, TaskTemplate } from '@/domain/types'
 
 export const tasksService = {
-  async list(params?: { status?: string; priority?: string; assigned_to?: number; team?: number; parent?: number; search?: string; scope?: 'team' | 'all' }) {
+  async list(params?: { status?: string; priority?: string; assigned_to?: number; team?: number; parent?: number; project?: number; search?: string; scope?: 'team' | 'all' }) {
     return api.getList<Task>('/tasks/', { params })
   },
 
@@ -136,7 +136,29 @@ export const tasksService = {
     return api.get<TaskReport[]>('/tasks/reports/my/', { params })
   },
 
-  async getPendingReports() {
-    return api.get<TaskReport[]>('/tasks/reports/pending/')
+  async getPendingReports(params?: { status?: 'pending' | 'approved' | 'rejected' | 'all' }) {
+    return api.get<TaskReport[]>('/tasks/reports/pending/', { params })
+  },
+
+  async getApprovals(params?: { status?: ApprovalStatus }) {
+    return api.getList<ApprovalRequest>('/tasks/approvals/', { params })
+  },
+
+  async getTaskApprovals(taskId: number) {
+    return api.getList<ApprovalRequest>(`/tasks/${taskId}/approvals/`)
+  },
+
+  async requestCompletionApproval(taskId: number, reason: string) {
+    return api.post<ApprovalRequest>(`/tasks/${taskId}/approvals/`, {
+      action: 'task_completion',
+      reason,
+    })
+  },
+
+  async reviewApproval(
+    approvalId: number,
+    data: { status: 'approved' | 'rejected'; review_comment?: string },
+  ) {
+    return api.patch<ApprovalRequest>(`/tasks/approvals/${approvalId}/`, data)
   }
 }

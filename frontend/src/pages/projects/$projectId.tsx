@@ -2,17 +2,18 @@ import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  ArrowLeft, FolderKanban, CheckCircle2, AlertTriangle, Clock, Users,
-  Plus, Calendar, LayoutGrid, ListFilter, CheckSquare2, UserRound, ArrowRight
+  ArrowLeft, Clock, Plus, Calendar, LayoutGrid, CheckSquare2, UserRound, ArrowRight
 } from 'lucide-react'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
+import { TaskForm } from '@/components/tasks/TaskForm'
 import { requireAuthentication } from '@/router/auth'
 import { projectsService } from '@/services/projects'
 import { tasksService } from '@/services/tasks'
-import type { Task, Status, Priority } from '@/domain/types'
+import { authService } from '@/services/auth'
+import type { Status, TaskCreateRequest } from '@/domain/types'
 
 export const Route = createFileRoute('/projects/$projectId')({
   beforeLoad: requireAuthentication,
@@ -29,7 +30,6 @@ const statusColumns: { id: Status; label: string; color: string }[] = [
 export function ProjectDetailPage() {
   const { projectId } = Route.useParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const numericId = Number(projectId)
   const [activeTab, setActiveTab] = useState<'kanban' | 'timeline'>('kanban')
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
@@ -39,23 +39,11 @@ export function ProjectDetailPage() {
     queryFn: () => projectsService.getById(numericId),
   })
 
-  const { data: tasksData, isLoading: isTasksLoading } = useQuery({
+  const { data: tasks = [], isLoading: isTasksLoading } = useQuery({
     queryKey: ['tasks', 'project', numericId],
     queryFn: () => tasksService.list({ project: numericId }),
   })
-  const tasks = tasksData?.results || []
-
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ taskId, newStatus }: { taskId: number; newStatus: Status }) =>
-      tasksService.update(taskId, { status: newStatus }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      queryClient.invalidateQueries({ queryKey: ['project', numericId] })
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-    },
-  })
-
-  if (isProjectLoading) {
+  if (isProjectLoading || isTasksLoading) {
     return (
       <Layout title="Projet">
         <div className="p-8 max-w-7xl mx-auto space-y-6">
@@ -160,6 +148,21 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
+        {(project.team_details || []).length > 0 && (
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="text-sm font-bold text-foreground">Équipes participant au projet</h3>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {project.team_details?.map((team) => (
+                <span key={team.id} className="inline-flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">
+                  <UserRound className="h-4 w-4" />
+                  {team.name}
+                  <span className="text-xs font-normal text-muted-foreground">{team.member_count} membre(s)</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* View Tabs */}
         <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex gap-2">
@@ -259,7 +262,7 @@ export function ProjectDetailPage() {
                     </div>
 
                     <div className="flex items-center gap-4 text-xs font-semibold">
-                      <Badge variant={task.status === 'completed' ? 'success' : 'secondary'}>
+                      <Badge variant={task.status === 'completed' ? 'success' : 'default'}>
                         {task.status_display}
                       </Badge>
                       {task.due_date && (
@@ -297,81 +300,32 @@ function CreateProjectTaskModal({
   projectId: number
 }) {
   const queryClient = useQueryClient()
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: authService.getCurrentUser,
+  })
+  const canAssign = Boolean(currentUser?.is_superuser || currentUser?.role === 'owner' || currentUser?.role === 'manager')
 
   const mutation = useMutation({
-    mutationFn: (data: { title: string; description?: string; project: number; priority?: Priority; due_date?: string }) =>
-      tasksService.create(data),
+    mutationFn: (data: TaskCreateRequest) => tasksService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       onClose()
     },
   })
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const form = new FormData(e.currentTarget)
-    mutation.mutate({
-      title: String(form.get('title')),
-      description: String(form.get('description') || ''),
-      project: projectId,
-      priority: (form.get('priority') as Priority) || 'normal',
-      due_date: form.get('due_date') ? String(form.get('due_date')) : undefined,
-    })
-  }
-
-  const inputClass = 'h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Nouvelle tâche pour ce projet">
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-foreground">Titre de la tâche *</label>
-          <input name="title" required placeholder="Ex: Rédiger la spécification..." className={inputClass} />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-foreground">Description</label>
-          <textarea
-            name="description"
-            rows={3}
-            placeholder="Détails de la tâche..."
-            className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground">Priorité</label>
-            <select name="priority" defaultValue="normal" className={inputClass}>
-              <option value="low">Faible</option>
-              <option value="normal">Normale</option>
-              <option value="high">Haute</option>
-              <option value="urgent">Urgente</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground">Date d'échéance</label>
-            <input name="due_date" type="date" className={inputClass} />
-          </div>
-        </div>
-
-        {mutation.isError && (
-          <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-xs font-medium text-destructive">
-            {mutation.error instanceof Error ? mutation.error.message : 'Erreur lors de la création.'}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-3 pt-4 border-t border-border">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Création…' : 'Créer la tâche'}
-          </Button>
-        </div>
-      </form>
+    <Modal isOpen={isOpen} onClose={onClose} title="Nouvelle tâche pour ce projet" size="lg">
+      <TaskForm
+        lockedProjectId={projectId}
+        onSubmit={mutation.mutate}
+        onCancel={onClose}
+        isSubmitting={mutation.isPending}
+        canAssign={canAssign}
+        error={mutation.isError ? (mutation.error instanceof Error ? mutation.error.message : 'Erreur lors de la création.') : undefined}
+      />
     </Modal>
   )
 }

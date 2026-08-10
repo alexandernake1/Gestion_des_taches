@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -220,3 +221,38 @@ class SystemAnnouncement(models.Model):
 
     def __str__(self):
         return f"{self.get_type_display()}: {self.message[:30]}"
+
+
+class PlatformAuditLog(models.Model):
+    """Trace readable of sensitive operations performed in the SaaS back-office."""
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='platform_audit_actions',
+    )
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='platform_audit_events',
+    )
+    category = models.CharField(max_length=40)
+    action = models.CharField(max_length=80)
+    entity_label = models.CharField(max_length=255, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'platform_audit_logs'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['category', 'created_at'], name='platform_au_categor_dd069c_idx'),
+            models.Index(fields=['company', 'created_at'], name='platform_au_company_bb7bda_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.category}: {self.action}"

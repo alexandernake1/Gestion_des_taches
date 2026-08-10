@@ -35,6 +35,8 @@ function RegisterPage() {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState(initialForm)
   const [error, setError] = useState('')
+  const [companyEmailError, setCompanyEmailError] = useState('')
+  const [checkingCompanyEmail, setCheckingCompanyEmail] = useState(false)
   const [loading, setLoading] = useState(false)
   const { data: plans = [], isLoading: plansLoading } = useQuery({
     queryKey: ['public-subscription-plans'],
@@ -45,6 +47,26 @@ function RegisterPage() {
   const update = (field: keyof CompanyRegistrationRequest, value: string | boolean) => {
     setForm((current) => ({ ...current, [field]: value }))
     setError('')
+    if (field === 'contact_email') setCompanyEmailError('')
+  }
+
+  const validateCompanyEmail = async () => {
+    if (!form.contact_email) return false
+    setCheckingCompanyEmail(true)
+    try {
+      const result = await authService.checkCompanyEmail(form.contact_email)
+      const message = result.available ? '' : (result.message || "Cet email d'entreprise est déjà utilisé.")
+      setCompanyEmailError(message)
+      if (message) setError(message)
+      return result.available
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Impossible de vérifier l'email de l'entreprise."
+      setCompanyEmailError(message)
+      setError(message)
+      return false
+    } finally {
+      setCheckingCompanyEmail(false)
+    }
   }
 
   const validateStep = () => {
@@ -59,8 +81,10 @@ function RegisterPage() {
     return true
   }
 
-  const next = () => {
-    if (validateStep()) setStep((current) => Math.min(3, current + 1))
+  const next = async () => {
+    if (!validateStep()) return
+    if (step === 1 && !(await validateCompanyEmail())) return
+    setStep((current) => Math.min(3, current + 1))
   }
 
   const submit = async (event: React.FormEvent) => {
@@ -122,7 +146,15 @@ function RegisterPage() {
                   <div className="sm:col-span-2 border-t border-slate-100 pt-4 mt-2">
                     <p className="text-sm font-bold text-slate-700 mb-4">Coordonnées principales</p>
                     <div className="grid gap-6 sm:grid-cols-2">
-                      <Field label="Email de contact" type="email" required value={form.contact_email} onChange={(value) => update('contact_email', value)} />
+                      <Field
+                        label="Email de l'entreprise"
+                        type="email"
+                        required
+                        value={form.contact_email}
+                        error={companyEmailError}
+                        onBlur={() => void validateCompanyEmail()}
+                        onChange={(value) => update('contact_email', value)}
+                      />
                       <Field label="Téléphone de contact" type="tel" required value={form.contact_phone} onChange={(value) => update('contact_phone', value)} />
                       <Field label="Adresse postale (Siège)" helpText="Où est située l'entreprise" value={form.address || ''} placeholder="123 Rue de Paris..." onChange={(value) => update('address', value)} />
                       <Field label="Site web" type="url" value={form.website || ''} placeholder="https://..." onChange={(value) => update('website', value)} />
@@ -186,8 +218,8 @@ function RegisterPage() {
                 <ChevronLeft className="h-4 w-4" />Retour
               </button>
               {step < 3 ? (
-                <button type="button" onClick={next} className="inline-flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700">
-                  Continuer<ChevronRight className="h-4 w-4" />
+                <button type="button" onClick={() => void next()} disabled={checkingCompanyEmail} className="inline-flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-60">
+                  {checkingCompanyEmail ? 'Vérification…' : 'Continuer'}<ChevronRight className="h-4 w-4" />
                 </button>
               ) : (
                 <button type="submit" disabled={loading || !form.accept_terms} className="inline-flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50">
@@ -202,11 +234,11 @@ function RegisterPage() {
   )
 }
 
-function Field({ label, type = 'text', value, placeholder, required, helpText, onChange }: { label: string; type?: string; value: string; placeholder?: string; required?: boolean; helpText?: string; onChange: (value: string) => void }) {
+function Field({ label, type = 'text', value, placeholder, required, helpText, error, onBlur, onChange }: { label: string; type?: string; value: string; placeholder?: string; required?: boolean; helpText?: string; error?: string; onBlur?: () => void; onChange: (value: string) => void }) {
   return (
     <label className="block text-sm font-semibold text-slate-700">{label} {required && <span className="text-rose-500">*</span>}
-      <input type={type} required={required} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors" />
-      {helpText && <p className="mt-1.5 text-xs text-slate-400 font-medium">{helpText}</p>}
+      <input type={type} required={required} value={value} placeholder={placeholder} onBlur={onBlur} onChange={(event) => onChange(event.target.value)} className={`mt-1.5 h-11 w-full rounded-xl border px-3 text-sm font-normal focus:ring-1 transition-colors ${error ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'}`} />
+      {error ? <p className="mt-1.5 text-xs font-medium text-rose-600">{error}</p> : helpText && <p className="mt-1.5 text-xs text-slate-400 font-medium">{helpText}</p>}
     </label>
   )
 }

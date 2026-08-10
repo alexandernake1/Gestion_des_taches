@@ -1,4 +1,6 @@
 from datetime import timedelta
+import re
+import unicodedata
 
 from rest_framework import generics, status, filters
 from rest_framework.decorators import api_view, permission_classes
@@ -16,7 +18,19 @@ import openpyxl
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 from common.permissions.permissions import IsTaskCreatorOrAssigneeOrManager, IsOwnerOrCompanyManager, IsCompanyOperational
 from common.utils import get_requested_company
-from .models import Task, TaskTemplate, Status, TaskComment, TaskAttachment, TaskReport, Project
+from domain.users.models import Role, User
+from .models import (
+    ApprovalAction,
+    ApprovalRequest,
+    ApprovalStatus,
+    Task,
+    TaskTemplate,
+    Status,
+    TaskComment,
+    TaskAttachment,
+    TaskReport,
+    Project,
+)
 from .serializers import (
     TaskSerializer,
     TaskListSerializer,
@@ -35,6 +49,9 @@ from .serializers import (
     TaskTemplateInstantiateSerializer,
     TaskBulkActionSerializer,
     ProjectSerializer,
+    ApprovalRequestSerializer,
+    ApprovalRequestCreateSerializer,
+    ApprovalRequestReviewSerializer,
 )
 
 
@@ -63,15 +80,58 @@ def get_accessible_task(request, task_id, include_inactive=False):
     )
 
 
+def link_task_participants_to_project(task):
+    """Keep project participants in sync when a task is assigned in context."""
+    if not task.project_id:
+        return
+    if task.assigned_to_id:
+        task.project.members.add(task.assigned_to)
+    if task.team_id:
+        task.project.teams.add(task.team)
+
+
+def notify_company_reviewers(task, *, title, message, dedupe_prefix):
+    """Notify active managers and owners who may review a request."""
+    from domain.notifications.models import NotificationType
+    from domain.notifications.services import create_smart_notification
+
+    reviewers = User.objects.filter(
+        company=task.company,
+        is_active=True,
+        role__in=[Role.MANAGER, Role.OWNER],
+    )
+    for reviewer in reviewers:
+        create_smart_notification(
+            recipient=reviewer,
+            notification_type=NotificationType.APPROVAL_REQUESTED,
+            title=title,
+            message=message,
+            task=task,
+            dedupe_key=f'{dedupe_prefix}:{reviewer.id}',
+        )
+
+
 def apply_task_filters(request, queryset):
     status_filter = request.query_params.get('status')
     priority_filter = request.query_params.get('priority')
     search = request.query_params.get('search')
     scope = request.query_params.get('scope')
+    project_filter = request.query_params.get('project')
+    team_filter = request.query_params.get('team')
+    assigned_filter = request.query_params.get('assigned_to')
 
-    if scope == 'team':
+    if scope == 'mine':
+        queryset = queryset.filter(creator=request.user)
+    elif scope == 'assigned':
+        queryset = queryset.filter(assigned_to=request.user)
+    elif scope == 'team':
         queryset = queryset.filter(team__isnull=False)
-
+    if project_filter:
+        queryset = queryset.filter(project_id=project_filter)
+    if team_filter:
+        queryset = queryset.filter(team_id=team_filter)
+    if assigned_filter:
+        queryset = queryset.filter(assigned_to_id=assigned_filter)
     if status_filter:
         queryset = queryset.filter(status=status_filter)
     if priority_filter:
@@ -106,7 +166,7 @@ def apply_task_filters(request, queryset):
         ),
     )
     return queryset.select_related(
-        'creator', 'assigned_to', 'team'
+        'creator', 'assigned_to', 'team', 'project'
     ).order_by('is_completed_rank', 'priority_rank', 'attention_rank', 'due_date', '-created_at')
 
 
@@ -115,7 +175,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
     
     permission_classes = [IsAuthenticated, IsCompanyOperational]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['status', 'priority', 'assigned_to', 'team', 'parent']
+    filterset_fields = ['status', 'priority', 'assigned_to', 'team', 'parent', 'project']
     search_fields = ['title', 'description']
     
     def get_queryset(self):
@@ -128,6 +188,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
             return TaskCreateSerializer
         return TaskListSerializer
     
+    @transaction.atomic
     def perform_create(self, serializer):
         # NOTE: la création réelle est implémentée dans la méthode `post` ci-dessous
         # car elle nécessite une logique d'assignation conditionelle qui dépend du rôle.
@@ -207,6 +268,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
             creator=request.user,
             assigned_to=assigned_to,
         )
+        link_task_participants_to_project(task)
 
         # Create history entry
         from .models import TaskHistory
@@ -285,6 +347,7 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Create history entries for changed fields
         from .models import TaskHistory
         new_task = serializer.instance
+        link_task_participants_to_project(new_task)
         
         for field, old_value in old_values.items():
             if field in {'assigned_to', 'team'}:
@@ -974,10 +1037,19 @@ class TaskReportListCreateView(generics.ListCreateAPIView):
             raise ValidationError({
                 'task': 'A pending report already exists for this task.'
             })
-        serializer.save(
+        report = serializer.save(
             task=task,
             requested_by=self.request.user,
             old_due_date=task.due_date
+        )
+        notify_company_reviewers(
+            task,
+            title='Demande de report à valider',
+            message=(
+                f"{self.request.user.full_name} demande de reporter la tâche "
+                f"« {task.title} » au {report.new_due_date:%d/%m/%Y}."
+            ),
+            dedupe_prefix=f'report-request:{report.id}',
         )
 
 
@@ -997,6 +1069,7 @@ class TaskReportDetailView(generics.RetrieveUpdateAPIView):
             return TaskReportReviewSerializer
         return TaskReportSerializer
     
+    @transaction.atomic
     def perform_update(self, serializer):
         report = self.get_object()
         
@@ -1084,13 +1157,212 @@ def pending_reports(request):
         )
     
     company = get_requested_company(request)
-    queryset = TaskReport.objects.filter(
-        status='pending',
-        task__company=company
+    queryset = TaskReport.objects.filter(task__company=company).select_related(
+        'task', 'requested_by', 'reviewed_by'
     )
+    status_filter = request.query_params.get('status', 'pending')
+    if status_filter != 'all':
+        if status_filter not in {'pending', 'approved', 'rejected'}:
+            raise ValidationError({'status': 'Invalid report status.'})
+        queryset = queryset.filter(status=status_filter)
     
     serializer = TaskReportSerializer(queryset, many=True)
     return Response(serializer.data)
+
+
+class ApprovalRequestListView(generics.ListAPIView):
+    """List approval requests visible to the current company member."""
+
+    permission_classes = [IsAuthenticated, IsCompanyOperational]
+    serializer_class = ApprovalRequestSerializer
+
+    def get_queryset(self):
+        company = get_requested_company(self.request)
+        if not company:
+            return ApprovalRequest.objects.none()
+        queryset = ApprovalRequest.objects.filter(company=company).select_related(
+            'task', 'requested_by', 'reviewed_by'
+        )
+        if not self.request.user.is_manager():
+            queryset = queryset.filter(requested_by=self.request.user)
+        status_filter = self.request.query_params.get('status')
+        if status_filter in ApprovalStatus.values:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
+
+
+class TaskApprovalRequestListCreateView(generics.ListCreateAPIView):
+    """List a task's approvals or request validation of a sensitive action."""
+
+    permission_classes = [IsAuthenticated, IsCompanyOperational]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ApprovalRequestCreateSerializer
+        return ApprovalRequestSerializer
+
+    def get_queryset(self):
+        task = get_accessible_task(self.request, self.kwargs['task_id'])
+        queryset = ApprovalRequest.objects.filter(task=task).select_related(
+            'task', 'requested_by', 'reviewed_by'
+        )
+        if not self.request.user.is_manager():
+            queryset = queryset.filter(requested_by=self.request.user)
+        return queryset
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        task = get_accessible_task(self.request, self.kwargs['task_id'])
+        user = self.request.user
+        action = serializer.validated_data.get('action', ApprovalAction.TASK_COMPLETION)
+
+        if user.is_manager():
+            raise ValidationError({
+                'detail': "Un responsable peut clôturer directement la tâche sans demander de validation."
+            })
+        if action == ApprovalAction.TASK_COMPLETION:
+            if not task.requires_completion_approval:
+                raise ValidationError({
+                    'detail': "Cette tâche ne nécessite pas de validation de clôture."
+                })
+            if task.status == Status.COMPLETED:
+                raise ValidationError({'detail': "Cette tâche est déjà terminée."})
+            if task.is_blocked:
+                raise ValidationError({
+                    'detail': "Terminez les dépendances et sous-tâches avant de demander la clôture."
+                })
+        if ApprovalRequest.objects.filter(
+            task=task,
+            action=action,
+            status=ApprovalStatus.PENDING,
+        ).exists():
+            raise ValidationError({
+                'detail': "Une demande de validation est déjà en attente pour cette tâche."
+            })
+
+        approval = serializer.save(
+            company=task.company,
+            task=task,
+            requested_by=user,
+        )
+        task.history.create(
+            changed_by=user,
+            field_name='approval_requested',
+            new_value=str(approval.id),
+        )
+        notify_company_reviewers(
+            task,
+            title='Clôture de tâche à valider',
+            message=f"{user.full_name} demande la validation de la tâche « {task.title} ».",
+            dedupe_prefix=f'approval-request:{approval.id}',
+        )
+
+
+class ApprovalRequestDetailView(generics.RetrieveAPIView):
+    """Retrieve or review one approval request."""
+
+    permission_classes = [IsAuthenticated, IsCompanyOperational]
+    serializer_class = ApprovalRequestSerializer
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        company = get_requested_company(self.request)
+        if not company:
+            return ApprovalRequest.objects.none()
+        queryset = ApprovalRequest.objects.filter(company=company).select_related(
+            'task', 'requested_by', 'reviewed_by'
+        )
+        if not self.request.user.is_manager():
+            queryset = queryset.filter(requested_by=self.request.user)
+        return queryset
+
+    @transaction.atomic
+    def patch(self, request, *args, **kwargs):
+        if not request.user.is_manager():
+            raise PermissionDenied("Seuls les responsables peuvent traiter une demande de validation.")
+
+        company = get_requested_company(request)
+        approval = get_object_or_404(
+            ApprovalRequest.objects.select_for_update().select_related(
+                'task', 'requested_by', 'reviewed_by'
+            ),
+            id=kwargs['id'],
+            company=company,
+        )
+        if approval.status != ApprovalStatus.PENDING:
+            raise ValidationError({'status': "Cette demande a déjà été traitée."})
+
+        serializer = ApprovalRequestReviewSerializer(
+            approval,
+            data=request.data,
+            partial=True,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        decision = serializer.validated_data['status']
+
+        if decision == ApprovalStatus.APPROVED:
+            task = Task.objects.select_for_update().get(pk=approval.task_id)
+            if task.status == Status.COMPLETED:
+                raise ValidationError({'task': "Cette tâche est déjà terminée."})
+            if task.is_blocked:
+                raise ValidationError({
+                    'task': "La tâche est bloquée par une dépendance ou une sous-tâche incomplète."
+                })
+            old_status = task.status
+            task.status = Status.COMPLETED
+            task.completed_at = timezone.now()
+            task.save(update_fields=['status', 'completed_at', 'updated_at'])
+            task.history.create(
+                changed_by=request.user,
+                field_name='status',
+                old_value=old_status,
+                new_value=Status.COMPLETED,
+            )
+            task.history.create(
+                changed_by=request.user,
+                field_name='approval_approved',
+                old_value=str(approval.id),
+                new_value=serializer.validated_data.get('review_comment', ''),
+            )
+            from .services import generate_next_occurrence
+            generate_next_occurrence(task)
+        else:
+            approval.task.history.create(
+                changed_by=request.user,
+                field_name='approval_rejected',
+                old_value=str(approval.id),
+                new_value=serializer.validated_data.get('review_comment', ''),
+            )
+
+        approval.status = decision
+        approval.review_comment = serializer.validated_data.get('review_comment', '')
+        approval.reviewed_by = request.user
+        approval.reviewed_at = timezone.now()
+        approval.save(update_fields=[
+            'status', 'review_comment', 'reviewed_by', 'reviewed_at'
+        ])
+
+        if approval.requested_by:
+            from domain.notifications.models import NotificationType
+            from domain.notifications.services import create_smart_notification
+            approved = decision == ApprovalStatus.APPROVED
+            create_smart_notification(
+                recipient=approval.requested_by,
+                notification_type=(
+                    NotificationType.APPROVAL_APPROVED
+                    if approved else NotificationType.APPROVAL_REJECTED
+                ),
+                title=f"Demande de clôture {'approuvée' if approved else 'refusée'}",
+                message=(
+                    f"Votre demande pour la tâche « {approval.task.title} » a été "
+                    f"{'approuvée' if approved else 'refusée'} par {request.user.full_name}."
+                ),
+                task=approval.task,
+                dedupe_key=f'approval-decision:{approval.id}:{decision}',
+            )
+
+        return Response(ApprovalRequestSerializer(approval, context={'request': request}).data)
 
 
 @extend_schema(
@@ -1113,9 +1385,27 @@ def export_tasks_excel(request):
     total_count = queryset.count()
     queryset = queryset[:EXPORT_LIMIT]
 
+    scope_titles = {
+        'mine': 'Tâches créées par moi',
+        'assigned': 'Tâches assignées à moi',
+        'team': "Tâches d'équipe",
+        'all': 'Toutes les tâches',
+    }
+    status_titles = dict(Status.choices)
+    priority_titles = dict(Task._meta.get_field('priority').choices)
+    title_parts = [scope_titles.get(request.query_params.get('scope'), 'Export des tâches')]
+    if request.query_params.get('status') in status_titles:
+        title_parts.append(status_titles[request.query_params['status']])
+    if request.query_params.get('priority') in priority_titles:
+        title_parts.append(f"Priorité {priority_titles[request.query_params['priority']].lower()}")
+    requested_title = request.query_params.get('title', '').strip()
+    export_title = requested_title or ' - '.join(title_parts)
+    export_title = export_title[:120]
+
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Tasks Export"
+    worksheet_title = re.sub(r'[\\/*?:\[\]]', '-', export_title).strip()[:31]
+    ws.title = worksheet_title or 'Export des tâches'
 
     # Define headers
     headers = ["ID", "Titre", "Statut", "Priorité", "Assigné à", "Équipe", "Échéance", "Créé le"]
@@ -1133,8 +1423,10 @@ def export_tasks_excel(request):
             task.created_at.strftime("%Y-%m-%d %H:%M"),
         ])
 
+    ascii_title = unicodedata.normalize('NFKD', export_title).encode('ascii', 'ignore').decode('ascii')
+    safe_filename = re.sub(r'[^a-zA-Z0-9._-]+', '_', ascii_title).strip('._') or 'export_taches'
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="export_taches_{timezone.localdate()}.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="{safe_filename}_{timezone.localdate()}.xlsx"'
     if total_count > EXPORT_LIMIT:
         response['X-Export-Truncated'] = f'true; total={total_count}; exported={EXPORT_LIMIT}'
     wb.save(response)
@@ -1149,7 +1441,7 @@ class ProjectListCreateView(generics.ListCreateAPIView):
         company = get_requested_company(self.request)
         if not company:
             return Project.objects.none()
-        qs = Project.objects.filter(company=company)
+        qs = Project.objects.filter(company=company).select_related('manager').prefetch_related('members', 'teams', 'teams__members')
         status_param = self.request.query_params.get('status')
         health_param = self.request.query_params.get('health')
         search_param = self.request.query_params.get('search')
@@ -1177,5 +1469,8 @@ class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
         company = get_requested_company(self.request)
         if not company:
             return Project.objects.none()
-        return Project.objects.filter(company=company)
+        return Project.objects.filter(company=company).select_related('manager').prefetch_related('members', 'teams', 'teams__members')
 
+    @transaction.atomic
+    def perform_update(self, serializer):
+        serializer.save()

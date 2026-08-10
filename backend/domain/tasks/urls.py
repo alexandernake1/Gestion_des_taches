@@ -23,7 +23,10 @@ from .views import (
     TaskReportDetailView,
     my_reports,
     pending_reports,
-    export_tasks_excel
+    export_tasks_excel,
+    ApprovalRequestListView,
+    TaskApprovalRequestListCreateView,
+    ApprovalRequestDetailView,
 )
 
 urlpatterns = [
@@ -33,6 +36,8 @@ urlpatterns = [
     path('bulk/', bulk_task_action, name='task_bulk_action'),
     path('workload/', workload_planning, name='task_workload'),
     path('export/', export_tasks_excel, name='export_tasks_excel'),
+    path('approvals/', ApprovalRequestListView.as_view(), name='approval_request_list'),
+    path('approvals/<int:id>/', ApprovalRequestDetailView.as_view(), name='approval_request_detail'),
     path('', TaskListCreateView.as_view(), name='task_list_create'),
     path('<int:id>/', TaskDetailView.as_view(), name='task_detail'),
     path('<int:task_id>/duplicate/', duplicate_task, name='task_duplicate'),
@@ -46,6 +51,7 @@ urlpatterns = [
     path('<int:task_id>/attachments/<int:attachment_id>/download/', download_attachment, name='task_attachment_download'),
     path('<int:task_id>/reports/', TaskReportListCreateView.as_view(), name='task_reports'),
     path('<int:task_id>/reports/<int:id>/', TaskReportDetailView.as_view(), name='task_report_detail'),
+    path('<int:task_id>/approvals/', TaskApprovalRequestListCreateView.as_view(), name='task_approval_requests'),
     path('my/', my_tasks, name='my_tasks'),
     path('assigned/', assigned_tasks, name='assigned_tasks'),
     path('daily-focus/', daily_focus, name='daily_focus'),

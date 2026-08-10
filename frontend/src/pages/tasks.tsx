@@ -4,6 +4,8 @@ import { Layout } from '@/components/layout/Layout'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
+import { useConfirmation } from '@/components/ui/confirmation'
 import { tasksService } from '@/services/tasks'
 import { authService } from '@/services/auth'
 import { subscriptionsService } from '@/services/subscriptions'
@@ -15,15 +17,40 @@ import { fr } from 'date-fns/locale'
 import { requireCompanyMember } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { TimelineView } from '@/components/tasks/TimelineView'
+import { api } from '@/utils/api'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/tasks')({
   beforeLoad: requireCompanyMember,
   component: TasksPage,
 })
 
+const exportScopeTitles: Record<string, string> = {
+  assigned: 'Tâches assignées à moi',
+  mine: 'Tâches créées par moi',
+  team: "Tâches d'équipe",
+  all: 'Toutes les tâches',
+}
+
+const exportStatusTitles: Record<string, string> = {
+  todo: 'À faire',
+  in_progress: 'En cours',
+  on_hold: 'En attente',
+  deferred: 'Reportées',
+  completed: 'Terminées',
+}
+
+const exportPriorityTitles: Record<string, string> = {
+  low: 'Priorité faible',
+  normal: 'Priorité normale',
+  high: 'Priorité haute',
+  urgent: 'Priorité urgente',
+}
+
 function TasksPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const confirmAction = useConfirmation()
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [priorityFilter, setPriorityFilter] = useState<string>('')
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') || '')
@@ -64,6 +91,9 @@ function TasksPage() {
 
   const [scope, setScope] = useState<string>(scopes[0].id)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exportTitle, setExportTitle] = useState('')
+  const [exporting, setExporting] = useState(false)
   
   // Fonctionnalités autorisées par le forfait
   const featureFlags = subscription?.plan_details?.feature_flags || {}
@@ -113,6 +143,11 @@ function TasksPage() {
     completed: tasks?.filter((task) => task.status === 'completed').length || 0,
   }
   const activeFilterCount = [statusFilter, priorityFilter, deferredSearch].filter(Boolean).length
+  const automaticExportTitle = [
+    exportScopeTitles[scope] || 'Export des tâches',
+    statusFilter ? exportStatusTitles[statusFilter] : '',
+    priorityFilter ? exportPriorityTitles[priorityFilter] : '',
+  ].filter(Boolean).join(' - ')
   const clearFilters = () => {
     setStatusFilter('')
     setPriorityFilter('')
@@ -120,21 +155,39 @@ function TasksPage() {
     window.history.replaceState({}, '', window.location.pathname)
   }
 
+  const openExportModal = () => {
+    setExportTitle(automaticExportTitle)
+    setExportModalOpen(true)
+  }
+
   const handleExport = async () => {
+    const finalTitle = exportTitle.trim() || automaticExportTitle
+    setExporting(true)
     try {
-      const { api } = await import('@/utils/api')
-      const blob = await api.download('/tasks/export/')
+      const params = new URLSearchParams()
+      Object.entries({ ...filters, scope, title: finalTitle }).forEach(([key, value]) => {
+        if (value) params.set(key, String(value))
+      })
+      const blob = await api.download(`/tasks/export/?${params.toString()}`)
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `export_taches.xlsx`
+      const safeTitle = finalTitle
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'export_taches'
+      a.download = `${safeTitle}_${new Date().toISOString().slice(0, 10)}.xlsx`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
+      setExportModalOpen(false)
     } catch (err) {
       console.error(err)
       alert("Erreur lors de l'export.")
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -145,6 +198,7 @@ function TasksPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
     },
+    onError: (error) => toast.error(error instanceof Error ? error.message : 'Changement de statut impossible.'),
   })
   const bulkMutation = useMutation({
     mutationFn: (data: { action: 'status' | 'archive'; status?: Status }) =>
@@ -164,6 +218,21 @@ function TasksPage() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
     },
   })
+
+  const changeTaskStatus = (taskId: number, newStatus: Status) => {
+    const task = tasks?.find((item) => item.id === taskId)
+    if (newStatus === 'completed' && isEmployee && task?.requires_completion_approval) {
+      toast.info('Validation requise avant clôture', {
+        description: 'Ouvrez la tâche pour envoyer votre demande au responsable.',
+        action: {
+          label: 'Ouvrir',
+          onClick: () => navigate({ to: '/tasks/$taskId', params: { taskId: String(taskId) } }),
+        },
+      })
+      return
+    }
+    updateStatusMutation.mutate({ taskId, newStatus })
+  }
 
   const getStatusBadge = (status: Status) => {
     const variants = {
@@ -230,7 +299,7 @@ function TasksPage() {
             </div>
             <div className="flex shrink-0 items-center gap-3">
               {hasExports && (
-                <Button size="lg" variant="secondary" onClick={handleExport} className="shrink-0">
+                <Button size="lg" variant="secondary" onClick={openExportModal} className="shrink-0">
                   Exporter (Excel)
                 </Button>
               )}
@@ -298,7 +367,15 @@ function TasksPage() {
             <span className="px-2 text-sm font-bold">{selectedIds.length} tâche{selectedIds.length > 1 ? 's' : ''} sélectionnée{selectedIds.length > 1 ? 's' : ''}</span>
             <div className="flex flex-1 flex-wrap gap-2 sm:justify-end">
               <select defaultValue="" aria-label="Changer le statut des tâches sélectionnées" onChange={(event) => {
-                if (event.target.value) bulkMutation.mutate({ action: 'status', status: event.target.value as Status })
+                const nextStatus = event.target.value as Status
+                const selectionRequiresApproval = nextStatus === 'completed' && isEmployee && tasks?.some(
+                  (task) => selectedIds.includes(task.id) && task.requires_completion_approval,
+                )
+                if (selectionRequiresApproval) {
+                  toast.info('Certaines tâches exigent une validation individuelle avant clôture.')
+                } else if (nextStatus) {
+                  bulkMutation.mutate({ action: 'status', status: nextStatus })
+                }
                 event.target.value = ''
               }} className="h-9 rounded-lg border border-white/20 bg-white/10 px-3 text-xs font-semibold text-white">
                 <option value="" className="text-slate-900">Changer le statut…</option>
@@ -307,7 +384,17 @@ function TasksPage() {
                 <option value="on_hold" className="text-slate-900">En attente</option>
                 <option value="completed" className="text-slate-900">Terminée</option>
               </select>
-              {!isEmployee && <button type="button" onClick={() => bulkMutation.mutate({ action: 'archive' })} className="h-9 rounded-lg bg-rose-500 px-3 text-xs font-bold hover:bg-rose-600">Archiver</button>}
+              {!isEmployee && <button type="button" onClick={async () => {
+                const taskCount = selectedIds.length
+                const { confirmed } = await confirmAction({
+                  title: `Archiver ${taskCount} tâche${taskCount > 1 ? 's' : ''} ?`,
+                  description: `Les ${taskCount} tâches sélectionnées ne figureront plus dans les listes actives.`,
+                  confirmLabel: 'Archiver',
+                  tone: 'danger',
+                  impacts: ['Les tâches pourront toujours être retrouvées dans les données archivées.'],
+                })
+                if (confirmed) bulkMutation.mutate({ action: 'archive' })
+              }} className="h-9 rounded-lg bg-rose-500 px-3 text-xs font-bold hover:bg-rose-600">Archiver</button>}
               <button type="button" onClick={() => setSelectedIds([])} className="h-9 rounded-lg px-3 text-xs font-bold text-indigo-100 hover:bg-white/10">Annuler</button>
             </div>
           </div>
@@ -374,7 +461,7 @@ function TasksPage() {
             tasks={tasks || []}
             onOpen={(task) => navigate({ to: '/tasks/$taskId', params: { taskId: String(task.id) } })}
             getPriorityBadge={getPriorityBadge}
-            onStatusChange={(taskId, newStatus) => updateStatusMutation.mutate({ taskId, newStatus })}
+            onStatusChange={changeTaskStatus}
           />
         ) : view === 'calendar' ? (
           <CalendarView
@@ -425,6 +512,52 @@ function TasksPage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        title="Exporter les tâches"
+        description="Le fichier reprend exactement le périmètre et les filtres actuellement sélectionnés."
+      >
+        <form
+          className="space-y-5"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void handleExport()
+          }}
+        >
+          <div>
+            <label htmlFor="export-title" className="mb-1.5 block text-sm font-semibold text-foreground">
+              Titre du fichier
+            </label>
+            <input
+              id="export-title"
+              value={exportTitle}
+              onChange={(event) => setExportTitle(event.target.value)}
+              placeholder={automaticExportTitle}
+              maxLength={120}
+              className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              Titre automatique : {automaticExportTitle}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+            Périmètre : <strong className="text-foreground">{exportScopeTitles[scope] || 'Export des tâches'}</strong>
+            {statusFilter && <> · Statut : <strong className="text-foreground">{exportStatusTitles[statusFilter]}</strong></>}
+            {priorityFilter && <> · <strong className="text-foreground">{exportPriorityTitles[priorityFilter]}</strong></>}
+            {deferredSearch && <> · Recherche : <strong className="text-foreground">{deferredSearch}</strong></>}
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setExportModalOpen(false)} disabled={exporting}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={exporting}>
+              {exporting ? 'Export en cours…' : 'Télécharger le fichier Excel'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </Layout>
   )
 }

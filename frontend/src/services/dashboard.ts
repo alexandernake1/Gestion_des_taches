@@ -79,7 +79,9 @@ export interface DailyFocus {
 
 export const dashboardService = {
   async getCompanyStatistics(teamId?: number | string) {
-    return api.get<CompanyStatistics>('/dashboard/company/', { params: { team_id: teamId } })
+    return teamId === undefined
+      ? api.get<CompanyStatistics>('/dashboard/company/')
+      : api.get<CompanyStatistics>('/dashboard/company/', { params: { team_id: teamId } })
   },
 
   async getUserStatistics() {
@@ -87,11 +89,14 @@ export const dashboardService = {
   },
 
   async getRecentActivity(limit = 10, teamId?: number | string) {
-    return api.get<ActivityItem[]>('/dashboard/activity/', { params: { limit, team_id: teamId } })
+    const params = teamId === undefined ? { limit } : { limit, team_id: teamId }
+    return api.get<ActivityItem[]>('/dashboard/activity/', { params })
   },
 
   async getPerformanceMetrics(teamId?: number | string) {
-    return api.get<PerformanceMetrics>('/dashboard/performance/', { params: { team_id: teamId } })
+    return teamId === undefined
+      ? api.get<PerformanceMetrics>('/dashboard/performance/')
+      : api.get<PerformanceMetrics>('/dashboard/performance/', { params: { team_id: teamId } })
   },
 
   async getDailyFocus() {

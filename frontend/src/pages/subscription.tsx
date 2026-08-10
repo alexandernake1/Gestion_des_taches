@@ -19,6 +19,37 @@ export const Route = createFileRoute('/subscription')({
   component: SubscriptionPage,
 })
 
+const featureLabels: Record<string, string> = {
+  audit_logs: 'Journal d’audit',
+  custom_branding: 'Personnalisation de la marque',
+  has_kanban_view: 'Vue Tableau Kanban',
+  has_calendar_view: 'Vue Calendrier',
+  has_timeline_view: 'Vue Chronologie / Gantt',
+  has_reports: 'Rapports & Statistiques',
+  has_exports: 'Export Excel des tâches',
+  has_projects: 'Gestion de projets',
+}
+
+function normalizedPlanFeatures(flags: Record<string, boolean>) {
+  const normalized = { ...flags }
+  const aliases: Record<string, string[]> = {
+    has_calendar_view: ['calendar_view'],
+    has_kanban_view: ['kanban_view'],
+    has_timeline_view: ['timeline_view'],
+    has_reports: ['reports'],
+    has_exports: ['advanced_export', 'exports'],
+  }
+
+  Object.entries(aliases).forEach(([canonical, legacyKeys]) => {
+    const hasLegacyKey = legacyKeys.some((key) => key in flags)
+    if (normalized[canonical] === undefined && hasLegacyKey) {
+      normalized[canonical] = legacyKeys.some((key) => flags[key] === true)
+    }
+    legacyKeys.forEach((key) => delete normalized[key])
+  })
+  return Object.entries(normalized)
+}
+
 function SubscriptionPage() {
   const goBack = useSmartBack('/dashboard')
   const queryClient = useQueryClient()
@@ -276,22 +307,7 @@ function SubscriptionPage() {
                         <HardDrive className="h-4 w-4 text-slate-400 shrink-0" />
                         <span>{plan.storage_limit_mb === 0 ? 'Stockage illimité' : `${plan.storage_limit_mb} Mo de stockage`}</span>
                       </li>
-                      {Object.entries(plan.feature_flags).map(([key, enabled]) => {
-                        const featureLabels: Record<string, string> = {
-                          calendar_view: 'Vue Calendrier',
-                          advanced_export: 'Exports avancés',
-                          audit_logs: 'Journal d’audit',
-                          custom_branding: 'Personnalisation de la marque',
-                          has_kanban_view: 'Vue Tableau Kanban',
-                          has_calendar_view: 'Vue Calendrier',
-                          has_timeline_view: 'Vue Chronologie / Gantt',
-                          has_reports: 'Rapports & Statistiques',
-                          has_exports: 'Exportations de données',
-                          kanban_view: 'Vue Tableau Kanban',
-                          timeline_view: 'Vue Chronologie / Gantt',
-                          reports: 'Rapports & Statistiques',
-                          exports: 'Exportations de données',
-                        }
+                      {normalizedPlanFeatures(plan.feature_flags).map(([key, enabled]) => {
                         const labelText = featureLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
                         return (
                           <li key={key} className={`flex items-center gap-2 ${enabled ? 'text-slate-700' : 'text-slate-400 line-through'}`}>

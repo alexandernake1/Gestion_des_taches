@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { useConfirmation } from '@/components/ui/confirmation'
 import { companiesService } from '@/services/companies'
 import { requirePlatformAdmin } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -20,12 +21,18 @@ export const Route = createFileRoute('/admin/companies')({
 function AdminCompaniesPage() {
   const goBack = useSmartBack('/dashboard')
   const queryClient = useQueryClient()
+  const confirmAction = useConfirmation()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     description: '',
     website: '',
+    contact_email: '',
+    contact_phone: '',
+    address: '',
+    timezone: 'Africa/Abidjan',
+    language: 'fr',
   })
   const [formError, setFormError] = useState('')
 
@@ -39,7 +46,9 @@ function AdminCompaniesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
       setIsModalOpen(false)
-      setFormData({ name: '', slug: '', description: '', website: '' })
+      setFormData({
+        name: '', slug: '', description: '', website: '', contact_email: '', contact_phone: '', address: '', timezone: 'Africa/Abidjan', language: 'fr',
+      })
       setFormError('')
     },
     onError: (err: Error) => {
@@ -62,16 +71,38 @@ function AdminCompaniesPage() {
       .replace(/[^\w\s-]/g, '')
       .replace(/[\s_-]+/g, '-')
       .replace(/^-+|-+$/g, '')
-    setFormData({ ...formData, name, slug })
+    setFormData((current) => ({ ...current, name, slug }))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name || !formData.slug) {
+    if (!formData.name || !formData.slug || !formData.contact_email || !formData.contact_phone) {
       setFormError('Le nom et le slug de la société sont obligatoires.')
       return
     }
     createCompanyMutation.mutate(formData)
+  }
+
+  const handleToggleCompanyStatus = async (company: NonNullable<typeof companies>[number]) => {
+    const deactivating = company.is_active
+    const { confirmed } = await confirmAction({
+      title: `${deactivating ? 'Désactiver' : 'Réactiver'} « ${company.name} » ?`,
+      description: deactivating
+        ? 'Les membres de cette entreprise perdront l’accès à leur espace.'
+        : 'Les membres de cette entreprise pourront de nouveau accéder à leur espace.',
+      confirmLabel: deactivating ? 'Désactiver l’entreprise' : 'Réactiver l’entreprise',
+      tone: deactivating ? 'danger' : 'warning',
+      impacts: deactivating
+        ? ['Les données sont conservées et pourront être restaurées en réactivant l’entreprise.']
+        : ['Les accès précédemment configurés seront rétablis.'],
+      requireText: deactivating ? 'DÉSACTIVER' : undefined,
+    })
+    if (confirmed) {
+      toggleCompanyStatusMutation.mutate({
+        id: company.id,
+        is_active: !company.is_active,
+      })
+    }
   }
 
   if (isLoading) {
@@ -167,12 +198,8 @@ function AdminCompaniesPage() {
                     variant={company.is_active ? 'ghost' : 'secondary'}
                     size="sm"
                     className="flex items-center gap-1.5 text-xs"
-                    onClick={() =>
-                      toggleCompanyStatusMutation.mutate({
-                        id: company.id,
-                        is_active: !company.is_active,
-                      })
-                    }
+                    onClick={() => handleToggleCompanyStatus(company)}
+                    disabled={toggleCompanyStatusMutation.isPending}
                   >
                     <Power className="h-3.5 w-3.5" />
                     <span>{company.is_active ? 'Désactiver' : 'Réactiver'}</span>
@@ -203,6 +230,49 @@ function AdminCompaniesPage() {
                 required
               />
             </div>
+
+            <fieldset className="rounded-xl border border-slate-200 p-4">
+              <legend className="px-1 text-xs font-bold uppercase tracking-wide text-slate-500">Coordonnées principales</legend>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-xs font-bold text-slate-700">Email de l'entreprise *
+                  <input
+                    type="email"
+                    value={formData.contact_email}
+                    onChange={(e) => setFormData((current) => ({ ...current, contact_email: e.target.value }))}
+                    placeholder="contact@entreprise.com"
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    required
+                  />
+                </label>
+                <label className="block text-xs font-bold text-slate-700">Téléphone de contact *
+                  <input
+                    type="tel"
+                    value={formData.contact_phone}
+                    onChange={(e) => setFormData((current) => ({ ...current, contact_phone: e.target.value }))}
+                    placeholder="+225 …"
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    required
+                  />
+                </label>
+                <label className="block text-xs font-bold text-slate-700">Adresse postale
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData((current) => ({ ...current, address: e.target.value }))}
+                    placeholder="Siège de l'entreprise"
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  />
+                </label>
+                <label className="block text-xs font-bold text-slate-700">Fuseau horaire
+                  <select value={formData.timezone} onChange={(e) => setFormData((current) => ({ ...current, timezone: e.target.value }))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                    <option value="Africa/Abidjan">Afrique/Abidjan (GMT)</option>
+                    <option value="Africa/Dakar">Afrique/Dakar (GMT)</option>
+                    <option value="Europe/Paris">Europe/Paris</option>
+                    <option value="UTC">UTC</option>
+                  </select>
+                </label>
+              </div>
+            </fieldset>
 
             <div>
               <label className="block text-xs font-bold text-slate-700">Identifiant Slug *</label>

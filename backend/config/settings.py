@@ -194,7 +194,10 @@ SIMPLE_JWT = {
 
 JWT_COOKIE_NAME = 'access_token'
 JWT_REFRESH_COOKIE_NAME = 'refresh_token'
-JWT_COOKIE_SECURE = not DEBUG  # True in prod
+JWT_COOKIE_SECURE = os.getenv(
+    'JWT_COOKIE_SECURE',
+    'True' if not DEBUG else 'False',
+).lower() == 'true'
 JWT_COOKIE_HTTP_ONLY = True
 JWT_COOKIE_SAMESITE = 'Lax'
 
@@ -268,4 +271,3 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Gestion des Tâches <noreply@gestiontaches.com>')
 APP_FRONTEND_URL = os.getenv('APP_FRONTEND_URL', 'http://localhost:5173')
-

@@ -54,7 +54,7 @@ function NotificationsPage() {
   const visibleNotifications = notifications?.filter((notification) => {
     if (filter === 'unread') return !notification.is_read
     if (filter === 'action') {
-      return ['task_due_soon', 'task_overdue', 'payment_failed', 'subscription_suspended'].includes(notification.type)
+      return ['approval_requested', 'task_due_soon', 'task_overdue', 'payment_failed', 'subscription_suspended'].includes(notification.type)
     }
     return true
   })
@@ -167,7 +167,7 @@ function NotificationsPage() {
 }
 
 function NotificationCard({ notification, onMarkAsRead, onOpen, isMarking }: { notification: Notification; onMarkAsRead: () => void; onOpen: () => void; isMarking: boolean }) {
-  const requiresAction = ['task_overdue', 'payment_failed', 'subscription_suspended'].includes(notification.type)
+  const requiresAction = ['approval_requested', 'task_overdue', 'payment_failed', 'subscription_suspended'].includes(notification.type)
   const isReminder = notification.type === 'task_due_soon'
   return (
     <Card className={`transition-colors ${requiresAction ? 'border-rose-200 bg-rose-50/50' : !notification.is_read ? 'bg-blue-50 border-blue-200' : ''}`}>

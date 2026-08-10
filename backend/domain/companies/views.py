@@ -2,11 +2,12 @@ from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from common.permissions.permissions import IsAdministrator, IsSameCompany, IsSuperUser
 from common.utils import get_requested_company
-from .models import Company, SubscriptionPlan, CompanySubscription, PaymentTransaction, SystemAnnouncement
+from .models import Company, SubscriptionPlan, CompanySubscription, PaymentTransaction, SystemAnnouncement, PlatformAuditLog
 from .serializers import (
     CompanySerializer,
     CompanyCreateSerializer,
@@ -18,8 +19,23 @@ from .serializers import (
     PaymentTransactionSerializer,
     StartTestPaymentSerializer,
     SystemAnnouncementSerializer,
+    PlatformAuditLogSerializer,
 )
 from .services import complete_test_payment, start_test_payment
+
+
+def log_platform_audit(request, *, category, action, entity_label='', company=None, details=None):
+    """Persist sensitive platform actions without exposing tenant data to other tenants."""
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return
+    PlatformAuditLog.objects.create(
+        actor=request.user,
+        company=company,
+        category=category,
+        action=action,
+        entity_label=entity_label,
+        details=details or {},
+    )
 
 
 class CompanyListCreateView(generics.ListCreateAPIView):
@@ -67,6 +83,14 @@ class CompanyListCreateView(generics.ListCreateAPIView):
         # Create seed data for the new company to make it look "plausible"
         from .seed import seed_company_data
         seed_company_data(company, self.request.user)
+        log_platform_audit(
+            self.request,
+            category='company',
+            action='company_created',
+            entity_label=company.name,
+            company=company,
+            details={'slug': company.slug, 'contact_email': company.contact_email},
+        )
 
 
 class CompanyDetailView(generics.RetrieveUpdateAPIView):
@@ -95,6 +119,27 @@ class CompanyDetailView(generics.RetrieveUpdateAPIView):
         if self.request.method in ['PUT', 'PATCH']:
             return CompanyUpdateSerializer
         return CompanySerializer
+
+    def perform_update(self, serializer):
+        previous = {
+            field: getattr(serializer.instance, field)
+            for field in serializer.validated_data
+        }
+        company = serializer.save()
+        changes = {
+            field: {'from': previous[field], 'to': getattr(company, field)}
+            for field in previous
+            if previous[field] != getattr(company, field)
+        }
+        if changes:
+            log_platform_audit(
+                self.request,
+                category='company',
+                action='company_updated',
+                entity_label=company.name,
+                company=company,
+                details={'changes': changes},
+            )
 
     @extend_schema(description="Get company details", responses=CompanySerializer)
     def get(self, request, *args, **kwargs):
@@ -231,6 +276,16 @@ class AdminSubscriptionPlanListCreateView(generics.ListCreateAPIView):
     serializer_class = SubscriptionPlanSerializer
     queryset = SubscriptionPlan.objects.all()
 
+    def perform_create(self, serializer):
+        plan = serializer.save()
+        log_platform_audit(
+            self.request,
+            category='plan',
+            action='plan_created',
+            entity_label=plan.name,
+            details={'code': plan.code, 'price': str(plan.price)},
+        )
+
 
 class AdminSubscriptionPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Platform super-admin endpoint to manage a specific subscription plan."""
@@ -243,6 +298,30 @@ class AdminSubscriptionPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Soft delete: mark as inactive to preserve foreign key relations
         instance.is_active = False
         instance.save(update_fields=['is_active', 'updated_at'])
+        log_platform_audit(
+            self.request,
+            category='plan',
+            action='plan_archived',
+            entity_label=instance.name,
+            details={'code': instance.code},
+        )
+
+    def perform_update(self, serializer):
+        previous = {field: getattr(serializer.instance, field) for field in serializer.validated_data}
+        plan = serializer.save()
+        changes = {
+            field: {'from': str(previous[field]), 'to': str(getattr(plan, field))}
+            for field in previous
+            if previous[field] != getattr(plan, field)
+        }
+        if changes:
+            log_platform_audit(
+                self.request,
+                category='plan',
+                action='plan_updated',
+                entity_label=plan.name,
+                details={'changes': changes},
+            )
 
 
 class AdminCompanySubscriptionListView(generics.ListAPIView):
@@ -262,6 +341,24 @@ class AdminCompanySubscriptionDetailView(generics.RetrieveUpdateAPIView):
         if self.request.method in ['PUT', 'PATCH']:
             return AdminCompanySubscriptionUpdateSerializer
         return CompanySubscriptionSerializer
+
+    def perform_update(self, serializer):
+        previous = {field: getattr(serializer.instance, field) for field in serializer.validated_data}
+        subscription = serializer.save()
+        changes = {
+            field: {'from': previous[field], 'to': getattr(subscription, field)}
+            for field in previous
+            if previous[field] != getattr(subscription, field)
+        }
+        if changes:
+            log_platform_audit(
+                self.request,
+                category='subscription',
+                action='subscription_updated',
+                entity_label=subscription.company.name,
+                company=subscription.company,
+                details={'changes': changes},
+            )
 
 
 @extend_schema(
@@ -378,3 +475,42 @@ class AdminSystemAnnouncementViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         from .models import SystemAnnouncement
         return SystemAnnouncement.objects.all()
+
+    def perform_create(self, serializer):
+        announcement = serializer.save()
+        log_platform_audit(
+            self.request,
+            category='announcement',
+            action='announcement_created',
+            entity_label=announcement.message[:100],
+            details={'type': announcement.type, 'target_audience': announcement.target_audience},
+        )
+
+    def perform_update(self, serializer):
+        announcement = serializer.save()
+        log_platform_audit(
+            self.request,
+            category='announcement',
+            action='announcement_updated',
+            entity_label=announcement.message[:100],
+            details={'is_active': announcement.is_active},
+        )
+
+    def perform_destroy(self, instance):
+        log_platform_audit(
+            self.request,
+            category='announcement',
+            action='announcement_deleted',
+            entity_label=instance.message[:100],
+        )
+        instance.delete()
+
+
+class PlatformAuditLogListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsSuperUser]
+    serializer_class = PlatformAuditLogSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['category', 'company']
+
+    def get_queryset(self):
+        return PlatformAuditLog.objects.select_related('actor', 'company')

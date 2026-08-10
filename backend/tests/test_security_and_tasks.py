@@ -1,5 +1,7 @@
 from datetime import date, timedelta
+from io import BytesIO
 
+import openpyxl
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -15,7 +17,17 @@ from domain.companies.models import (
     PaymentTransaction,
     SubscriptionPlan,
 )
-from domain.tasks.models import Task, TaskHistory, TaskReport, TaskTemplate
+from domain.tasks.models import (
+    ApprovalRequest,
+    ApprovalStatus,
+    Project,
+    Status,
+    Task,
+    TaskHistory,
+    TaskReport,
+    TaskTemplate,
+)
+from domain.teams.models import Team
 from domain.users.models import Role, User, UserAuditLog
 from domain.notifications.models import (
     Notification,
@@ -359,6 +371,182 @@ def test_company_registration_creates_owner_and_free_subscription(api_client):
     assert owner.company.subscription.status == 'active'
     assert response.data['access']
     assert response.data['payment'] is None
+
+
+@pytest.mark.django_db
+def test_company_email_is_checked_before_registration(api_client):
+    Company.objects.create(
+        name='Entreprise existante',
+        slug='entreprise-existante',
+        contact_email='contact@existing.test',
+    )
+
+    unavailable = api_client.get(
+        '/api/auth/register/company/email-availability/',
+        {'email': 'CONTACT@existing.test'},
+    )
+    available = api_client.get(
+        '/api/auth/register/company/email-availability/',
+        {'email': 'nouveau@example.test'},
+    )
+
+    assert unavailable.status_code == 200
+    assert unavailable.data == {
+        'available': False,
+        'message': "Cet email d'entreprise est déjà utilisé.",
+    }
+    assert available.status_code == 200
+    assert available.data['available'] is True
+
+
+@pytest.mark.django_db
+def test_company_registration_rejects_duplicate_company_email(api_client):
+    Company.objects.create(
+        name='Entreprise existante',
+        slug='entreprise-existante',
+        contact_email='contact@existing.test',
+    )
+    plan = SubscriptionPlan.objects.create(name='Gratuit', code='duplicate-email-free', price=0)
+
+    response = api_client.post(
+        '/api/auth/register/company/',
+        {
+            'company_name': 'Nouvelle entreprise',
+            'contact_email': 'CONTACT@existing.test',
+            'contact_phone': '+22670000000',
+            'plan_code': plan.code,
+            'first_name': 'Owner',
+            'last_name': 'Test',
+            'email': 'owner-duplicate-check@example.test',
+            'password': 'StrongPass123!',
+            'password_confirm': 'StrongPass123!',
+            'accept_terms': True,
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.data['contact_email'] == ["Cet email d'entreprise est déjà utilisé."]
+
+
+@pytest.mark.django_db
+def test_task_export_uses_scope_filters_and_custom_title(api_client, tenant_data):
+    manager = tenant_data['manager_a']
+    Task.objects.create(
+        title='Tâche du manager',
+        company=tenant_data['company_a'],
+        creator=manager,
+        assigned_to=manager,
+    )
+    api_client.force_authenticate(manager)
+
+    response = api_client.get(
+        '/api/tasks/export/',
+        {'scope': 'mine', 'title': 'Mes tâches prioritaires'},
+    )
+
+    assert response.status_code == 200
+    assert 'Mes_taches_prioritaires_' in response['Content-Disposition']
+    workbook = openpyxl.load_workbook(BytesIO(response.content), read_only=True)
+    worksheet = workbook.active
+    assert worksheet.title == 'Mes tâches prioritaires'
+    exported_titles = [row[1] for row in worksheet.iter_rows(min_row=2, values_only=True)]
+    assert exported_titles == ['Tâche du manager']
+
+
+@pytest.mark.django_db
+def test_project_can_include_multiple_company_teams(api_client, tenant_data):
+    manager = tenant_data['manager_a']
+    team_one = Team.objects.create(
+        name='Équipe Produit',
+        company=tenant_data['company_a'],
+        leader=manager,
+    )
+    team_two = Team.objects.create(
+        name='Équipe Technique',
+        company=tenant_data['company_a'],
+        leader=manager,
+    )
+    api_client.force_authenticate(manager)
+
+    response = api_client.post(
+        '/api/projects/',
+        {
+            'name': 'Projet transverse',
+            'status': 'in_progress',
+            'health': 'on_track',
+            'teams': [team_one.id, team_two.id],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 201
+    project = Project.objects.get(id=response.data['id'])
+    assert set(project.teams.values_list('id', flat=True)) == {team_one.id, team_two.id}
+    assert {team['name'] for team in response.data['team_details']} == {
+        'Équipe Produit',
+        'Équipe Technique',
+    }
+
+
+@pytest.mark.django_db
+def test_project_rejects_team_from_another_company(api_client, tenant_data):
+    foreign_team = Team.objects.create(
+        name='Équipe externe',
+        company=tenant_data['company_b'],
+        leader=tenant_data['employee_b'],
+    )
+    api_client.force_authenticate(tenant_data['manager_a'])
+
+    response = api_client.post(
+        '/api/projects/',
+        {
+            'name': 'Projet invalide',
+            'status': 'in_progress',
+            'health': 'on_track',
+            'teams': [foreign_team.id],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert 'teams' in response.data
+
+
+@pytest.mark.django_db
+def test_task_assignment_automatically_links_person_and_team_to_project(api_client, tenant_data):
+    manager = tenant_data['manager_a']
+    employee = tenant_data['employee_a']
+    team = Team.objects.create(
+        name='Équipe Livraison',
+        company=tenant_data['company_a'],
+        leader=manager,
+    )
+    team.members.add(employee)
+    project = Project.objects.create(
+        name='Projet Livraison',
+        company=tenant_data['company_a'],
+        manager=manager,
+    )
+    api_client.force_authenticate(manager)
+
+    response = api_client.post(
+        '/api/tasks/',
+        {
+            'title': 'Préparer la livraison',
+            'project': project.id,
+            'assigned_to': employee.id,
+            'team': team.id,
+            'status': 'todo',
+            'priority': 'normal',
+        },
+        format='json',
+    )
+
+    assert response.status_code == 201
+    project.refresh_from_db()
+    assert project.members.filter(id=employee.id).exists()
+    assert project.teams.filter(id=team.id).exists()
 
 
 @pytest.mark.django_db
@@ -1473,3 +1661,193 @@ def test_user_invitation_sends_email(api_client, tenant_data, mailoutbox):
     assert resp.data['temporary_password'] in mail.body
 
 
+@pytest.mark.django_db
+def test_employee_requests_completion_and_manager_approves(api_client, tenant_data):
+    task = Task.objects.create(
+        title='Livrable à valider',
+        company=tenant_data['company_a'],
+        creator=tenant_data['manager_a'],
+        assigned_to=tenant_data['employee_a'],
+        status=Status.IN_PROGRESS,
+        requires_completion_approval=True,
+    )
+    Notification.objects.all().delete()
+
+    api_client.force_authenticate(tenant_data['employee_a'])
+    direct_completion = api_client.patch(
+        f'/api/tasks/{task.id}/',
+        {'status': Status.COMPLETED},
+        format='json',
+    )
+    assert direct_completion.status_code == 400
+    task.refresh_from_db()
+    assert task.status == Status.IN_PROGRESS
+
+    requested = api_client.post(
+        f'/api/tasks/{task.id}/approvals/',
+        {
+            'action': 'task_completion',
+            'reason': 'Le livrable est terminé et les contrôles ont été effectués.',
+        },
+        format='json',
+    )
+    assert requested.status_code == 201
+    approval_id = requested.data['id']
+    assert requested.data['status'] == ApprovalStatus.PENDING
+    assert Notification.objects.filter(
+        recipient=tenant_data['manager_a'],
+        type=NotificationType.APPROVAL_REQUESTED,
+        task=task,
+    ).exists()
+
+    duplicate = api_client.post(
+        f'/api/tasks/{task.id}/approvals/',
+        {'action': 'task_completion', 'reason': 'Seconde demande.'},
+        format='json',
+    )
+    assert duplicate.status_code == 400
+
+    api_client.force_authenticate(tenant_data['manager_a'])
+    pending = api_client.get('/api/tasks/approvals/?status=pending')
+    assert pending.status_code == 200
+    pending_results = pending.data.get('results', pending.data)
+    assert approval_id in [item['id'] for item in pending_results]
+
+    reviewed = api_client.patch(
+        f'/api/tasks/approvals/{approval_id}/',
+        {'status': ApprovalStatus.APPROVED, 'review_comment': 'Livrable conforme.'},
+        format='json',
+    )
+    assert reviewed.status_code == 200
+    assert reviewed.data['reviewed_by'] == tenant_data['manager_a'].id
+
+    task.refresh_from_db()
+    assert task.status == Status.COMPLETED
+    assert task.completed_at is not None
+    assert TaskHistory.objects.filter(
+        task=task,
+        field_name='approval_approved',
+        changed_by=tenant_data['manager_a'],
+    ).exists()
+    assert Notification.objects.filter(
+        recipient=tenant_data['employee_a'],
+        type=NotificationType.APPROVAL_APPROVED,
+        task=task,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_rejected_completion_requires_comment_and_preserves_task(api_client, tenant_data):
+    task = Task.objects.create(
+        title='Livrable incomplet',
+        company=tenant_data['company_a'],
+        creator=tenant_data['manager_a'],
+        assigned_to=tenant_data['employee_a'],
+        status=Status.IN_PROGRESS,
+        requires_completion_approval=True,
+    )
+    approval = ApprovalRequest.objects.create(
+        company=tenant_data['company_a'],
+        task=task,
+        requested_by=tenant_data['employee_a'],
+        reason='Travail présenté pour contrôle.',
+    )
+
+    api_client.force_authenticate(tenant_data['manager_a'])
+    missing_reason = api_client.patch(
+        f'/api/tasks/approvals/{approval.id}/',
+        {'status': ApprovalStatus.REJECTED},
+        format='json',
+    )
+    assert missing_reason.status_code == 400
+
+    rejected = api_client.patch(
+        f'/api/tasks/approvals/{approval.id}/',
+        {
+            'status': ApprovalStatus.REJECTED,
+            'review_comment': 'Le procès-verbal de recette est manquant.',
+        },
+        format='json',
+    )
+    assert rejected.status_code == 200
+    assert rejected.data['status'] == ApprovalStatus.REJECTED
+    task.refresh_from_db()
+    assert task.status == Status.IN_PROGRESS
+    assert Notification.objects.filter(
+        recipient=tenant_data['employee_a'],
+        type=NotificationType.APPROVAL_REJECTED,
+        task=task,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_approval_requests_are_tenant_scoped(api_client, tenant_data):
+    task = Task.objects.create(
+        title='Validation interne A',
+        company=tenant_data['company_a'],
+        creator=tenant_data['manager_a'],
+        assigned_to=tenant_data['employee_a'],
+        requires_completion_approval=True,
+    )
+    approval = ApprovalRequest.objects.create(
+        company=tenant_data['company_a'],
+        task=task,
+        requested_by=tenant_data['employee_a'],
+        reason='Prêt pour validation.',
+    )
+
+    api_client.force_authenticate(tenant_data['employee_b'])
+    detail = api_client.get(f'/api/tasks/approvals/{approval.id}/')
+    assert detail.status_code == 404
+    listing = api_client.get('/api/tasks/approvals/')
+    assert listing.status_code == 200
+    assert listing.data.get('results', listing.data) == []
+
+
+@pytest.mark.django_db
+def test_report_request_notifies_reviewers_and_rejection_requires_reason(api_client, tenant_data):
+    task = Task.objects.create(
+        title='Échéance à arbitrer',
+        company=tenant_data['company_a'],
+        creator=tenant_data['manager_a'],
+        assigned_to=tenant_data['employee_a'],
+        due_date=date.today() + timedelta(days=2),
+    )
+    Notification.objects.all().delete()
+
+    api_client.force_authenticate(tenant_data['employee_a'])
+    requested = api_client.post(
+        f'/api/tasks/{task.id}/reports/',
+        {
+            'new_due_date': date.today() + timedelta(days=5),
+            'reason': 'Une dépendance externe retarde la livraison.',
+        },
+        format='json',
+    )
+    assert requested.status_code == 201
+    report_id = requested.data['id']
+    assert Notification.objects.filter(
+        recipient=tenant_data['manager_a'],
+        type=NotificationType.APPROVAL_REQUESTED,
+        task=task,
+    ).exists()
+
+    api_client.force_authenticate(tenant_data['manager_a'])
+    missing_reason = api_client.patch(
+        f'/api/tasks/{task.id}/reports/{report_id}/',
+        {'status': 'rejected'},
+        format='json',
+    )
+    assert missing_reason.status_code == 400
+
+    rejected = api_client.patch(
+        f'/api/tasks/{task.id}/reports/{report_id}/',
+        {'status': 'rejected', 'review_comment': 'Le délai contractuel doit être maintenu.'},
+        format='json',
+    )
+    assert rejected.status_code == 200
+    assert Notification.objects.filter(
+        recipient=tenant_data['employee_a'],
+        type=NotificationType.REPORT_REJECTED,
+        task=task,
+    ).exists()

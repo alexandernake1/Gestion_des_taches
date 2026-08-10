@@ -2,18 +2,21 @@ import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  FolderKanban, Plus, Search, CheckCircle2, AlertTriangle, Clock, Users,
-  Calendar, ShieldAlert, ArrowUpRight, Lock, Edit3, Trash2, UserRound, Sparkles
+  FolderKanban, Plus, Search, CheckCircle2, AlertTriangle,
+  Calendar, ArrowUpRight, Edit3, Trash2, UserRound, Sparkles
 } from 'lucide-react'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
+import { DateInput } from '@/components/ui/DateInput'
 import { Modal } from '@/components/ui/Modal'
+import { useConfirmation } from '@/components/ui/confirmation'
 import { Badge } from '@/components/ui/Badge'
 import { requireAuthentication } from '@/router/auth'
 import { projectsService, type CreateProjectPayload } from '@/services/projects'
 import { subscriptionsService } from '@/services/subscriptions'
 import { authService } from '@/services/auth'
-import type { Project, ProjectHealth, ProjectStatus } from '@/domain/types'
+import { teamsService } from '@/services/teams'
+import type { Project, ProjectHealth, ProjectStatus, Team } from '@/domain/types'
 
 export const Route = createFileRoute('/projects')({
   beforeLoad: requireAuthentication,
@@ -36,6 +39,7 @@ const statusBadges: Record<ProjectStatus, { label: string; className: string }> 
 export function ProjectsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const confirmAction = useConfirmation()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [healthFilter, setHealthFilter] = useState<string>('')
@@ -54,9 +58,14 @@ export function ProjectsPage() {
 
   const { data: usersData } = useQuery({
     queryKey: ['companyUsers'],
-    queryFn: () => authService.getUsers({ is_active: true }),
+    queryFn: () => authService.list({ is_active: true }),
   })
-  const users = Array.isArray(usersData) ? usersData : usersData?.results || []
+  const users = usersData || []
+
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: teamsService.list,
+  })
 
   // Check tiering: free/starter plans can be restricted or prompt upgrade
   const planCode = subscription?.plan_details?.code || 'starter'
@@ -210,10 +219,19 @@ export function ProjectsPage() {
                   setEditingProject(project)
                   setIsModalOpen(true)
                 }}
-                onDelete={() => {
-                  if (confirm(`Voulez-vous supprimer le projet « ${project.name} » ?`)) {
-                    deleteMutation.mutate(project.id)
-                  }
+                onDelete={async () => {
+                  const { confirmed } = await confirmAction({
+                    title: 'Supprimer ce projet ?',
+                    description: `Le projet « ${project.name} » sera supprimé définitivement.`,
+                    confirmLabel: 'Supprimer le projet',
+                    tone: 'danger',
+                    impacts: [
+                      'Le projet disparaîtra du portefeuille.',
+                      'Les tâches associées resteront disponibles, mais ne seront plus rattachées à ce projet.',
+                    ],
+                    requireText: 'SUPPRIMER',
+                  })
+                  if (confirmed) deleteMutation.mutate(project.id)
                 }}
               />
             ))}
@@ -226,6 +244,7 @@ export function ProjectsPage() {
           onClose={() => setIsModalOpen(false)}
           project={editingProject}
           users={users}
+          teams={teams}
         />
       </div>
     </Layout>
@@ -312,6 +331,15 @@ function ProjectCard({
 
       {/* Footer details & Action buttons */}
       <div className="mt-6 border-t border-border pt-4">
+        {(project.team_details || []).length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            {project.team_details?.map((team) => (
+              <span key={team.id} className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                {team.name} · {team.member_count} membre(s)
+              </span>
+            ))}
+          </div>
+        )}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5 font-medium">
             <UserRound className="h-3.5 w-3.5" />
@@ -373,11 +401,13 @@ function ProjectFormModal({
   onClose,
   project,
   users,
+  teams,
 }: {
   isOpen: boolean
   onClose: () => void
   project: Project | null
-  users: { id: number; full_name: string; email: string }[]
+  users: { id: string | number; full_name: string; email: string }[]
+  teams: Team[]
 }) {
   const queryClient = useQueryClient()
   const isEditing = !!project
@@ -406,7 +436,7 @@ function ProjectFormModal({
       start_date: form.get('start_date') ? String(form.get('start_date')) : undefined,
       due_date: form.get('due_date') ? String(form.get('due_date')) : undefined,
       manager: form.get('manager') ? Number(form.get('manager')) : undefined,
-      budget_hours: form.get('budget_hours') ? Number(form.get('budget_hours')) : 0,
+      teams: form.getAll('teams').map((id) => Number(id)),
     }
     mutation.mutate(data)
   }
@@ -414,7 +444,7 @@ function ProjectFormModal({
   const inputClass = 'h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Modifier le projet' : 'Nouveau Projet Strategic'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Modifier le projet' : 'Nouveau projet stratégique'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-foreground">Nom du projet *</label>
@@ -453,34 +483,57 @@ function ProjectFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground">Responsable</label>
-            <select name="manager" defaultValue={project?.manager || ''} className={inputClass}>
-              <option value="">Sélectionner un manager</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name}
-                </option>
+        <div className="space-y-2">
+          <div>
+            <label className="text-xs font-bold text-foreground">Équipes rattachées au projet</label>
+            <p className="mt-0.5 text-xs text-muted-foreground">Sélectionnez une ou plusieurs équipes qui participeront au projet.</p>
+          </div>
+          {teams.length > 0 ? (
+            <div className="grid max-h-44 gap-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3 sm:grid-cols-2">
+              {teams.map((team) => (
+                <label key={team.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-sm hover:border-border hover:bg-background">
+                  <input
+                    type="checkbox"
+                    name="teams"
+                    value={team.id}
+                    defaultChecked={project?.teams?.includes(Number(team.id))}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold text-foreground">{team.name}</span>
+                    <span className="text-xs text-muted-foreground">{team.member_count ?? team.members?.length ?? 0} membre(s)</span>
+                  </span>
+                </label>
               ))}
-            </select>
-          </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+              Aucune équipe disponible. Créez d’abord une équipe depuis le module Équipes.
+            </div>
+          )}
+        </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground">Budget d'heures</label>
-            <input name="budget_hours" type="number" min={0} defaultValue={project?.budget_hours || 0} className={inputClass} />
-          </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-foreground">Responsable</label>
+          <select name="manager" defaultValue={project?.manager || ''} className={inputClass}>
+            <option value="">Sélectionner un manager</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-foreground">Date de début</label>
-            <input name="start_date" type="date" defaultValue={project?.start_date} className={inputClass} />
+            <DateInput name="start_date" defaultValue={project?.start_date} className={inputClass} />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-foreground">Date d'échéance</label>
-            <input name="due_date" type="date" defaultValue={project?.due_date} className={inputClass} />
+            <DateInput name="due_date" defaultValue={project?.due_date} className={inputClass} />
           </div>
         </div>
 

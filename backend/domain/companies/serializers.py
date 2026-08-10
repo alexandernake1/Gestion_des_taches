@@ -4,6 +4,7 @@ from .models import (
     SubscriptionPlan,
     CompanySubscription,
     PaymentTransaction,
+    PlatformAuditLog,
 )
 
 
@@ -35,6 +36,12 @@ class CompanyCreateSerializer(serializers.ModelSerializer):
         if Company.objects.filter(slug=value).exists():
             raise serializers.ValidationError("A company with this slug already exists.")
         return value
+
+    def validate_contact_email(self, value):
+        normalized_email = value.strip().lower()
+        if Company.objects.filter(contact_email__iexact=normalized_email).exists():
+            raise serializers.ValidationError("Cet email d'entreprise est déjà utilisé.")
+        return normalized_email
 
 
 class CompanyUpdateSerializer(serializers.ModelSerializer):
@@ -148,3 +155,16 @@ class SystemAnnouncementSerializer(serializers.ModelSerializer):
         model = SystemAnnouncement
         fields = ['id', 'message', 'type', 'type_display', 'target_audience', 'target_audience_display', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class PlatformAuditLogSerializer(serializers.ModelSerializer):
+    actor_name = serializers.CharField(source='actor.full_name', read_only=True)
+    company_name = serializers.CharField(source='company.name', read_only=True)
+
+    class Meta:
+        model = PlatformAuditLog
+        fields = [
+            'id', 'actor', 'actor_name', 'company', 'company_name', 'category',
+            'action', 'entity_label', 'details', 'created_at',
+        ]
+        read_only_fields = fields

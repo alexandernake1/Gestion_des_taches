@@ -123,7 +123,8 @@ class UserAuditLog(models.Model):
     )
     target = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='audit_history',
     )
     action = models.CharField(max_length=50)

@@ -17,6 +17,9 @@ class NotificationType(models.TextChoices):
     TASK_DUE_SOON = 'task_due_soon', 'Échéance proche'
     TASK_OVERDUE = 'task_overdue', 'Tâche en retard'
     DAILY_DIGEST = 'daily_digest', 'Résumé quotidien'
+    APPROVAL_REQUESTED = 'approval_requested', 'Validation demandée'
+    APPROVAL_APPROVED = 'approval_approved', 'Validation approuvée'
+    APPROVAL_REJECTED = 'approval_rejected', 'Validation refusée'
 
 
 class Notification(models.Model):

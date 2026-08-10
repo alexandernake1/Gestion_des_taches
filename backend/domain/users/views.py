@@ -12,6 +12,7 @@ from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
 from common.permissions.permissions import IsAdministrator, IsManagerOrAdministrator, IsSameCompany, IsCompanyOperational
 from common.utils import get_requested_company
+from domain.companies.models import Company
 from .models import User, Role, UserAuditLog
 from .serializers import (
     UserSerializer,
@@ -67,6 +68,37 @@ def register_company(request):
             if result['payment'] else None
         ),
     }, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    description="Check whether a company email can be used during onboarding",
+    parameters=[],
+    responses={200: inline_serializer(
+        name='CompanyEmailAvailability',
+        fields={
+            'available': serializers.BooleanField(),
+            'message': serializers.CharField(required=False),
+        },
+    )},
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@throttle_classes([RegistrationRateThrottle])
+def company_email_availability(request):
+    email_field = serializers.EmailField()
+    try:
+        email = email_field.run_validation(request.query_params.get('email', '')).lower()
+    except serializers.ValidationError:
+        return Response({
+            'available': False,
+            'message': "Saisissez un email d'entreprise valide.",
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    available = not Company.objects.filter(contact_email__iexact=email).exists()
+    return Response({
+        'available': available,
+        'message': '' if available else "Cet email d'entreprise est déjà utilisé.",
+    })
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -155,7 +187,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 @permission_classes([IsAuthenticated])
 def logout(request):
     from django.conf import settings
-    refresh_token = request.COOKIES.get(getattr(settings, 'JWT_REFRESH_COOKIE_NAME', 'refresh_token'))
+    refresh_token = (
+        request.COOKIES.get(getattr(settings, 'JWT_REFRESH_COOKIE_NAME', 'refresh_token'))
+        or request.data.get('refresh')
+    )
     if refresh_token:
         try:
             RefreshToken(refresh_token).blacklist()
@@ -321,12 +356,19 @@ class UserListView(generics.ListAPIView):
         return User.objects.filter(company=user.company, role__in=['employee', 'manager'], is_superuser=False)
 
 
-class UserDetailView(generics.RetrieveUpdateAPIView):
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve and update user details (managers and admins only)."""
     
     permission_classes = [IsAuthenticated, IsManagerOrAdministrator, IsSameCompany]
     serializer_class = UserManagementSerializer
     lookup_field = 'id'
+
+    def get_permissions(self):
+        if self.request.method == 'DELETE':
+            permission_classes = [IsAuthenticated, IsCompanyOperational, IsAdministrator, IsSameCompany]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -370,6 +412,23 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
                 details={'changes': changes},
             )
 
+    def perform_destroy(self, instance):
+        if instance == self.request.user:
+            raise ValidationError({'detail': 'Vous ne pouvez pas supprimer votre propre compte.'})
+        if instance.role == Role.OWNER:
+            raise ValidationError({'detail': "Le compte propriétaire doit être transféré avant toute suppression."})
+        UserAuditLog.objects.create(
+            actor=self.request.user,
+            target=instance,
+            action='account_deleted',
+            details={
+                'target_name': instance.full_name,
+                'target_email': instance.email,
+                'permanent': True,
+            },
+        )
+        instance.delete()
+
 
 @extend_schema(
     description="Invite a user to the company (managers and admins only)",
@@ -386,6 +445,15 @@ def invite_user(request):
         return Response(
             {"detail": "You must be associated with a company or have one selected to invite users."},
             status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if (
+        request.data.get('role') == Role.MANAGER
+        and not request.user.is_administrator()
+    ):
+        return Response(
+            {"detail": "Only administrators can invite manager roles."},
+            status=status.HTTP_403_FORBIDDEN,
         )
     
     serializer = InviteUserSerializer(
@@ -550,7 +618,7 @@ def reset_user_password(request, user_id):
     },
 )
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdministrator, IsCompanyOperational])
+@permission_classes([IsAuthenticated, IsManagerOrAdministrator, IsCompanyOperational])
 def deactivate_user(request, user_id):
     """Deactivate a user."""
     
@@ -577,6 +645,12 @@ def deactivate_user(request, user_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    if not (request.user.is_superuser or request.user.is_owner()) and user.role != Role.EMPLOYEE:
+        return Response(
+            {"detail": "Un manager peut uniquement archiver les comptes employés."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     user.is_active = False
     user.save(update_fields=['is_active', 'updated_at'])
     UserAuditLog.objects.create(
@@ -601,13 +675,24 @@ def deactivate_user(request, user_id):
     },
 )
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdministrator, IsCompanyOperational])
+@permission_classes([IsAuthenticated, IsManagerOrAdministrator, IsCompanyOperational])
 def activate_user(request, user_id):
     company = get_requested_company(request)
     try:
         user = User.objects.get(id=user_id, company=company)
     except User.DoesNotExist:
         return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if user.role == Role.OWNER:
+        return Response(
+            {"detail": "The company owner account cannot be deactivated or reactivated this way."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not (request.user.is_superuser or request.user.is_owner()) and user.role != Role.EMPLOYEE:
+        return Response(
+            {"detail": "Un manager peut uniquement réactiver les comptes employés."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
     user.is_active = True
     user.save(update_fields=['is_active', 'updated_at'])

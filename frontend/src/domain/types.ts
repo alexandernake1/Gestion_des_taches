@@ -27,7 +27,20 @@ export interface UserAuditLog {
   actor_name?: string;
   target: number;
   target_name: string;
-  action: 'account_created' | 'account_updated' | 'password_reset' | 'account_deactivated' | 'account_activated';
+  action: 'account_created' | 'account_updated' | 'password_reset' | 'account_deactivated' | 'account_activated' | 'account_deleted';
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface PlatformAuditLog {
+  id: number;
+  actor?: number;
+  actor_name?: string;
+  company?: number;
+  company_name?: string;
+  category: 'company' | 'plan' | 'subscription' | 'announcement' | string;
+  action: string;
+  entity_label: string;
   details: Record<string, unknown>;
   created_at: string;
 }
@@ -40,6 +53,12 @@ export interface ProjectMember {
   full_name: string;
   email: string;
   role: Role;
+}
+
+export interface ProjectTeam {
+  id: number;
+  name: string;
+  member_count: number;
 }
 
 export interface Project {
@@ -57,6 +76,8 @@ export interface Project {
   manager_name?: string;
   members?: number[];
   member_details?: ProjectMember[];
+  teams?: number[];
+  team_details?: ProjectTeam[];
   budget_hours?: number;
   progress_percent: number;
   total_tasks_count: number;
@@ -172,6 +193,8 @@ export interface Task {
   team?: number;
   team_name?: string;
   team_leader_id?: number;
+  project?: number;
+  project_name?: string;
   parent?: number;
   dependencies?: number[];
   dependency_details?: Array<Pick<Task, 'id' | 'title' | 'status'>>;
@@ -192,6 +215,7 @@ export interface Task {
   recurrence_end_date?: string;
   next_occurrence?: number;
   estimated_hours?: number;
+  requires_completion_approval: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -249,6 +273,28 @@ export interface TaskReport {
   reviewed_at?: string;
 }
 
+export type ApprovalAction = 'task_completion';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ApprovalRequest {
+  id: number;
+  company: number;
+  task: number;
+  task_title: string;
+  requested_by?: number;
+  requested_by_name?: string;
+  reviewed_by?: number;
+  reviewed_by_name?: string;
+  action: ApprovalAction;
+  action_display: string;
+  status: ApprovalStatus;
+  status_display: string;
+  reason: string;
+  review_comment?: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
 export type NotificationType =
   | 'new_task'
   | 'comment'
@@ -262,7 +308,10 @@ export type NotificationType =
   | 'subscription_suspended'
   | 'task_due_soon'
   | 'task_overdue'
-  | 'daily_digest';
+  | 'daily_digest'
+  | 'approval_requested'
+  | 'approval_approved'
+  | 'approval_rejected';
 
 export interface Notification {
   id: string;
@@ -349,6 +398,7 @@ export interface TaskCreateRequest {
   description?: string;
   assigned_to?: number;
   team?: number;
+  project?: number;
   priority: Priority;
   status: Status;
   start_date?: string;
@@ -359,6 +409,7 @@ export interface TaskCreateRequest {
   recurrence_interval?: number;
   recurrence_end_date?: string;
   estimated_hours?: number;
+  requires_completion_approval?: boolean;
 }
 
 export interface TaskUpdateRequest {
@@ -366,6 +417,7 @@ export interface TaskUpdateRequest {
   description?: string;
   assigned_to?: number;
   team?: number;
+  project?: number;
   priority?: Priority;
   status?: Status;
   start_date?: string;
@@ -377,6 +429,7 @@ export interface TaskUpdateRequest {
   recurrence_interval?: number;
   recurrence_end_date?: string;
   estimated_hours?: number;
+  requires_completion_approval?: boolean;
 }
 
 export interface TaskTemplate {
@@ -453,4 +506,3 @@ export interface SystemAnnouncement {
   created_at: string;
   updated_at: string;
 }
-

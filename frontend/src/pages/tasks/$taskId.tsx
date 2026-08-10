@@ -5,12 +5,14 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { useConfirmation } from '@/components/ui/confirmation'
 import { TaskForm } from '@/components/tasks/TaskForm'
+import { TaskApprovalPanel } from '@/components/tasks/TaskApprovalPanel'
 import { tasksService } from '@/services/tasks'
 import { authService } from '@/services/auth'
 import { teamsService } from '@/services/teams'
-import type { Task, TaskAttachment, TaskCreateRequest, Status, Priority } from '@/domain/types'
-import { ArrowLeft, Calendar, CalendarClock, Clock, Copy, Edit, FileText, GitBranch, LayoutTemplate, ListChecks, MessageSquare, Paperclip, Plus, Trash2, User } from 'lucide-react'
+import type { Task, TaskAttachment, TaskCreateRequest, TaskReport, Status, Priority } from '@/domain/types'
+import { ArrowLeft, Calendar, CalendarClock, Clock, Copy, Edit, FileText, GitBranch, LayoutTemplate, ListChecks, MessageSquare, Paperclip, Plus, ShieldCheck, Trash2, User } from 'lucide-react'
 import { useState } from 'react'
 import { requireCompanyMember } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -27,8 +29,9 @@ function TaskDetailPage() {
   const navigate = useNavigate()
   const goBack = useSmartBack('/tasks')
   const queryClient = useQueryClient()
+  const confirmAction = useConfirmation()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'structure' | 'activity' | 'attachments' | 'reports'>('structure')
+  const [activeTab, setActiveTab] = useState<'structure' | 'activity' | 'attachments' | 'approvals' | 'reports'>('structure')
 
   const { data: task, isLoading, isError, refetch } = useQuery({
     queryKey: ['task', taskId],
@@ -59,6 +62,10 @@ function TaskDetailPage() {
   const { data: reports = [] } = useQuery({
     queryKey: ['task-reports', taskId],
     queryFn: () => tasksService.getReports(Number(taskId)),
+  })
+  const { data: approvals = [] } = useQuery({
+    queryKey: ['task-approvals', taskId],
+    queryFn: () => tasksService.getTaskApprovals(Number(taskId)),
   })
   const { data: subtasks = [] } = useQuery({
     queryKey: ['task-subtasks', taskId],
@@ -103,6 +110,22 @@ function TaskDetailPage() {
   const reportMutation = useMutation({
     mutationFn: (data: { new_due_date: string; reason: string }) => tasksService.createReport(Number(taskId), data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['task-reports', taskId] }),
+  })
+  const reviewReportMutation = useMutation({
+    mutationFn: ({ report, status, comment }: {
+      report: TaskReport
+      status: 'approved' | 'rejected'
+      comment?: string
+    }) => tasksService.reviewReport(Number(taskId), report.id, {
+      status,
+      review_comment: comment,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-reports', taskId] })
+      queryClient.invalidateQueries({ queryKey: ['approval-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['task', taskId] })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    },
   })
   const duplicateMutation = useMutation({
     mutationFn: () => tasksService.duplicate(Number(taskId)),
@@ -167,6 +190,23 @@ function TaskDetailPage() {
       urgent: 'Urgent'
     }
     return <Badge variant={variants[priority]}>{labels[priority]}</Badge>
+  }
+
+  const handleReviewReport = async (report: TaskReport, decision: 'approved' | 'rejected') => {
+    const approving = decision === 'approved'
+    const result = await confirmAction({
+      title: approving ? 'Approuver ce report ?' : 'Refuser ce report ?',
+      description: approving
+        ? `La nouvelle échéance sera fixée au ${new Date(report.new_due_date).toLocaleDateString('fr-FR')}.`
+        : 'La date d’échéance actuelle sera conservée.',
+      confirmLabel: approving ? 'Approuver le report' : 'Refuser le report',
+      tone: approving ? 'warning' : 'danger',
+      reasonLabel: approving ? 'Commentaire de validation' : 'Motif du refus',
+      reasonRequired: !approving,
+    })
+    if (result.confirmed) {
+      reviewReportMutation.mutate({ report, status: decision, comment: result.reason })
+    }
   }
 
   if (isUserLoading) {
@@ -254,12 +294,20 @@ function TaskDetailPage() {
                     Modifier la tâche
                   </Button>
                   <div className="flex gap-2">
-                    <Button variant="secondary" className="bg-white" onClick={() => {
+                    <Button variant="secondary" className="bg-white" onClick={async () => {
                       const name = window.prompt('Nom du modèle réutilisable :', task.title)
                       if (name?.trim()) {
                         let isShared = false
                         if (currentUser?.role !== 'employee') {
-                          isShared = window.confirm('Souhaitez-vous partager ce modèle avec TOUTE l\'entreprise ?\n\nCliquez sur [OK] pour partager avec l\'entreprise, ou [Annuler] pour créer un modèle personnel.')
+                          const result = await confirmAction({
+                            title: 'Visibilité du modèle',
+                            description: 'Choisissez si ce modèle doit être accessible à toute l’entreprise ou uniquement à vous.',
+                            confirmLabel: 'Partager avec l’entreprise',
+                            cancelLabel: 'Modèle personnel',
+                            tone: 'warning',
+                            impacts: ['Un modèle partagé pourra être utilisé par tous les membres autorisés de votre entreprise.'],
+                          })
+                          isShared = result.confirmed
                         }
                         saveTemplateMutation.mutate({ name: name.trim(), is_shared: isShared })
                       }
@@ -270,11 +318,26 @@ function TaskDetailPage() {
                       <Copy className="mr-2 h-4 w-4 text-indigo-500" />Dupliquer
                     </Button>
                   </div>
-                  <Button variant="ghost" className="text-rose-500 hover:bg-rose-50 hover:text-rose-600" onClick={() => window.confirm('Archiver cette tâche ? Elle ne figurera plus dans les listes actives.') && deleteMutation.mutate()} disabled={deleteMutation.isPending}>
+                  <Button variant="ghost" className="text-rose-500 hover:bg-rose-50 hover:text-rose-600" onClick={async () => {
+                    const { confirmed } = await confirmAction({
+                      title: 'Archiver cette tâche ?',
+                      description: `La tâche « ${task.title} » ne figurera plus dans les listes actives.`,
+                      confirmLabel: 'Archiver la tâche',
+                      tone: 'danger',
+                      impacts: ['Son historique, ses commentaires et ses pièces jointes seront conservés.'],
+                    })
+                    if (confirmed) deleteMutation.mutate()
+                  }} disabled={deleteMutation.isPending}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Archiver
                   </Button>
                 </div>
+              )}
+              {!canManageTask && task.requires_completion_approval && task.status !== 'completed' && (
+                <Button onClick={() => setActiveTab('approvals')} className="shrink-0">
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  {approvals.some((approval) => approval.status === 'pending') ? 'Suivre la validation' : 'Demander la validation'}
+                </Button>
               )}
             </div>
           </div>
@@ -354,6 +417,7 @@ function TaskDetailPage() {
               { id: 'structure', label: 'Structure', count: subtasks.length + (task.dependencies?.length || 0), icon: ListChecks },
               { id: 'activity', label: 'Activité', count: comments.length + history.length, icon: MessageSquare },
               { id: 'attachments', label: 'Documents', count: attachments.length, icon: Paperclip },
+              { id: 'approvals', label: 'Validations', count: approvals.length, icon: ShieldCheck },
               { id: 'reports', label: 'Reports', count: reports.length, icon: CalendarClock },
             ].map((tab) => (
               <button
@@ -475,8 +539,9 @@ function TaskDetailPage() {
                 {attachments.length === 0 && <EmptyTab icon={Paperclip} label="Aucun document joint." />}
               </div>
             )}
-
-
+            {activeTab === 'approvals' && currentUser && (
+              <TaskApprovalPanel task={task} currentUser={currentUser} />
+            )}
 
             {activeTab === 'reports' && (
               <div className="space-y-3">
@@ -514,6 +579,17 @@ function TaskDetailPage() {
                       <Badge variant={report.status === 'approved' ? 'success' : report.status === 'rejected' ? 'danger' : 'warning'}>{report.status === 'approved' ? 'Approuvé' : report.status === 'rejected' ? 'Refusé' : 'En attente'}</Badge>
                     </div>
                     <p className="mt-2 text-sm text-slate-600">{report.reason}</p>
+                    {report.review_comment && (
+                      <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                        <strong>Décision de {report.reviewed_by_name || 'Responsable'} :</strong> {report.review_comment}
+                      </p>
+                    )}
+                    {(currentUser?.role === 'manager' || currentUser?.role === 'owner' || currentUser?.is_superuser) && report.status === 'pending' && (
+                      <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-3">
+                        <Button variant="danger" size="sm" onClick={() => handleReviewReport(report, 'rejected')} disabled={reviewReportMutation.isPending}>Refuser</Button>
+                        <Button size="sm" onClick={() => handleReviewReport(report, 'approved')} disabled={reviewReportMutation.isPending}>Approuver</Button>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {reports.length === 0 && <EmptyTab icon={CalendarClock} label="Aucune demande de report." />}
@@ -574,16 +650,18 @@ function EditTaskModal({ isOpen, onClose, task, onSuccess, canAssign }: { isOpen
     status: task.status,
     assigned_to: task.assigned_to,
     team: task.team,
+    project: task.project,
     start_date: task.start_date,
     due_date: task.due_date,
     recurrence_frequency: task.recurrence_frequency,
     recurrence_interval: task.recurrence_interval,
     recurrence_end_date: task.recurrence_end_date,
     estimated_hours: task.estimated_hours,
+    requires_completion_approval: task.requires_completion_approval,
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Modifier la tâche" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Modifier la tâche" size="lg">
       <TaskForm
         initialData={initialData}
         isEdit={true}

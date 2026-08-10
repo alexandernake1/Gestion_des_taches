@@ -19,12 +19,14 @@ import { Route as TeamsRouteImport } from '../pages/teams'
 import { Route as PlanningRouteImport } from '../pages/planning'
 import { Route as UsersRouteImport } from '../pages/users'
 import { Route as NotificationsRouteImport } from '../pages/notifications'
+import { Route as ApprovalsRouteImport } from '../pages/approvals'
 import { Route as SubscriptionRouteImport } from '../pages/subscription'
 import { Route as SettingsRouteImport } from '../pages/settings'
 import { Route as AdminCompaniesRouteImport } from '../pages/admin/companies'
 import { Route as AdminSubscriptionsRouteImport } from '../pages/admin/subscriptions'
 import { Route as AdminPlansRouteImport } from '../pages/admin/plans'
 import { Route as AdminAnnouncementsRouteImport } from '../pages/admin/announcements'
+import { Route as AdminAuditRouteImport } from '../pages/admin/audit'
 import { Route as TasksCreateRouteImport } from '../pages/tasks/create'
 import { Route as TasksTaskIdRouteImport } from '../pages/tasks/$taskId'
 import { Route as TasksTemplatesRouteImport } from '../pages/tasks/templates'
@@ -89,6 +91,11 @@ const NotificationsRoute = NotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => rootRoute,
 } as any)
+const ApprovalsRoute = ApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
+  getParentRoute: () => rootRoute,
+} as any)
 const SubscriptionRoute = SubscriptionRouteImport.update({
   id: '/subscription',
   path: '/subscription',
@@ -117,6 +124,11 @@ const AdminPlansRoute = AdminPlansRouteImport.update({
 const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
   id: '/admin/announcements',
   path: '/admin/announcements',
+  getParentRoute: () => rootRoute,
+} as any)
+const AdminAuditRoute = AdminAuditRouteImport.update({
+  id: '/admin/audit',
+  path: '/admin/audit',
   getParentRoute: () => rootRoute,
 } as any)
 const TasksCreateRoute = TasksCreateRouteImport.update({
@@ -181,6 +193,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksRoute
       parentRoute: typeof rootRoute
     }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRoute
+      parentRoute: typeof rootRoute
+    }
+    '/projects/$projectId': {
+      id: '/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof ProjectsProjectIdRoute
+      parentRoute: typeof rootRoute
+    }
     '/teams': {
       id: '/teams'
       path: '/teams'
@@ -207,6 +233,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRoute
+      parentRoute: typeof rootRoute
+    }
+    '/approvals': {
+      id: '/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof ApprovalsRoute
       parentRoute: typeof rootRoute
     }
     '/subscription': {
@@ -251,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnnouncementsRoute
       parentRoute: typeof rootRoute
     }
+    '/admin/audit': {
+      id: '/admin/audit'
+      path: '/admin/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAuditRoute
+      parentRoute: typeof rootRoute
+    }
     '/tasks/create': {
       id: '/tasks/create'
       path: '/tasks/create'
@@ -288,12 +328,14 @@ export const routeTree = rootRoute.addChildren([
   PlanningRoute,
   UsersRoute,
   NotificationsRoute,
+  ApprovalsRoute,
   SubscriptionRoute,
   SettingsRoute,
   AdminCompaniesRoute,
   AdminSubscriptionsRoute,
   AdminPlansRoute,
   AdminAnnouncementsRoute,
+  AdminAuditRoute,
   TasksCreateRoute,
   TasksTaskIdRoute,
   TasksTemplatesRoute,

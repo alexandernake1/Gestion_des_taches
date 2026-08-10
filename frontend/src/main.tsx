@@ -4,6 +4,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { router } from './router'
 import { ErrorBoundary } from './components/layout/ErrorBoundary'
+import { ConfirmationProvider } from './components/ui/ConfirmationProvider'
 import './index.css'
 
 // Create a client
@@ -34,8 +35,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster position="top-right" richColors />
+        <ConfirmationProvider>
+          <RouterProvider router={router} />
+          <Toaster position="top-right" richColors />
+        </ConfirmationProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,

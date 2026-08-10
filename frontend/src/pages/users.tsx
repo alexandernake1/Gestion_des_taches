@@ -6,10 +6,11 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { authService as usersService } from '@/services/auth'
 import type { User, UserAuditLog } from '@/domain/types'
-import { Briefcase, CheckCircle2, Clock, History, Mail, Phone, Search, ShieldCheck, UserPlus, UserRound, Users, XCircle } from 'lucide-react'
+import { Archive, ArchiveRestore, Briefcase, CheckCircle2, Clock, History, Mail, Phone, Search, ShieldCheck, Trash2, UserPlus, UserRound, Users, XCircle } from 'lucide-react'
 import { requireManagement } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Modal } from '@/components/ui/Modal'
+import { useConfirmation } from '@/components/ui/confirmation'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/users')({
@@ -45,6 +46,52 @@ function UsersPage() {
     queryFn: () => usersService.getAuditLog(),
     enabled: auditOpen && canManageAccounts,
   })
+  const accountStatusMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => (
+      isActive ? usersService.activate(id) : usersService.deactivate(id)
+    ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ['user-audit-log'] })
+    },
+  })
+  const deleteAccountMutation = useMutation({
+    mutationFn: (id: number) => usersService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ['user-audit-log'] })
+    },
+  })
+  const confirmAction = useConfirmation()
+  const handleToggleAccount = async (user: User) => {
+    const archiving = user.is_active
+    const { confirmed } = await confirmAction({
+      title: `${archiving ? 'Archiver' : 'Réactiver'} le compte de ${user.full_name} ?`,
+      description: archiving
+        ? 'Cette personne ne pourra plus se connecter, sans supprimer son historique.'
+        : 'Cette personne retrouvera l’accès avec ses permissions actuelles.',
+      confirmLabel: archiving ? 'Archiver le compte' : 'Réactiver le compte',
+      tone: archiving ? 'danger' : 'warning',
+      impacts: archiving
+        ? ['Ses tâches et son historique restent conservés.']
+        : ['Les droits précédemment attribués restent inchangés.'],
+    })
+    if (confirmed) accountStatusMutation.mutate({ id: Number(user.id), isActive: user.is_active })
+  }
+  const handleDeleteAccount = async (user: User) => {
+    const { confirmed } = await confirmAction({
+      title: `Supprimer définitivement le compte de ${user.full_name} ?`,
+      description: 'Cette action est irréversible et réservée au propriétaire.',
+      confirmLabel: 'Supprimer définitivement',
+      tone: 'danger',
+      impacts: [
+        'Le compte, ses accès et ses notifications seront supprimés.',
+        'Les tâches et les journaux administratifs sont conservés, sans compte associé.',
+      ],
+      requireText: 'SUPPRIMER',
+    })
+    if (confirmed) deleteAccountMutation.mutate(Number(user.id))
+  }
   const activeFilterCount = [search, roleFilter, statusFilter].filter(Boolean).length
   const activeUsers = users?.filter((user) => user.is_active).length || 0
   const managers = users?.filter((user) => user.role === 'manager').length || 0
@@ -128,7 +175,16 @@ function UsersPage() {
         ) : (
           <div className="grid gap-4">
             {users?.map((user) => (
-              <UserCard key={user.id} user={user} getRoleBadge={getRoleBadge} onEdit={(canManageAccounts && (isOwner || isSuperuser || user.role === 'employee')) ? () => setSelectedUser(user) : undefined} />
+              <UserCard
+                key={user.id}
+                user={user}
+                getRoleBadge={getRoleBadge}
+                onEdit={(canManageAccounts && (isOwner || isSuperuser || user.role === 'employee')) ? () => setSelectedUser(user) : undefined}
+                onToggleStatus={canManageAccounts && user.role !== 'owner' && (isOwner || isSuperuser || user.role === 'employee') ? () => void handleToggleAccount(user) : undefined}
+                isToggling={accountStatusMutation.isPending}
+                onDelete={(isOwner || isSuperuser) && user.role !== 'owner' ? () => void handleDeleteAccount(user) : undefined}
+                isDeleting={deleteAccountMutation.isPending}
+              />
             ))}
             {users?.length === 0 && (
               <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
@@ -172,7 +228,7 @@ function UserMetric({ icon: Icon, label, value }: { icon: typeof Users; label: s
   )
 }
 
-function UserCard({ user, getRoleBadge, onEdit }: { user: User; getRoleBadge: (role: string) => React.ReactNode; onEdit?: () => void }) {
+function UserCard({ user, getRoleBadge, onEdit, onToggleStatus, isToggling, onDelete, isDeleting }: { user: User; getRoleBadge: (role: string) => React.ReactNode; onEdit?: () => void; onToggleStatus?: () => void; isToggling: boolean; onDelete?: () => void; isDeleting: boolean }) {
   return (
     <Card className="group relative cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 border-slate-200/60 bg-white">
       <CardContent className="p-5 sm:p-6">
@@ -211,6 +267,17 @@ function UserCard({ user, getRoleBadge, onEdit }: { user: User; getRoleBadge: (r
           </div>
           {onEdit && (
             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity mt-4 sm:mt-0">
+              {onToggleStatus && (
+                <Button variant="ghost" size="sm" onClick={onToggleStatus} disabled={isToggling} className="rounded-full">
+                  {user.is_active ? <Archive className="mr-1.5 h-3.5 w-3.5" /> : <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" />}
+                  {user.is_active ? 'Archiver' : 'Réactiver'}
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="ghost" size="sm" onClick={onDelete} disabled={isDeleting} className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive">
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />Supprimer
+                </Button>
+              )}
               <Button variant="secondary" size="sm" onClick={onEdit} className="rounded-full shadow-sm hover:bg-white hover:shadow">
                 Modifier <UserRound className="ml-1.5 h-3.5 w-3.5" />
               </Button>
@@ -223,6 +290,7 @@ function UserCard({ user, getRoleBadge, onEdit }: { user: User; getRoleBadge: (r
 }
 
 function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user?: User; onClose: () => void; onSuccess: () => void }) {
+  const confirmAction = useConfirmation()
   const { data: currentUser } = useQuery({ queryKey: ['current-user'], queryFn: usersService.getCurrentUser })
   const isOwner = currentUser?.role === 'owner'
   const isSuperuser = currentUser?.is_superuser
@@ -246,18 +314,60 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
     },
   })
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
-    mutation.mutate({
+    const payload = {
       email: data.get('email') as string,
       first_name: data.get('first_name') as string,
       last_name: data.get('last_name') as string,
       phone: data.get('phone') as string || undefined,
       role: data.get('role') as string,
-      is_active: user ? data.get('is_active') === 'on' : undefined,
+      is_active: user
+        ? (isEditingOwner ? user.is_active : data.get('is_active') === 'on')
+        : undefined,
       weekly_capacity_hours: Number(data.get('weekly_capacity_hours')) || 40,
+    }
+
+    if (user) {
+      const deactivating = user.is_active && payload.is_active === false
+      const reactivating = !user.is_active && payload.is_active === true
+      const roleChanged = payload.role !== user.role
+      if (deactivating || reactivating || roleChanged) {
+        const impacts = [
+          ...(deactivating ? ["L’utilisateur ne pourra plus se connecter à l’espace de l’entreprise."] : []),
+          ...(reactivating ? ["L’utilisateur retrouvera l’accès avec ses permissions actuelles."] : []),
+          ...(roleChanged ? [`Son rôle passera de « ${user.role_display || user.role} » à « ${payload.role === 'manager' ? 'Manager' : 'Employé'} ».`] : []),
+        ]
+        const { confirmed } = await confirmAction({
+          title: deactivating
+            ? `Désactiver le compte de ${user.full_name} ?`
+            : roleChanged
+              ? `Modifier les permissions de ${user.full_name} ?`
+              : `Réactiver le compte de ${user.full_name} ?`,
+          description: 'Cette modification affecte immédiatement les accès de ce collaborateur.',
+          confirmLabel: deactivating ? 'Désactiver le compte' : 'Appliquer la modification',
+          tone: deactivating || roleChanged ? 'danger' : 'warning',
+          impacts,
+          requireText: deactivating ? 'DÉSACTIVER' : undefined,
+        })
+        if (!confirmed) return
+      }
+    }
+
+    mutation.mutate(payload)
+  }
+
+  const handleResetPassword = async () => {
+    if (!user) return
+    const { confirmed } = await confirmAction({
+      title: `Réinitialiser le mot de passe de ${user.full_name} ?`,
+      description: 'Un nouveau mot de passe temporaire sera généré.',
+      confirmLabel: 'Générer un nouveau mot de passe',
+      tone: 'danger',
+      impacts: ["L’ancien mot de passe ne permettra plus de se connecter."],
     })
+    if (confirmed) resetPassword.mutate()
   }
 
   return (
@@ -393,7 +503,7 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
           <div className="flex gap-2">
             {user && (isOwner || isSuperuser) && (!isEditingOwner || isSuperuser) && (
-              <Button type="button" variant="secondary" disabled={resetPassword.isPending} onClick={() => resetPassword.mutate()}>
+              <Button type="button" variant="secondary" disabled={resetPassword.isPending} onClick={handleResetPassword}>
                 {resetPassword.isPending ? 'Réinitialisation…' : 'Nouveau mot de passe'}
               </Button>
             )}
@@ -417,6 +527,7 @@ const auditLabels: Record<UserAuditLog['action'], string> = {
   password_reset: 'Mot de passe réinitialisé',
   account_deactivated: 'Compte désactivé',
   account_activated: 'Compte réactivé',
+  account_deleted: 'Compte supprimé définitivement',
 }
 
 function AuditLogModal({ isOpen, onClose, entries, isLoading }: { isOpen: boolean; onClose: () => void; entries: UserAuditLog[]; isLoading: boolean }) {
@@ -431,7 +542,7 @@ function AuditLogModal({ isOpen, onClose, entries, isLoading }: { isOpen: boolea
                 <time className="text-xs text-slate-400">{new Date(entry.created_at).toLocaleString('fr-FR')}</time>
               </div>
               <p className="mt-1 text-sm text-slate-600">
-                {entry.target_name} · par {entry.actor_name || 'Système'}
+                {entry.target_name || String(entry.details.target_name || 'Compte supprimé')} · par {entry.actor_name || 'Système'}
               </p>
             </div>
           ))}

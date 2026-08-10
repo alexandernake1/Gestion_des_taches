@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiResponse
 from rest_framework import serializers
-from common.permissions.permissions import IsManagerOrAdministrator, IsSameCompany, IsCompanyOperational
+from common.permissions.permissions import IsManagerOrAdministrator, IsOwner, IsSameCompany, IsCompanyOperational
 from common.utils import get_requested_company
 from .models import Team
 from .serializers import (
@@ -94,6 +94,13 @@ class TeamDetailView(generics.RetrieveUpdateDestroyAPIView):
     
     permission_classes = [IsAuthenticated, IsCompanyOperational, IsManagerOrAdministrator, IsSameCompany]
     lookup_field = 'id'
+
+    def get_permissions(self):
+        if self.request.method == 'DELETE':
+            permission_classes = [IsAuthenticated, IsCompanyOperational, IsOwner, IsSameCompany]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         company = get_requested_company(self.request)

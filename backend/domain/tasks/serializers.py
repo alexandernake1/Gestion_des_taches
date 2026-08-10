@@ -6,7 +6,21 @@ import mimetypes
 import zipfile
 from domain.users.models import Role, User
 from domain.teams.models import Team
-from .models import Status, Task, TaskTemplate, TaskHistory, TaskComment, TaskAttachment, TaskReport, Project, ProjectStatus, ProjectHealth
+from .models import (
+    ApprovalAction,
+    ApprovalRequest,
+    ApprovalStatus,
+    Status,
+    Task,
+    TaskTemplate,
+    TaskHistory,
+    TaskComment,
+    TaskAttachment,
+    TaskReport,
+    Project,
+    ProjectStatus,
+    ProjectHealth,
+)
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -17,6 +31,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     total_tasks_count = serializers.IntegerField(read_only=True)
     completed_tasks_count = serializers.IntegerField(read_only=True)
     member_details = serializers.SerializerMethodField()
+    team_details = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -24,6 +39,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'company', 'status', 'status_display',
             'health', 'health_display', 'start_date', 'due_date',
             'manager', 'manager_name', 'members', 'member_details',
+            'teams', 'team_details',
             'budget_hours', 'progress_percent', 'total_tasks_count',
             'completed_tasks_count', 'created_at', 'updated_at',
         ]
@@ -34,6 +50,30 @@ class ProjectSerializer(serializers.ModelSerializer):
             {'id': m.id, 'full_name': m.full_name, 'email': m.email, 'role': m.role}
             for m in obj.members.all()
         ]
+
+    def get_team_details(self, obj):
+        return [
+            {'id': team.id, 'name': team.name, 'member_count': team.members.count()}
+            for team in obj.teams.all()
+        ]
+
+    def validate_manager(self, value):
+        company = get_requested_company(self.context['request'])
+        if value and value.company != company:
+            raise serializers.ValidationError("Le responsable doit appartenir à votre entreprise.")
+        return value
+
+    def validate_members(self, value):
+        company = get_requested_company(self.context['request'])
+        if any(member.company != company for member in value):
+            raise serializers.ValidationError("Tous les membres doivent appartenir à votre entreprise.")
+        return value
+
+    def validate_teams(self, value):
+        company = get_requested_company(self.context['request'])
+        if any(team.company != company for team in value):
+            raise serializers.ValidationError("Toutes les équipes doivent appartenir à votre entreprise.")
+        return value
 
 
 def validate_task_dates(attrs, instance=None):
@@ -73,7 +113,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'is_active', 'archived_at', 'created_at', 'updated_at',
             'recurrence_frequency', 'recurrence_interval',
             'recurrence_end_date', 'next_occurrence',
-            'estimated_hours',
+            'estimated_hours', 'requires_completion_approval',
         ]
         extra_kwargs = {'recurrence_interval': {'min_value': 1, 'max_value': 365}}
         read_only_fields = [
@@ -94,10 +134,11 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'title', 'description', 'assigned_to', 'team', 'priority',
+            'title', 'description', 'assigned_to', 'team', 'project', 'priority',
             'status', 'start_date', 'due_date', 'parent', 'dependencies',
             'recurrence_frequency', 'recurrence_interval',
             'recurrence_end_date', 'estimated_hours',
+            'requires_completion_approval',
         ]
         extra_kwargs = {'recurrence_interval': {'min_value': 1, 'max_value': 365}}
     
@@ -115,6 +156,12 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You can only assign tasks to teams in your company.")
         if value and not value.is_active:
             raise serializers.ValidationError("You cannot assign a task to an inactive team.")
+        return value
+
+    def validate_project(self, value):
+        company = get_requested_company(self.context['request'])
+        if value and value.company != company:
+            raise serializers.ValidationError("You can only link tasks to projects in your company.")
         return value
 
     def validate(self, attrs):
@@ -136,6 +183,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
                 })
             attrs.pop('assigned_to', None)
             attrs.pop('team', None)
+            attrs['requires_completion_approval'] = False
             
         company = get_requested_company(self.context['request'])
         parent = attrs.get('parent')
@@ -153,10 +201,11 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'title', 'description', 'assigned_to', 'team', 'priority',
+            'title', 'description', 'assigned_to', 'team', 'project', 'priority',
             'status', 'start_date', 'due_date', 'parent', 'dependencies',
             'is_active', 'recurrence_frequency', 'recurrence_interval',
             'recurrence_end_date', 'estimated_hours',
+            'requires_completion_approval',
         ]
         extra_kwargs = {'recurrence_interval': {'min_value': 1, 'max_value': 365}}
     
@@ -176,12 +225,18 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You cannot assign a task to an inactive team.")
         return value
 
+    def validate_project(self, value):
+        company = get_requested_company(self.context['request'])
+        if value and value.company != company:
+            raise serializers.ValidationError("You can only link tasks to projects in your company.")
+        return value
+
     def validate(self, attrs):
         user = self.context['request'].user
         if user.role == Role.EMPLOYEE:
-            if 'assigned_to' in attrs or 'team' in attrs:
+            if 'assigned_to' in attrs or 'team' in attrs or 'requires_completion_approval' in attrs:
                 raise serializers.ValidationError(
-                    "Employees cannot change task assignment or team."
+                    "Employees cannot change task assignment, team, or approval policy."
                 )
         company = get_requested_company(self.context['request'])
         parent = attrs.get('parent', self.instance.parent)
@@ -202,6 +257,13 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             if incomplete_dependencies.exists() or incomplete_subtasks.exists():
                 raise serializers.ValidationError({
                     'status': "Complete all dependencies and subtasks before closing this task."
+                })
+            if (
+                self.instance.requires_completion_approval
+                and not user.is_manager()
+            ):
+                raise serializers.ValidationError({
+                    'status': "Cette tâche exige une validation. Envoyez une demande de clôture à un responsable."
                 })
         return validate_task_dates(attrs, self.instance)
 
@@ -228,7 +290,69 @@ class TaskListSerializer(serializers.ModelSerializer):
             'due_date', 'is_overdue', 'is_blocked', 'progress_percent',
             'parent', 'created_at', 'recurrence_frequency',
             'estimated_hours',
+            'requires_completion_approval',
         ]
+
+
+class ApprovalRequestSerializer(serializers.ModelSerializer):
+    action_display = serializers.CharField(source='get_action_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    task_title = serializers.CharField(source='task.title', read_only=True)
+    requested_by_name = serializers.CharField(source='requested_by.full_name', read_only=True)
+    reviewed_by_name = serializers.CharField(source='reviewed_by.full_name', read_only=True)
+
+    class Meta:
+        model = ApprovalRequest
+        fields = [
+            'id', 'company', 'task', 'task_title', 'requested_by',
+            'requested_by_name', 'reviewed_by', 'reviewed_by_name',
+            'action', 'action_display', 'status', 'status_display',
+            'reason', 'review_comment', 'created_at', 'reviewed_at',
+        ]
+        read_only_fields = fields
+
+
+class ApprovalRequestCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApprovalRequest
+        fields = ['action', 'reason']
+
+    def validate_action(self, value):
+        if value != ApprovalAction.TASK_COMPLETION:
+            raise serializers.ValidationError("Ce type de validation n'est pas encore pris en charge.")
+        return value
+
+    def validate_reason(self, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise serializers.ValidationError("Précisez brièvement pourquoi la tâche peut être clôturée.")
+        return value
+
+    def to_representation(self, instance):
+        return ApprovalRequestSerializer(instance, context=self.context).data
+
+
+class ApprovalRequestReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApprovalRequest
+        fields = ['status', 'review_comment']
+
+    def validate(self, attrs):
+        decision = attrs.get('status')
+        comment = attrs.get('review_comment', '').strip()
+        if decision not in {ApprovalStatus.APPROVED, ApprovalStatus.REJECTED}:
+            raise serializers.ValidationError({
+                'status': "La décision doit être 'approved' ou 'rejected'."
+            })
+        if decision == ApprovalStatus.REJECTED and not comment:
+            raise serializers.ValidationError({
+                'review_comment': "Un motif est obligatoire pour refuser une demande."
+            })
+        attrs['review_comment'] = comment
+        return attrs
+
+    def to_representation(self, instance):
+        return ApprovalRequestSerializer(instance, context=self.context).data
 
 
 class TaskTemplateSerializer(serializers.ModelSerializer):
@@ -486,3 +610,12 @@ class TaskReportReviewSerializer(serializers.ModelSerializer):
         if value not in valid_statuses:
             raise serializers.ValidationError(f"Status must be one of: {', '.join(valid_statuses)}")
         return value
+
+    def validate(self, attrs):
+        comment = attrs.get('review_comment', '').strip()
+        if attrs.get('status') == 'rejected' and not comment:
+            raise serializers.ValidationError({
+                'review_comment': "Un motif est obligatoire pour refuser une demande."
+            })
+        attrs['review_comment'] = comment
+        return attrs

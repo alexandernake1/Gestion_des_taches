@@ -14,6 +14,10 @@ export const authService = {
     return response;
   },
 
+  async checkCompanyEmail(email: string): Promise<{ available: boolean; message?: string }> {
+    return api.get('/auth/register/company/email-availability/', { params: { email } });
+  },
+
   async logout(): Promise<void> {
     try {
       await api.post('/auth/logout/', {});

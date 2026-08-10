@@ -3,34 +3,42 @@ services:
     image: postgres:15-alpine
     container_name: activity_tracker_db
     environment:
-      POSTGRES_DB: activity_tracker
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${DB_NAME:-activity_tracker}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     container_name: activity_tracker_redis
-    ports:
-      - "6379:6379"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   backend:
     build: ./backend
     container_name: activity_tracker_backend
     restart: unless-stopped
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - .env
-    # We expose port 8000 internally, but nginx will route to it. No need to bind to host port 8000 unless desired.
-    ports:
-      - "8000:8000"
+    volumes:
+      - static_data:/app/staticfiles
+      - media_data:/app/media
 
   frontend:
     build: ./frontend
@@ -38,8 +46,13 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    volumes:
+      - static_data:/usr/share/nginx/html/static:ro
+      - media_data:/usr/share/nginx/html/media:ro
     ports:
       - "80:80"
 
 volumes:
   postgres_data:
+  static_data:
+  media_data:

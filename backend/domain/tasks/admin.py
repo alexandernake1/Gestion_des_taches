@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Task, TaskHistory, TaskComment, TaskAttachment, TaskReport
+from .models import ApprovalRequest, Task, TaskHistory, TaskComment, TaskAttachment, TaskReport
 
 
 @admin.register(Task)
@@ -43,5 +43,14 @@ class TaskReportAdmin(admin.ModelAdmin):
     list_display = ['task', 'requested_by', 'old_due_date', 'new_due_date', 'status', 'created_at']
     list_filter = ['status', 'created_at']
     search_fields = ['task__title', 'reason']
+    ordering = ['-created_at']
+    readonly_fields = ['created_at', 'reviewed_at']
+
+
+@admin.register(ApprovalRequest)
+class ApprovalRequestAdmin(admin.ModelAdmin):
+    list_display = ['task', 'action', 'requested_by', 'status', 'reviewed_by', 'created_at']
+    list_filter = ['action', 'status', 'company', 'created_at']
+    search_fields = ['task__title', 'requested_by__email', 'reviewed_by__email', 'reason']
     ordering = ['-created_at']
     readonly_fields = ['created_at', 'reviewed_at']

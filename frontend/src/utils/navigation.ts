@@ -11,7 +11,7 @@ export function useSmartBack(fallbackPath: string = '/dashboard') {
     if (typeof window !== 'undefined' && (window.history.state?.idx > 0 || window.history.length > 1)) {
       window.history.back()
     } else {
-      navigate({ to: fallbackPath as any })
+      navigate({ to: fallbackPath as never })
     }
   }
 }

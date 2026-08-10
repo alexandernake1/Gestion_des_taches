@@ -1,12 +1,15 @@
-import { Bell, Building2, FolderKanban, CheckSquare2, CreditCard, Globe, LayoutDashboard, LogOut, Shield, UserRound, Users, X, Package, Megaphone, ChevronRight } from 'lucide-react'
+import { Bell, Building2, ClipboardCheck, FolderKanban, CheckSquare2, CreditCard, Globe, LayoutDashboard, LogOut, Shield, UserRound, Users, X, Package, Megaphone, ChevronRight, ScrollText } from 'lucide-react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { authService } from '@/services/auth'
+import { subscriptionsService } from '@/services/subscriptions'
+import { tasksService } from '@/services/tasks'
 import { useQuery } from '@tanstack/react-query'
 
 const navigation = [
   { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'employee'] },
   { name: 'Tâches', href: '/tasks', icon: CheckSquare2, roles: ['owner', 'manager', 'employee'] },
   { name: 'Projets', href: '/projects', icon: FolderKanban, roles: ['owner', 'manager', 'employee'] },
+  { name: 'Validations', href: '/approvals', icon: ClipboardCheck, roles: ['owner', 'manager', 'employee'] },
   { name: 'Équipes', href: '/teams', icon: Users, roles: ['owner', 'manager'] },
   { name: 'Utilisateurs', href: '/users', icon: UserRound, roles: ['owner', 'manager'] },
   { name: 'Abonnement', href: '/subscription', icon: CreditCard, roles: ['owner'] },
@@ -14,6 +17,7 @@ const navigation = [
 ]
 
 const platformNavigation = [
+  { name: "Journal d'audit", href: '/admin/audit', icon: ScrollText },
   { name: 'Entreprises Clients', href: '/admin/companies', icon: Globe },
   { name: 'Abonnements SaaS', href: '/admin/subscriptions', icon: CreditCard },
   { name: 'Forfaits SaaS', href: '/admin/plans', icon: Package },
@@ -40,11 +44,36 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     queryKey: ['current-user'],
     queryFn: authService.getCurrentUser,
   })
+  const { data: subscription } = useQuery({
+    queryKey: ['mySubscription'],
+    queryFn: subscriptionsService.getMySubscription,
+    enabled: !!currentUser?.company && !currentUser?.is_superuser,
+  })
+  const hasProjectsFeature = currentUser?.is_superuser || !!subscription?.plan_details?.feature_flags?.has_projects
   const impersonatedCompanyId = localStorage.getItem('impersonated_company_id')
   const hasCompany = (!!currentUser?.company && !currentUser?.is_superuser) || (currentUser?.is_superuser && !!impersonatedCompanyId)
-  const visibleNavigation = navigation.filter(
-    (item) => hasCompany && !!currentUser && (item.roles.includes(currentUser.role) || currentUser.is_superuser)
+  const canReviewApprovals = Boolean(
+    currentUser?.is_superuser || currentUser?.role === 'owner' || currentUser?.role === 'manager',
   )
+  const { data: pendingApprovals = [] } = useQuery({
+    queryKey: ['sidebar-pending-approvals'],
+    queryFn: () => tasksService.getApprovals({ status: 'pending' }),
+    enabled: canReviewApprovals && hasCompany,
+    refetchInterval: 30_000,
+  })
+  const { data: pendingReports = [] } = useQuery({
+    queryKey: ['sidebar-pending-reports'],
+    queryFn: () => tasksService.getPendingReports({ status: 'pending' }),
+    enabled: canReviewApprovals && hasCompany,
+    refetchInterval: 30_000,
+  })
+  const pendingValidationCount = pendingApprovals.length + pendingReports.length
+  const visibleNavigation = navigation.filter((item) => {
+    if (!hasCompany || !currentUser) return false
+    if (!item.roles.includes(currentUser.role) && !currentUser.is_superuser) return false
+    if (item.href === '/projects' && !hasProjectsFeature) return false
+    return true
+  })
   const navigationLabel = (item: (typeof navigation)[number]) => {
     if (item.href === '/tasks') {
       return currentUser?.role === 'employee' ? 'Mes tâches' : 'Pilotage des tâches'
@@ -189,6 +218,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       isActive={isActive}
                       onClose={onClose}
                       label={navigationLabel(item)}
+                      badgeCount={item.href === '/approvals' && canReviewApprovals ? pendingValidationCount : undefined}
                       delay={i * 40}
                       variant="default"
                     />
@@ -259,6 +289,7 @@ function NavItem({
   isActive,
   onClose,
   label,
+  badgeCount,
   delay,
   variant,
 }: {
@@ -266,6 +297,7 @@ function NavItem({
   isActive: boolean
   onClose: () => void
   label: string
+  badgeCount?: number
   delay: number
   variant: 'default' | 'admin'
 }) {
@@ -311,6 +343,15 @@ function NavItem({
           style={{ color: isActive ? activeColor : 'hsl(var(--sidebar-text-muted))' }}
         />
         <span className="flex-1 truncate">{label}</span>
+
+        {!!badgeCount && (
+          <span
+            aria-label={`${badgeCount} validation${badgeCount > 1 ? 's' : ''} en attente`}
+            className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white shadow-sm"
+          >
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </span>
+        )}
 
         {isActive && (
           <ChevronRight
