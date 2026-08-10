@@ -269,7 +269,7 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
             <p className="mt-3 text-sm text-emerald-900">Email : <strong>{createdCredentials.email}</strong></p>
             <p className="mt-1 text-sm text-emerald-900">Mot de passe temporaire : <strong className="font-mono">{createdCredentials.password}</strong></p>
           </div>
-          <p className="text-sm text-slate-500">Transmettez ces identifiants à l’utilisateur par un canal sécurisé. Le mot de passe ne sera plus affiché après la fermeture de cette fenêtre.</p>
+          <p className="text-sm text-slate-500">Un e-mail d'invitation avec ces identifiants et l'obligation de changement de mot de passe a été automatiquement envoyé à l'adresse de l'utilisateur. Vous pouvez également les lui transmettre directement par précaution.</p>
           <div className="flex justify-end">
             <Button onClick={onSuccess}>Terminer</Button>
           </div>

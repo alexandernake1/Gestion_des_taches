@@ -1449,3 +1449,27 @@ def test_task_template_visibility_and_scoping(api_client, tenant_data):
     assert 'Manager Shared Template' in names
     assert 'Employee Personal Template' not in names
 
+
+@pytest.mark.django_db
+def test_user_invitation_sends_email(api_client, tenant_data, mailoutbox):
+    api_client.force_authenticate(tenant_data['owner_a'])
+    resp = api_client.post(
+        '/api/auth/users/invite/',
+        {
+            'email': 'new-member@example.com',
+            'first_name': 'Jean',
+            'last_name': 'Dupont',
+            'role': Role.EMPLOYEE,
+        },
+        format='json',
+    )
+    assert resp.status_code == 201
+    assert resp.data['email_sent'] is True
+    assert len(mailoutbox) == 1
+    mail = mailoutbox[0]
+    assert mail.to == ['new-member@example.com']
+    assert 'Bienvenue chez' in mail.subject
+    assert 'Jean' in mail.body
+    assert resp.data['temporary_password'] in mail.body
+
+

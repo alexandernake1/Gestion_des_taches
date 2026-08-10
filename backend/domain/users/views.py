@@ -461,13 +461,17 @@ def invite_user(request):
             must_change_password=True,
         )
     
+    from domain.users.emails import send_user_invitation_email
+    email_sent = send_user_invitation_email(user, temp_password)
+
     user_data = UserSerializer(user).data
     user_data['temporary_password'] = temp_password
+    user_data['email_sent'] = email_sent
     UserAuditLog.objects.create(
         actor=request.user,
         target=user,
         action='account_created',
-        details={'role': user.role},
+        details={'role': user.role, 'email_sent': email_sent},
     )
     
     return Response(
@@ -518,15 +522,20 @@ def reset_user_password(request, user_id):
     user.set_password(temporary_password)
     user.must_change_password = True
     user.save(update_fields=['password', 'must_change_password', 'updated_at'])
+    from domain.users.emails import send_password_reset_email
+    email_sent = send_password_reset_email(user, temporary_password)
+
     UserAuditLog.objects.create(
         actor=request.user,
         target=user,
         action='password_reset',
+        details={'email_sent': email_sent},
     )
 
     return Response({
         "email": user.email,
         "temporary_password": temporary_password,
+        "email_sent": email_sent,
     })
 
 
