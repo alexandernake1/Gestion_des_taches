@@ -13,6 +13,8 @@ import { Route as RegisterRouteImport } from '../pages/register'
 import { Route as ChangePasswordRouteImport } from '../pages/change-password'
 import { Route as DashboardRouteImport } from '../pages/dashboard'
 import { Route as TasksRouteImport } from '../pages/tasks'
+import { Route as ProjectsRouteImport } from '../pages/projects'
+import { Route as ProjectsProjectIdRouteImport } from '../pages/projects/$projectId'
 import { Route as TeamsRouteImport } from '../pages/teams'
 import { Route as PlanningRouteImport } from '../pages/planning'
 import { Route as UsersRouteImport } from '../pages/users'
@@ -55,6 +57,16 @@ const DashboardRoute = DashboardRouteImport.update({
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRoute,
+} as any)
+const ProjectsRoute = ProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => rootRoute,
+} as any)
+const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
   getParentRoute: () => rootRoute,
 } as any)
 const TeamsRoute = TeamsRouteImport.update({
@@ -270,6 +282,8 @@ export const routeTree = rootRoute.addChildren([
   ChangePasswordRoute,
   DashboardRoute,
   TasksRoute,
+  ProjectsRoute,
+  ProjectsProjectIdRoute,
   TeamsRoute,
   PlanningRoute,
   UsersRoute,

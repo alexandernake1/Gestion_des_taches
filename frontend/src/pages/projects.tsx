@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/Badge'
 import { requireAuthentication } from '@/router/auth'
 import { projectsService, type CreateProjectPayload } from '@/services/projects'
 import { subscriptionsService } from '@/services/subscriptions'
-import { usersService } from '@/services/users'
+import { authService } from '@/services/auth'
 import type { Project, ProjectHealth, ProjectStatus } from '@/domain/types'
 
 export const Route = createFileRoute('/projects')({
@@ -54,9 +54,9 @@ export function ProjectsPage() {
 
   const { data: usersData } = useQuery({
     queryKey: ['companyUsers'],
-    queryFn: () => usersService.list({ is_active: true }),
+    queryFn: () => authService.getUsers({ is_active: true }),
   })
-  const users = usersData?.results || []
+  const users = Array.isArray(usersData) ? usersData : usersData?.results || []
 
   // Check tiering: free/starter plans can be restricted or prompt upgrade
   const planCode = subscription?.plan_details?.code || 'starter'
