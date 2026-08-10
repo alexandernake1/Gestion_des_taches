@@ -116,11 +116,16 @@ async function request<T>(
     const errorData = typeof data === 'object' && data !== null
       ? data as Record<string, unknown>
       : {};
-    const errorMessage = (
+    let errorMessage = (
       typeof errorData.detail === 'string' && errorData.detail
     ) || (
       typeof errorData.message === 'string' && errorData.message
     ) || findErrorMessage(data) || 'Une erreur est survenue. Veuillez réessayer.';
+
+    if (errorMessage.includes('Request was throttled') || errorMessage.includes('throttled')) {
+      errorMessage = 'Nombre maximal de tentatives atteint. Veuillez patienter quelques minutes avant de réessayer.';
+    }
+
     throw new ApiError(response.status, errorMessage, data);
   }
 
