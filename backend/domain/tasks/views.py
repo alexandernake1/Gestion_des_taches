@@ -16,7 +16,7 @@ import openpyxl
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 from common.permissions.permissions import IsTaskCreatorOrAssigneeOrManager, IsOwnerOrCompanyManager, IsCompanyOperational
 from common.utils import get_requested_company
-from .models import Task, TaskTemplate, Status, TaskComment, TaskAttachment, TaskReport
+from .models import Task, TaskTemplate, Status, TaskComment, TaskAttachment, TaskReport, Project
 from .serializers import (
     TaskSerializer,
     TaskListSerializer,
@@ -34,6 +34,7 @@ from .serializers import (
     TaskTemplateSerializer,
     TaskTemplateInstantiateSerializer,
     TaskBulkActionSerializer,
+    ProjectSerializer,
 )
 
 
@@ -1138,3 +1139,43 @@ def export_tasks_excel(request):
         response['X-Export-Truncated'] = f'true; total={total_count}; exported={EXPORT_LIMIT}'
     wb.save(response)
     return response
+
+
+class ProjectListCreateView(generics.ListCreateAPIView):
+    serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticated, IsCompanyOperational]
+
+    def get_queryset(self):
+        company = get_requested_company(self.request)
+        if not company:
+            return Project.objects.none()
+        qs = Project.objects.filter(company=company)
+        status_param = self.request.query_params.get('status')
+        health_param = self.request.query_params.get('health')
+        search_param = self.request.query_params.get('search')
+        if status_param:
+            qs = qs.filter(status=status_param)
+        if health_param:
+            qs = qs.filter(health=health_param)
+        if search_param:
+            qs = qs.filter(name__icontains=search_param)
+        return qs
+
+    def perform_create(self, serializer):
+        company = get_requested_company(self.request)
+        user = self.request.user
+        if not (user.is_administrator() or user.is_owner() or user.role in ['manager', 'owner', 'administrator']):
+            raise ValidationError("Seuls les managers et propriétaires peuvent créer des projets.")
+        serializer.save(company=company, manager=serializer.validated_data.get('manager') or user)
+
+
+class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticated, IsCompanyOperational]
+
+    def get_queryset(self):
+        company = get_requested_company(self.request)
+        if not company:
+            return Project.objects.none()
+        return Project.objects.filter(company=company)
+

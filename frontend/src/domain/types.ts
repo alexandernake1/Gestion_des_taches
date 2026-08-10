@@ -32,6 +32,39 @@ export interface UserAuditLog {
   created_at: string;
 }
 
+export type ProjectStatus = 'in_progress' | 'on_hold' | 'completed' | 'cancelled';
+export type ProjectHealth = 'on_track' | 'at_risk' | 'off_track';
+
+export interface ProjectMember {
+  id: number;
+  full_name: string;
+  email: string;
+  role: Role;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  description?: string;
+  company?: number;
+  status: ProjectStatus;
+  status_display: string;
+  health: ProjectHealth;
+  health_display: string;
+  start_date?: string;
+  due_date?: string;
+  manager?: number;
+  manager_name?: string;
+  members?: number[];
+  member_details?: ProjectMember[];
+  budget_hours?: number;
+  progress_percent: number;
+  total_tasks_count: number;
+  completed_tasks_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Company {
   id: string;
   name: string;

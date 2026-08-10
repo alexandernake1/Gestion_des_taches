@@ -6,7 +6,34 @@ import mimetypes
 import zipfile
 from domain.users.models import Role, User
 from domain.teams.models import Team
-from .models import Status, Task, TaskTemplate, TaskHistory, TaskComment, TaskAttachment, TaskReport
+from .models import Status, Task, TaskTemplate, TaskHistory, TaskComment, TaskAttachment, TaskReport, Project, ProjectStatus, ProjectHealth
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    health_display = serializers.CharField(source='get_health_display', read_only=True)
+    manager_name = serializers.CharField(source='manager.full_name', read_only=True)
+    progress_percent = serializers.IntegerField(read_only=True)
+    total_tasks_count = serializers.IntegerField(read_only=True)
+    completed_tasks_count = serializers.IntegerField(read_only=True)
+    member_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Project
+        fields = [
+            'id', 'name', 'description', 'company', 'status', 'status_display',
+            'health', 'health_display', 'start_date', 'due_date',
+            'manager', 'manager_name', 'members', 'member_details',
+            'budget_hours', 'progress_percent', 'total_tasks_count',
+            'completed_tasks_count', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'company', 'created_at', 'updated_at']
+
+    def get_member_details(self, obj):
+        return [
+            {'id': m.id, 'full_name': m.full_name, 'email': m.email, 'role': m.role}
+            for m in obj.members.all()
+        ]
 
 
 def validate_task_dates(attrs, instance=None):
@@ -26,6 +53,7 @@ class TaskSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.CharField(source='assigned_to.full_name', read_only=True)
     team_name = serializers.CharField(source='team.name', read_only=True)
     team_leader_id = serializers.IntegerField(source='team.leader_id', read_only=True)
+    project_name = serializers.CharField(source='project.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
@@ -37,7 +65,7 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'id', 'title', 'description', 'company', 'creator', 'creator_name',
+            'id', 'title', 'description', 'company', 'project', 'project_name', 'creator', 'creator_name',
             'assigned_to', 'assigned_to_name', 'team', 'team_name', 'team_leader_id', 'priority',
             'priority_display', 'status', 'status_display', 'start_date', 'due_date',
             'completed_at', 'is_overdue', 'is_blocked', 'progress_percent',

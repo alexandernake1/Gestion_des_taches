@@ -11,6 +11,7 @@ urlpatterns = [
     path('companies/', include('domain.companies.urls')),
     path('teams/', include('domain.teams.urls')),
     path('tasks/', include('domain.tasks.urls')),
+    path('projects/', include('domain.tasks.projects_urls')),
     path('notifications/', include('domain.notifications.urls')),
     path('dashboard/company/', company_dashboard, name='company_dashboard'),
     path('dashboard/user/', user_dashboard, name='user_dashboard'),

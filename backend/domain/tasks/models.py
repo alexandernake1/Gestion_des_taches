@@ -31,6 +31,84 @@ class RecurrenceFrequency(models.TextChoices):
     MONTHLY = 'monthly', 'Mensuelle'
 
 
+class ProjectStatus(models.TextChoices):
+    IN_PROGRESS = 'in_progress', 'En cours'
+    ON_HOLD = 'on_hold', 'En pause'
+    COMPLETED = 'completed', 'Terminé'
+    CANCELLED = 'cancelled', 'Annulé'
+
+
+class ProjectHealth(models.TextChoices):
+    ON_TRACK = 'on_track', 'Sur les rails 🟢'
+    AT_RISK = 'at_risk', 'En risque 🟠'
+    OFF_TRACK = 'off_track', 'En retard 🔴'
+
+
+class Project(models.Model):
+    """Project model for grouping tasks and tracking business initiatives."""
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='projects'
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=ProjectStatus.choices,
+        default=ProjectStatus.IN_PROGRESS
+    )
+    health = models.CharField(
+        max_length=20,
+        choices=ProjectHealth.choices,
+        default=ProjectHealth.ON_TRACK
+    )
+    start_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    manager = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='managed_projects'
+    )
+    members = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='joined_projects'
+    )
+    budget_hours = models.PositiveIntegerField(default=0, help_text="Volume d'heures estimé")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'projects'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['company', 'status']),
+            models.Index(fields=['company', 'health']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
+
+    @property
+    def total_tasks_count(self) -> int:
+        return self.tasks.filter(is_active=True).count()
+
+    @property
+    def completed_tasks_count(self) -> int:
+        return self.tasks.filter(is_active=True, status=Status.COMPLETED).count()
+
+    @property
+    def progress_percent(self) -> int:
+        total = self.total_tasks_count
+        if total == 0:
+            return 100 if self.status == ProjectStatus.COMPLETED else 0
+        return round((self.completed_tasks_count / total) * 100)
+
+
 class Task(models.Model):
     """Task model for activity tracking."""
     
@@ -42,6 +120,13 @@ class Task(models.Model):
         Company,
         on_delete=models.CASCADE,
         related_name='tasks'
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        related_name='tasks',
+        null=True,
+        blank=True
     )
     creator = models.ForeignKey(
         User,

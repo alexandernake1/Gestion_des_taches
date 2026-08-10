@@ -1,4 +1,4 @@
-import { Bell, Building2, CalendarRange, CheckSquare2, CreditCard, Globe, LayoutDashboard, LogOut, Shield, UserRound, Users, X, Package, Megaphone, ChevronRight } from 'lucide-react'
+import { Bell, Building2, FolderKanban, CheckSquare2, CreditCard, Globe, LayoutDashboard, LogOut, Shield, UserRound, Users, X, Package, Megaphone, ChevronRight } from 'lucide-react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { authService } from '@/services/auth'
 import { useQuery } from '@tanstack/react-query'
@@ -6,8 +6,8 @@ import { useQuery } from '@tanstack/react-query'
 const navigation = [
   { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'employee'] },
   { name: 'Tâches', href: '/tasks', icon: CheckSquare2, roles: ['owner', 'manager', 'employee'] },
+  { name: 'Projets', href: '/projects', icon: FolderKanban, roles: ['owner', 'manager', 'employee'] },
   { name: 'Équipes', href: '/teams', icon: Users, roles: ['owner', 'manager'] },
-  { name: 'Planification', href: '/planning', icon: CalendarRange, roles: ['owner', 'manager'] },
   { name: 'Utilisateurs', href: '/users', icon: UserRound, roles: ['owner', 'manager'] },
   { name: 'Abonnement', href: '/subscription', icon: CreditCard, roles: ['owner'] },
   { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['owner', 'manager', 'employee'] },
