@@ -1,12 +1,14 @@
 from django.urls import path, include
 from .views import (
     company_dashboard,
+    health_check,
     user_dashboard,
     recent_activity,
     performance_metrics
 )
 
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
     path('auth/', include('domain.users.urls')),
     path('companies/', include('domain.companies.urls')),
     path('teams/', include('domain.teams.urls')),
