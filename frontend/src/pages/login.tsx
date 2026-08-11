@@ -5,6 +5,7 @@ import { authService } from '@/services/auth'
 import { redirectAuthenticatedUser } from '@/router/auth'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { ApiError } from '@/utils/api'
 
 export const Route = createFileRoute('/login')({
   beforeLoad: redirectAuthenticatedUser,
@@ -35,11 +36,13 @@ function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [credentialError, setCredentialError] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setCredentialError(false)
     setLoading(true)
 
     try {
@@ -54,6 +57,7 @@ function LoginPage() {
         navigate({ to: '/dashboard' })
       }
     } catch (err) {
+      setCredentialError(err instanceof ApiError && err.code === 'invalid_credentials')
       setError(err instanceof Error ? err.message : 'Connexion impossible. Vérifiez vos identifiants.')
       setLoading(false)
     }
@@ -193,7 +197,7 @@ function LoginPage() {
           {/* Form */}
           <form className="space-y-5" onSubmit={handleSubmit}>
             {error && (
-              <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3">
+              <div id="login-error" role="alert" aria-live="assertive" className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3">
                 <div className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
                 <p className="text-[13px] font-medium text-destructive">{error}</p>
               </div>
@@ -208,11 +212,18 @@ function LoginPage() {
                   id="login-email"
                   name="email"
                   type="email"
+                  autoComplete="username"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setError('')
+                    setCredentialError(false)
+                  }}
+                  aria-invalid={credentialError || undefined}
+                  aria-describedby={credentialError ? 'login-error' : undefined}
                   placeholder="vous@entreprise.com"
-                  className="h-11 w-full rounded-xl border border-border/80 bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/25 hover:border-border"
+                  className={`h-11 w-full rounded-xl border bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:outline-none focus:ring-2 ${credentialError ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/20' : 'border-border/80 focus:border-primary/60 focus:ring-primary/25 hover:border-border'}`}
                 />
               </div>
 
@@ -224,11 +235,18 @@ function LoginPage() {
                   id="login-password"
                   name="password"
                   type="password"
+                  autoComplete="current-password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setError('')
+                    setCredentialError(false)
+                  }}
+                  aria-invalid={credentialError || undefined}
+                  aria-describedby={credentialError ? 'login-error' : undefined}
                   placeholder="••••••••"
-                  className="h-11 w-full rounded-xl border border-border/80 bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/25 hover:border-border"
+                  className={`h-11 w-full rounded-xl border bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:outline-none focus:ring-2 ${credentialError ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/20' : 'border-border/80 focus:border-primary/60 focus:ring-primary/25 hover:border-border'}`}
                 />
               </div>
             </div>

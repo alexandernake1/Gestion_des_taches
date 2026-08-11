@@ -1412,6 +1412,37 @@ def test_deactivated_company_member_cannot_login(api_client, tenant_data):
     )
 
     assert response.status_code == 403
+    assert response.data['code'] == 'company_inactive'
+    assert response.data['detail'] == (
+        "L'espace de travail de votre entreprise a été désactivé. Contactez l'assistance."
+    )
+
+
+@pytest.mark.django_db
+def test_login_returns_targeted_french_error_without_exposing_accounts(api_client, tenant_data):
+    wrong_password = api_client.post(
+        '/api/auth/login/',
+        {
+            'email': tenant_data['employee_a'].email,
+            'password': 'MotDePasseIncorrect123!',
+        },
+        format='json',
+    )
+    unknown_email = api_client.post(
+        '/api/auth/login/',
+        {
+            'email': 'compte-inexistant@example.com',
+            'password': 'MotDePasseIncorrect123!',
+        },
+        format='json',
+    )
+
+    assert wrong_password.status_code == 401
+    assert unknown_email.status_code == 401
+    assert wrong_password.data['code'] == 'invalid_credentials'
+    assert unknown_email.data['code'] == 'invalid_credentials'
+    assert wrong_password.data['detail'] == 'Adresse e-mail ou mot de passe incorrect.'
+    assert unknown_email.data['detail'] == wrong_password.data['detail']
 
 
 @pytest.mark.django_db
