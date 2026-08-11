@@ -4,10 +4,70 @@ class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    public data?: unknown
+    public data?: unknown,
+    public code = 'api_error',
+    public fieldErrors: Record<string, string[]> = {},
   ) {
     super(message);
     this.name = 'ApiError';
+  }
+}
+
+const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
+  [/^this field is required\.?$/i, 'Ce champ est obligatoire.'],
+  [/^enter a valid email address\.?$/i, 'Saisissez une adresse e-mail valide.'],
+  [/^old password is incorrect\.?$/i, "L'ancien mot de passe est incorrect."],
+  [/^invalid company\.?$/i, "L'élément sélectionné n'appartient pas à votre entreprise."],
+  [/^authentication credentials were not provided\.?$/i, 'Vous devez vous connecter pour continuer.'],
+  [/^you do not have permission to perform this action\.?$/i, "Vous n'avez pas l'autorisation d'effectuer cette action."],
+  [/^not found\.?$/i, "L'élément demandé est introuvable."],
+]
+
+function translateErrorMessage(message: string): string {
+  if (/request was throttled|throttled/i.test(message)) {
+    return 'Nombre maximal de tentatives atteint. Veuillez patienter quelques minutes avant de réessayer.'
+  }
+
+  for (const [pattern, translation] of ERROR_TRANSLATIONS) {
+    if (pattern.test(message.trim())) return translation
+  }
+  return message
+}
+
+function normalizeFieldErrors(value: unknown): Record<string, string[]> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
+
+  const record = value as Record<string, unknown>
+  const source = typeof record.fields === 'object' && record.fields !== null
+    ? record.fields as Record<string, unknown>
+    : record
+  const result: Record<string, string[]> = {}
+
+  Object.entries(source).forEach(([field, messages]) => {
+    if (['code', 'detail', 'fields', 'message'].includes(field)) return
+    const values = Array.isArray(messages) ? messages : [messages]
+    const normalized = values
+      .filter((item): item is string => typeof item === 'string')
+      .map(translateErrorMessage)
+    if (normalized.length) result[field] = normalized
+  })
+
+  return result
+}
+
+async function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init)
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError(0, 'La requête a été interrompue.', { code: 'request_aborted' }, 'request_aborted')
+    }
+    throw new ApiError(
+      0,
+      'Impossible de contacter le serveur. Vérifiez votre connexion puis réessayez.',
+      { code: 'network_error' },
+      'network_error',
+    )
   }
 }
 
@@ -75,7 +135,7 @@ async function request<T>(
 
   const finalBody = body instanceof FormData ? body : (typeof body === 'object' && body !== null ? JSON.stringify(body) : body);
 
-  const response = await fetch(url, {
+  const response = await safeFetch(url, {
     ...fetchOptions,
     credentials: 'include',
     headers,
@@ -98,7 +158,7 @@ async function request<T>(
 
   if (!response.ok) {
     if (response.status === 401 && !hasRetriedAuthentication && endpoint !== '/auth/login/') {
-      const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+      const refreshResponse = await safeFetch(`${API_BASE_URL}/auth/refresh/`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -116,17 +176,14 @@ async function request<T>(
     const errorData = typeof data === 'object' && data !== null
       ? data as Record<string, unknown>
       : {};
-    let errorMessage = (
+    const errorMessage = translateErrorMessage((
       typeof errorData.detail === 'string' && errorData.detail
     ) || (
       typeof errorData.message === 'string' && errorData.message
-    ) || findErrorMessage(data) || 'Une erreur est survenue. Veuillez réessayer.';
+    ) || findErrorMessage(data) || 'Une erreur est survenue. Veuillez réessayer.');
 
-    if (errorMessage.includes('Request was throttled') || errorMessage.includes('throttled')) {
-      errorMessage = 'Nombre maximal de tentatives atteint. Veuillez patienter quelques minutes avant de réessayer.';
-    }
-
-    throw new ApiError(response.status, errorMessage, data);
+    const code = typeof errorData.code === 'string' ? errorData.code : 'api_error'
+    throw new ApiError(response.status, errorMessage, data, code, normalizeFieldErrors(data));
   }
 
   return data as T;
@@ -199,7 +256,10 @@ export const api = {
     if (token) headers.Authorization = `Bearer ${token}`;
     const impersonatedCompanyId = localStorage.getItem('impersonated_company_id');
     if (impersonatedCompanyId) headers['X-Company-ID'] = impersonatedCompanyId;
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
+    const response = await safeFetch(`${API_BASE_URL}${endpoint}`, {
+      credentials: 'include',
+      headers,
+    });
     if (!response.ok) {
       throw new ApiError(response.status, 'Téléchargement impossible.');
     }

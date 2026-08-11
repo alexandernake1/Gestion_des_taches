@@ -81,7 +81,7 @@ def validate_task_dates(attrs, instance=None):
     due_date = attrs.get('due_date', getattr(instance, 'due_date', None))
     if start_date and due_date and due_date < start_date:
         raise serializers.ValidationError({
-            'due_date': "Due date cannot be before start date."
+            'due_date': "La date d'échéance ne peut pas précéder la date de début."
         })
     return attrs
 
@@ -145,23 +145,23 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     def validate_assigned_to(self, value):
         company = get_requested_company(self.context['request'])
         if value and value.company != company:
-            raise serializers.ValidationError("You can only assign tasks to users in your company.")
+            raise serializers.ValidationError("Vous ne pouvez attribuer une tâche qu'aux utilisateurs de votre entreprise.")
         if value and not value.is_active:
-            raise serializers.ValidationError("You cannot assign a task to an inactive user.")
+            raise serializers.ValidationError("Vous ne pouvez pas attribuer une tâche à un utilisateur inactif.")
         return value
     
     def validate_team(self, value):
         company = get_requested_company(self.context['request'])
         if value and value.company != company:
-            raise serializers.ValidationError("You can only assign tasks to teams in your company.")
+            raise serializers.ValidationError("Vous ne pouvez attribuer une tâche qu'aux équipes de votre entreprise.")
         if value and not value.is_active:
-            raise serializers.ValidationError("You cannot assign a task to an inactive team.")
+            raise serializers.ValidationError("Vous ne pouvez pas attribuer une tâche à une équipe inactive.")
         return value
 
     def validate_project(self, value):
         company = get_requested_company(self.context['request'])
         if value and value.company != company:
-            raise serializers.ValidationError("You can only link tasks to projects in your company.")
+            raise serializers.ValidationError("Vous ne pouvez lier une tâche qu'aux projets de votre entreprise.")
         return value
 
     def validate(self, attrs):
@@ -175,11 +175,11 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         if user.role == Role.EMPLOYEE and not is_team_leader_for_parent:
             if attrs.get('assigned_to') not in (None, user):
                 raise serializers.ValidationError({
-                    'assigned_to': "Employees cannot assign tasks to another user."
+                    'assigned_to': "Les employés ne peuvent pas attribuer une tâche à un autre utilisateur."
                 })
             if attrs.get('team') is not None:
                 raise serializers.ValidationError({
-                    'team': "Employees cannot assign tasks to a team."
+                    'team': "Les employés ne peuvent pas attribuer une tâche à une équipe."
                 })
             attrs.pop('assigned_to', None)
             attrs.pop('team', None)
@@ -189,9 +189,9 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         parent = attrs.get('parent')
         dependencies = attrs.get('dependencies', [])
         if parent and parent.company != company:
-            raise serializers.ValidationError({'parent': "Invalid parent task."})
+            raise serializers.ValidationError({'parent': "La tâche parente est invalide."})
         if any(task.company != company for task in dependencies):
-            raise serializers.ValidationError({'dependencies': "Dependencies must belong to the same company."})
+            raise serializers.ValidationError({'dependencies': "Les dépendances doivent appartenir à la même entreprise."})
         return validate_task_dates(attrs)
 
 
@@ -212,23 +212,23 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
     def validate_assigned_to(self, value):
         company = get_requested_company(self.context['request'])
         if value and value.company != company:
-            raise serializers.ValidationError("You can only assign tasks to users in your company.")
+            raise serializers.ValidationError("Vous ne pouvez attribuer une tâche qu'aux utilisateurs de votre entreprise.")
         if value and not value.is_active:
-            raise serializers.ValidationError("You cannot assign a task to an inactive user.")
+            raise serializers.ValidationError("Vous ne pouvez pas attribuer une tâche à un utilisateur inactif.")
         return value
     
     def validate_team(self, value):
         company = get_requested_company(self.context['request'])
         if value and value.company != company:
-            raise serializers.ValidationError("You can only assign tasks to teams in your company.")
+            raise serializers.ValidationError("Vous ne pouvez attribuer une tâche qu'aux équipes de votre entreprise.")
         if value and not value.is_active:
-            raise serializers.ValidationError("You cannot assign a task to an inactive team.")
+            raise serializers.ValidationError("Vous ne pouvez pas attribuer une tâche à une équipe inactive.")
         return value
 
     def validate_project(self, value):
         company = get_requested_company(self.context['request'])
         if value and value.company != company:
-            raise serializers.ValidationError("You can only link tasks to projects in your company.")
+            raise serializers.ValidationError("Vous ne pouvez lier une tâche qu'aux projets de votre entreprise.")
         return value
 
     def validate(self, attrs):
@@ -236,27 +236,27 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         if user.role == Role.EMPLOYEE:
             if 'assigned_to' in attrs or 'team' in attrs or 'requires_completion_approval' in attrs:
                 raise serializers.ValidationError(
-                    "Employees cannot change task assignment, team, or approval policy."
+                    "Les employés ne peuvent pas modifier l'attribution, l'équipe ou la politique de validation d'une tâche."
                 )
         company = get_requested_company(self.context['request'])
         parent = attrs.get('parent', self.instance.parent)
         dependencies = attrs.get('dependencies')
         if parent:
             if parent == self.instance:
-                raise serializers.ValidationError({'parent': "A task cannot be its own parent."})
+                raise serializers.ValidationError({'parent': "Une tâche ne peut pas être sa propre tâche parente."})
             if parent.company != company:
-                raise serializers.ValidationError({'parent': "Invalid parent task."})
+                raise serializers.ValidationError({'parent': "La tâche parente est invalide."})
         if dependencies is not None:
             if self.instance in dependencies:
-                raise serializers.ValidationError({'dependencies': "A task cannot depend on itself."})
+                raise serializers.ValidationError({'dependencies': "Une tâche ne peut pas dépendre d'elle-même."})
             if any(task.company != company for task in dependencies):
-                raise serializers.ValidationError({'dependencies': "Dependencies must belong to the same company."})
+                raise serializers.ValidationError({'dependencies': "Les dépendances doivent appartenir à la même entreprise."})
         if attrs.get('status') == Status.COMPLETED:
             incomplete_dependencies = self.instance.dependencies.exclude(status=Status.COMPLETED)
             incomplete_subtasks = self.instance.subtasks.filter(is_active=True).exclude(status=Status.COMPLETED)
             if incomplete_dependencies.exists() or incomplete_subtasks.exists():
                 raise serializers.ValidationError({
-                    'status': "Complete all dependencies and subtasks before closing this task."
+                    'status': "Terminez toutes les dépendances et sous-tâches avant de clôturer cette tâche."
                 })
             if (
                 self.instance.requires_completion_approval
@@ -381,7 +381,7 @@ class TaskTemplateSerializer(serializers.ModelSerializer):
         if self.instance:
             queryset = queryset.exclude(pk=self.instance.pk)
         if queryset.exists():
-            raise serializers.ValidationError("A template with this name already exists.")
+            raise serializers.ValidationError("Un modèle portant ce nom existe déjà.")
         return value.strip()
 
 
@@ -413,9 +413,9 @@ class TaskBulkActionSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs['action'] == 'status' and 'status' not in attrs:
-            raise serializers.ValidationError({'status': 'This field is required.'})
+            raise serializers.ValidationError({'status': 'Ce champ est obligatoire.'})
         if attrs['action'] == 'assign' and 'assigned_to' not in attrs:
-            raise serializers.ValidationError({'assigned_to': 'This field is required.'})
+            raise serializers.ValidationError({'assigned_to': 'Ce champ est obligatoire.'})
         return attrs
 
 
@@ -502,20 +502,20 @@ class TaskAttachmentCreateSerializer(serializers.ModelSerializer):
         extension = Path(value.name).suffix.lower()
         if extension not in allowed_extensions:
             raise serializers.ValidationError(
-                "This file type is not allowed."
+                "Ce type de fichier n'est pas autorisé."
             )
 
         max_size = 10 * 1024 * 1024
         if value.size > max_size:
-            raise serializers.ValidationError("File size cannot exceed 10MB.")
+            raise serializers.ValidationError("La taille du fichier ne peut pas dépasser 10 Mo.")
 
         header = value.read(8)
         value.seek(0)
         if extension == '.pdf' and not header.startswith(b'%PDF-'):
-            raise serializers.ValidationError("The PDF file is invalid.")
+            raise serializers.ValidationError("Le fichier PDF est invalide.")
         if extension in {'.docx', '.xlsx'} and not zipfile.is_zipfile(value):
             value.seek(0)
-            raise serializers.ValidationError("The Office document is invalid.")
+            raise serializers.ValidationError("Le document Office est invalide.")
         value.seek(0)
 
         company = get_requested_company(self.context['request'])
@@ -529,7 +529,7 @@ class TaskAttachmentCreateSerializer(serializers.ModelSerializer):
                 )
                 if used + value.size > limit_mb * 1024 * 1024:
                     raise serializers.ValidationError(
-                        "Your enterprise storage quota has been reached."
+                        "Le quota de stockage de votre entreprise est atteint."
                     )
         return value
     
@@ -585,10 +585,10 @@ class TaskReportCreateSerializer(serializers.ModelSerializer):
         task = self.context['task']
         if task.due_date is None:
             raise serializers.ValidationError(
-                "The task must have a due date before a report can be requested."
+                "La tâche doit avoir une date d'échéance avant de pouvoir demander un report."
             )
         if value <= task.due_date:
-            raise serializers.ValidationError("New due date must be after the current due date.")
+            raise serializers.ValidationError("La nouvelle date d'échéance doit être postérieure à la date actuelle.")
         return value
 
     def to_representation(self, instance):
@@ -608,7 +608,7 @@ class TaskReportReviewSerializer(serializers.ModelSerializer):
     def validate_status(self, value):
         valid_statuses = ['approved', 'rejected']
         if value not in valid_statuses:
-            raise serializers.ValidationError(f"Status must be one of: {', '.join(valid_statuses)}")
+            raise serializers.ValidationError(f"Le statut doit être l'un des suivants : {', '.join(valid_statuses)}")
         return value
 
     def validate(self, attrs):

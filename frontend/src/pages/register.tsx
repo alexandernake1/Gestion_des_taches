@@ -7,6 +7,7 @@ import { authService } from '@/services/auth'
 import { subscriptionsService } from '@/services/subscriptions'
 import { redirectAuthenticatedUser } from '@/router/auth'
 import type { CompanyRegistrationRequest } from '@/domain/types'
+import { ApiError } from '@/utils/api'
 
 export const Route = createFileRoute('/register')({
   beforeLoad: redirectAuthenticatedUser,
@@ -35,6 +36,7 @@ function RegisterPage() {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState(initialForm)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const [companyEmailError, setCompanyEmailError] = useState('')
   const [checkingCompanyEmail, setCheckingCompanyEmail] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -47,6 +49,12 @@ function RegisterPage() {
   const update = (field: keyof CompanyRegistrationRequest, value: string | boolean) => {
     setForm((current) => ({ ...current, [field]: value }))
     setError('')
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
     if (field === 'contact_email') setCompanyEmailError('')
   }
 
@@ -99,6 +107,7 @@ function RegisterPage() {
       await authService.register(form)
       navigate({ to: '/dashboard' })
     } catch (err) {
+      if (err instanceof ApiError) setFieldErrors(err.fieldErrors)
       setError(err instanceof Error ? err.message : 'Création de l’espace impossible.')
     } finally {
       setLoading(false)
@@ -140,24 +149,25 @@ function RegisterPage() {
                 <h2 className="text-2xl font-black tracking-tight text-slate-950">Informations de l’entreprise</h2>
                 <p className="mt-2 text-sm text-slate-500">Ces informations identifient votre organisation et son contact principal.</p>
                 <div className="mt-7 grid gap-6 sm:grid-cols-2">
-                  <Field label="Nom de l’entreprise" required value={form.company_name} onChange={(value) => update('company_name', value)} />
-                  <Field label="Identifiant de l'espace (URL)" helpText="Ex: 'mon-entreprise' (facultatif)" value={form.company_slug || ''} placeholder="mon-entreprise" onChange={(value) => update('company_slug', value)} />
+                  <Field name="company_name" label="Nom de l’entreprise" required value={form.company_name} error={fieldErrors.company_name?.[0]} onChange={(value) => update('company_name', value)} />
+                  <Field name="company_slug" label="Identifiant de l'espace (URL)" helpText="Ex: 'mon-entreprise' (facultatif)" value={form.company_slug || ''} error={fieldErrors.company_slug?.[0]} placeholder="mon-entreprise" onChange={(value) => update('company_slug', value)} />
                   
                   <div className="sm:col-span-2 border-t border-slate-100 pt-4 mt-2">
                     <p className="text-sm font-bold text-slate-700 mb-4">Coordonnées principales</p>
                     <div className="grid gap-6 sm:grid-cols-2">
                       <Field
+                        name="contact_email"
                         label="Email de l'entreprise"
                         type="email"
                         required
                         value={form.contact_email}
-                        error={companyEmailError}
+                        error={companyEmailError || fieldErrors.contact_email?.[0]}
                         onBlur={() => void validateCompanyEmail()}
                         onChange={(value) => update('contact_email', value)}
                       />
-                      <Field label="Téléphone de contact" type="tel" required value={form.contact_phone} onChange={(value) => update('contact_phone', value)} />
-                      <Field label="Adresse postale (Siège)" helpText="Où est située l'entreprise" value={form.address || ''} placeholder="123 Rue de Paris..." onChange={(value) => update('address', value)} />
-                      <Field label="Site web" type="url" value={form.website || ''} placeholder="https://..." onChange={(value) => update('website', value)} />
+                      <Field name="contact_phone" label="Téléphone de contact" type="tel" required value={form.contact_phone} error={fieldErrors.contact_phone?.[0]} onChange={(value) => update('contact_phone', value)} />
+                      <Field name="address" label="Adresse postale (Siège)" helpText="Où est située l'entreprise" value={form.address || ''} error={fieldErrors.address?.[0]} placeholder="123 Rue de Paris..." onChange={(value) => update('address', value)} />
+                      <Field name="website" label="Site web" type="url" value={form.website || ''} error={fieldErrors.website?.[0]} placeholder="https://..." onChange={(value) => update('website', value)} />
                     </div>
                   </div>
                 </div>
@@ -199,12 +209,12 @@ function RegisterPage() {
                 <h2 className="text-2xl font-black tracking-tight text-slate-950">Créez le compte propriétaire</h2>
                 <p className="mt-2 text-sm text-slate-500">Ce compte pourra ensuite inviter les managers et employés.</p>
                 <div className="mt-7 grid gap-5 sm:grid-cols-2">
-                  <Field label="Prénom" required value={form.first_name} onChange={(value) => update('first_name', value)} />
-                  <Field label="Nom" required value={form.last_name} onChange={(value) => update('last_name', value)} />
-                  <Field label="Email (Identifiant)" type="email" helpText="Adresse utilisée pour la connexion" required value={form.email} onChange={(value) => update('email', value)} />
-                  <Field label="Téléphone personnel" type="tel" value={form.phone || ''} onChange={(value) => update('phone', value)} />
-                  <Field label="Mot de passe" type="password" required value={form.password} onChange={(value) => update('password', value)} />
-                  <Field label="Confirmez le mot de passe" type="password" required value={form.password_confirm} onChange={(value) => update('password_confirm', value)} />
+                  <Field name="first_name" label="Prénom" required value={form.first_name} error={fieldErrors.first_name?.[0]} onChange={(value) => update('first_name', value)} />
+                  <Field name="last_name" label="Nom" required value={form.last_name} error={fieldErrors.last_name?.[0]} onChange={(value) => update('last_name', value)} />
+                  <Field name="email" label="Email (Identifiant)" type="email" helpText="Adresse utilisée pour la connexion" required value={form.email} error={fieldErrors.email?.[0]} onChange={(value) => update('email', value)} />
+                  <Field name="phone" label="Téléphone personnel" type="tel" value={form.phone || ''} error={fieldErrors.phone?.[0]} onChange={(value) => update('phone', value)} />
+                  <Field name="password" label="Mot de passe" type="password" required value={form.password} error={fieldErrors.password?.[0]} onChange={(value) => update('password', value)} />
+                  <Field name="password_confirm" label="Confirmez le mot de passe" type="password" required value={form.password_confirm} error={fieldErrors.password_confirm?.[0]} onChange={(value) => update('password_confirm', value)} />
                 </div>
                 <label className="mt-6 flex items-start gap-3 rounded-xl border border-slate-200 p-4 text-sm text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer">
                   <input type="checkbox" checked={form.accept_terms} onChange={(event) => update('accept_terms', event.target.checked)} className="mt-0.5 accent-indigo-600 w-4 h-4" />
@@ -234,11 +244,13 @@ function RegisterPage() {
   )
 }
 
-function Field({ label, type = 'text', value, placeholder, required, helpText, error, onBlur, onChange }: { label: string; type?: string; value: string; placeholder?: string; required?: boolean; helpText?: string; error?: string; onBlur?: () => void; onChange: (value: string) => void }) {
+function Field({ name, label, type = 'text', value, placeholder, required, helpText, error, onBlur, onChange }: { name: string; label: string; type?: string; value: string; placeholder?: string; required?: boolean; helpText?: string; error?: string; onBlur?: () => void; onChange: (value: string) => void }) {
+  const errorId = `${name}-error`
+  const hintId = `${name}-hint`
   return (
-    <label className="block text-sm font-semibold text-slate-700">{label} {required && <span className="text-rose-500">*</span>}
-      <input type={type} required={required} value={value} placeholder={placeholder} onBlur={onBlur} onChange={(event) => onChange(event.target.value)} className={`mt-1.5 h-11 w-full rounded-xl border px-3 text-sm font-normal focus:ring-1 transition-colors ${error ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'}`} />
-      {error ? <p className="mt-1.5 text-xs font-medium text-rose-600">{error}</p> : helpText && <p className="mt-1.5 text-xs text-slate-400 font-medium">{helpText}</p>}
+    <label htmlFor={name} className="block text-sm font-semibold text-slate-700">{label} {required && <span className="text-rose-500">*</span>}
+      <input id={name} name={name} type={type} required={required} value={value} placeholder={placeholder} onBlur={onBlur} onChange={(event) => onChange(event.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : helpText ? hintId : undefined} className={`mt-1.5 h-11 w-full rounded-xl border px-3 text-sm font-normal focus:ring-1 transition-colors ${error ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'}`} />
+      {error ? <p id={errorId} role="alert" className="mt-1.5 text-xs font-medium text-rose-600">{error}</p> : helpText && <p id={hintId} className="mt-1.5 text-xs text-slate-400 font-medium">{helpText}</p>}
     </label>
   )
 }

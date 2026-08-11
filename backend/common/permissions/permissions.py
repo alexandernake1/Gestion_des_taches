@@ -1,6 +1,13 @@
+import logging
+
 from rest_framework import permissions
+
+from domain.companies.models import CompanySubscription
 from domain.users.models import Role
 from common.utils import get_requested_company
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_object_company(obj):
@@ -165,7 +172,7 @@ class IsSameCompany(permissions.BasePermission):
 class IsCompanyOperational(permissions.BasePermission):
     """Allow reads but reject writes for inactive or blocked companies."""
 
-    message = "Your enterprise workspace is not currently writable."
+    message = "L'espace de travail de votre entreprise n'autorise pas les modifications."
 
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
@@ -177,20 +184,31 @@ class IsCompanyOperational(permissions.BasePermission):
 
         company = request.user.company
         if company is None or not company.is_active:
-            self.message = "Your enterprise has been deactivated."
+            self.message = "Votre entreprise a été désactivée."
             return False
 
         try:
             subscription = company.subscription
-        except Exception:
+            from domain.companies.services import synchronize_subscription_status
+            subscription = synchronize_subscription_status(subscription)
+        except CompanySubscription.DoesNotExist:
+            # Legacy companies can predate the subscription module. Keep them
+            # operational until an explicit subscription record is attached.
             return True
-
-        from domain.companies.services import synchronize_subscription_status
-        subscription = synchronize_subscription_status(subscription)
+        except Exception:
+            logger.exception(
+                "Unable to verify company subscription",
+                extra={'company_id': company.pk},
+            )
+            self.message = (
+                "Impossible de vérifier l'abonnement de votre entreprise. "
+                "Veuillez réessayer dans quelques instants."
+            )
+            return False
 
         if subscription.status in {'suspended', 'cancelled'}:
             self.message = (
-                "Your enterprise subscription does not allow changes."
+                "L'abonnement de votre entreprise n'autorise pas les modifications."
             )
             return False
         return True

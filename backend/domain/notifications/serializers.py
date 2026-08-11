@@ -38,10 +38,10 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
 
     def validate_reminder_days_before(self, value):
         if value < 1 or value > 14:
-            raise serializers.ValidationError("Choose a value between 1 and 14 days.")
+            raise serializers.ValidationError("Choisissez une valeur comprise entre 1 et 14 jours.")
         return value
 
     def validate_digest_hour(self, value):
         if value > 23:
-            raise serializers.ValidationError("Choose an hour between 0 and 23.")
+            raise serializers.ValidationError("Choisissez une heure comprise entre 0 et 23.")
         return value

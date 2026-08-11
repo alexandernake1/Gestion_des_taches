@@ -43,7 +43,7 @@ class TeamListCreateView(generics.ListCreateAPIView):
         company = get_requested_company(self.request)
         if not company:
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You must select or belong to a company to create a team.")
+            raise PermissionDenied("Vous devez sélectionner une entreprise ou appartenir à une entreprise pour créer une équipe.")
         serializer.save(company=company)
     
     @extend_schema(

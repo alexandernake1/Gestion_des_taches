@@ -195,7 +195,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
         # Cette méthode est conservée pour la compatibilité DRF mais ne devrait pas être appelée directement.
         company = get_requested_company(self.request)
         if not company:
-            raise PermissionDenied("You must select or belong to a company to create a task.")
+            raise PermissionDenied("Vous devez sélectionner une entreprise ou appartenir à une entreprise pour créer une tâche.")
         serializer.save(
             company=company,
             creator=self.request.user,
@@ -222,7 +222,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
         company = get_requested_company(request)
         if not company:
             return Response(
-                {"detail": "You must select or belong to a company to create a task."},
+                {"detail": "Vous devez sélectionner une entreprise ou appartenir à une entreprise pour créer une tâche."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -240,7 +240,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
             # Validate assignee is in the same company.
             if assigned_to and getattr(assigned_to, 'company', None) != company:
                 return Response(
-                    {"detail": "You cannot assign a task to a user from a different company."},
+                    {"detail": "Vous ne pouvez pas attribuer une tâche à un utilisateur d'une autre entreprise."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -256,7 +256,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
             team = serializer.validated_data.get('team')
             if team and getattr(team, 'company', None) != company:
                 return Response(
-                    {"detail": "You cannot assign a task to a team from a different company."},
+                    {"detail": "Vous ne pouvez pas attribuer une tâche à une équipe d'une autre entreprise."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
         else:
@@ -276,7 +276,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
             task=task,
             changed_by=request.user,
             field_name='created',
-            new_value='Task created'
+            new_value='Tâche créée'
         )
 
         return Response(
@@ -324,8 +324,8 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
             disallowed = incoming - ALLOWED_FIELDS
             if disallowed:
                 raise PermissionDenied(
-                    f"You are only allowed to update the 'status' field on tasks assigned to you. "
-                    f"Disallowed field(s): {', '.join(sorted(disallowed))}"
+                    "Vous pouvez uniquement modifier le statut des tâches qui vous sont attribuées. "
+                    f"Champs non autorisés : {', '.join(sorted(disallowed))}"
                 )
             # Fix #14: Prevent status change if the task is blocked
             if task.is_blocked and 'status' in serializer.validated_data and serializer.validated_data['status'] != task.status:
@@ -409,7 +409,7 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         task.history.create(
             changed_by=request.user,
             field_name='archived',
-            new_value='Task archived',
+            new_value='Tâche archivée',
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -425,7 +425,7 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
 def duplicate_task(request, task_id):
     source = get_accessible_task(request, task_id)
     if not (request.user.is_manager() or source.creator == request.user):
-        raise PermissionDenied("You cannot duplicate this task.")
+        raise PermissionDenied("Vous ne pouvez pas dupliquer cette tâche.")
 
     clone = Task.objects.create(
         title=f"Copie de {source.title}",
@@ -474,7 +474,7 @@ def duplicate_task(request, task_id):
 def restore_task(request, task_id):
     task = get_accessible_task(request, task_id, include_inactive=True)
     if not (request.user.is_manager() or task.creator == request.user):
-        raise PermissionDenied("You cannot restore this task.")
+        raise PermissionDenied("Vous ne pouvez pas restaurer cette tâche.")
     task.is_active = True
     task.archived_at = None
     task.save(update_fields=['is_active', 'archived_at', 'updated_at'])
@@ -500,7 +500,7 @@ class TaskTemplateListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         company = get_requested_company(self.request)
         if not company:
-            raise PermissionDenied("A company context is required.")
+            raise PermissionDenied("Le contexte d'une entreprise est obligatoire.")
         is_shared = serializer.validated_data.get('is_shared', True)
         if self.request.user.role == 'employee':
             is_shared = False
@@ -545,9 +545,9 @@ def instantiate_template(request, template_id):
     elif assigned_to is None:
         assigned_to = request.user
     if assigned_to and assigned_to.company != company:
-        raise ValidationError({'assigned_to': 'Invalid company.'})
+        raise ValidationError({'assigned_to': "L'utilisateur sélectionné n'appartient pas à cette entreprise."})
     if team and team.company != company:
-        raise ValidationError({'team': 'Invalid company.'})
+        raise ValidationError({'team': "L'équipe sélectionnée n'appartient pas à cette entreprise."})
 
     start_date = serializer.validated_data.get('start_date') or timezone.localdate()
     due_date = (
@@ -585,7 +585,7 @@ def save_task_as_template(request, task_id):
     if request.user.role == 'employee':
         is_shared = False
     if not name:
-        raise ValidationError({'name': 'Template name is required.'})
+        raise ValidationError({'name': 'Le nom du modèle est obligatoire.'})
     duration = (
         (task.due_date - task.start_date).days
         if task.start_date and task.due_date else None
@@ -630,11 +630,11 @@ def bulk_task_action(request):
         ).filter(id__in=serializer.validated_data['task_ids'])
     )
     if len(tasks) != len(set(serializer.validated_data['task_ids'])):
-        raise ValidationError({'task_ids': 'One or more tasks are inaccessible.'})
+        raise ValidationError({'task_ids': 'Une ou plusieurs tâches sont inaccessibles.'})
 
     action = serializer.validated_data['action']
     if action in {'assign', 'archive', 'restore'} and not request.user.is_manager():
-        raise PermissionDenied("This bulk action requires a manager role.")
+        raise PermissionDenied("Cette action groupée nécessite le rôle de responsable.")
 
     if action == 'status':
         target_status = serializer.validated_data['status']
@@ -700,10 +700,10 @@ def bulk_task_action(request):
 @permission_classes([IsAuthenticated])
 def workload_planning(request):
     if not (request.user.is_manager() or request.user.is_superuser):
-        raise PermissionDenied("Workload planning requires a manager role.")
+        raise PermissionDenied("La planification de la charge nécessite le rôle de responsable.")
     company = get_requested_company(request)
     if not company:
-        raise ValidationError({'company': 'A company context is required.'})
+        raise ValidationError({'company': "Le contexte d'une entreprise est obligatoire."})
 
     from domain.users.models import User
 
@@ -1027,15 +1027,15 @@ class TaskReportListCreateView(generics.ListCreateAPIView):
         task = get_accessible_task(self.request, task_id)
         if task.status == Status.COMPLETED:
             raise ValidationError({
-                'task': 'Cannot request a report for a task that is already completed.'
+                'task': "Vous ne pouvez pas demander le report d'une tâche déjà terminée."
             })
         if task.due_date is None:
             raise ValidationError({
-                'task': 'The task must have a due date before requesting a report.'
+                'task': "La tâche doit avoir une date d'échéance avant de demander un report."
             })
         if TaskReport.objects.filter(task=task, status='pending').exists():
             raise ValidationError({
-                'task': 'A pending report already exists for this task.'
+                'task': 'Une demande de report est déjà en attente pour cette tâche.'
             })
         report = serializer.save(
             task=task,
@@ -1075,12 +1075,12 @@ class TaskReportDetailView(generics.RetrieveUpdateAPIView):
         
         # Only managers can review reports
         if not self.request.user.is_manager():
-            raise PermissionDenied("Only managers can review reports.")
+            raise PermissionDenied("Seuls les responsables peuvent examiner les demandes de report.")
         
         # Update reviewed_at and reviewed_by when status changes
         if report.status != 'pending':
             raise ValidationError({
-                'status': 'This report has already been reviewed.'
+                'status': 'Cette demande de report a déjà été examinée.'
             })
 
         if serializer.validated_data['status'] != 'pending':
@@ -1152,7 +1152,7 @@ def pending_reports(request):
     
     if not request.user.is_manager():
         return Response(
-            {"detail": "Only managers can view pending reports."},
+            {"detail": "Seuls les responsables peuvent consulter les demandes de report en attente."},
             status=status.HTTP_403_FORBIDDEN
         )
     
@@ -1163,7 +1163,7 @@ def pending_reports(request):
     status_filter = request.query_params.get('status', 'pending')
     if status_filter != 'all':
         if status_filter not in {'pending', 'approved', 'rejected'}:
-            raise ValidationError({'status': 'Invalid report status.'})
+            raise ValidationError({'status': 'Le statut de la demande de report est invalide.'})
         queryset = queryset.filter(status=status_filter)
     
     serializer = TaskReportSerializer(queryset, many=True)

@@ -34,7 +34,7 @@ class CompanyCreateSerializer(serializers.ModelSerializer):
     
     def validate_slug(self, value):
         if Company.objects.filter(slug=value).exists():
-            raise serializers.ValidationError("A company with this slug already exists.")
+            raise serializers.ValidationError("Une entreprise utilise déjà cet identifiant.")
         return value
 
     def validate_contact_email(self, value):
