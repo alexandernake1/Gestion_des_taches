@@ -10,13 +10,13 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
-from django.db.models import Case, Count, DecimalField, IntegerField, Q, Sum, Value, When
+from django.db.models import Case, Count, DecimalField, Exists, IntegerField, OuterRef, Q, Sum, Value, When
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.http import FileResponse, HttpResponse
 import openpyxl
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
-from common.permissions.permissions import IsTaskCreatorOrAssigneeOrManager, IsOwnerOrCompanyManager, IsCompanyOperational
+from common.permissions.permissions import IsTaskCreatorOrAssigneeOrManager, IsOwnerOrCompanyManager, IsCompanyOperational, IsManagerOrAdministrator
 from common.utils import get_requested_company
 from domain.users.models import Role, User
 from .models import (
@@ -165,6 +165,14 @@ def apply_task_filters(request, queryset):
             output_field=IntegerField(),
         ),
     )
+    queryset = queryset.annotate(
+        pending_approval_flag=Exists(
+            ApprovalRequest.objects.filter(
+                task_id=OuterRef('pk'),
+                status=ApprovalStatus.PENDING,
+            )
+        )
+    )
     return queryset.select_related(
         'creator', 'assigned_to', 'team', 'project'
     ).order_by('is_completed_rank', 'priority_rank', 'attention_rank', 'due_date', '-created_at')
@@ -232,10 +240,22 @@ class TaskListCreateView(generics.ListCreateAPIView):
         parent = serializer.validated_data.get('parent')
         is_team_leader_for_parent = bool(parent and parent.team and parent.team.leader == request.user)
 
-        if request.user.is_superuser:
-            assigned_to = serializer.validated_data.get('assigned_to')
+        personal_workspace = company.is_personal
+        if personal_workspace:
+            assigned_to = request.user
+        elif request.user.is_superuser:
+            team = serializer.validated_data.get('team')
+            assigned_to = (
+                serializer.validated_data.get('assigned_to')
+                or (team.leader if team else None)
+            )
         elif request.user.is_manager() or is_team_leader_for_parent:
-            assigned_to = serializer.validated_data.get('assigned_to') or request.user
+            team = serializer.validated_data.get('team')
+            assigned_to = (
+                serializer.validated_data.get('assigned_to')
+                or (team.leader if team else None)
+                or request.user
+            )
 
             # Validate assignee is in the same company.
             if assigned_to and getattr(assigned_to, 'company', None) != company:
@@ -267,6 +287,12 @@ class TaskListCreateView(generics.ListCreateAPIView):
             company=company,
             creator=request.user,
             assigned_to=assigned_to,
+            team=None if personal_workspace else serializer.validated_data.get('team'),
+            requires_completion_approval=(
+                False
+                if personal_workspace
+                else serializer.validated_data.get('requires_completion_approval', False)
+            ),
         )
         link_task_participants_to_project(task)
 
@@ -309,6 +335,11 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Track changes in history
         task = self.get_object()
         user = self.request.user
+
+        if task.company.is_personal:
+            serializer.validated_data['assigned_to'] = user
+            serializer.validated_data['team'] = None
+            serializer.validated_data['requires_completion_approval'] = False
 
         # An assignee who is not the creator (and not a manager) may only update
         # the status field.  Structural changes (title, description, priority, etc.)
@@ -427,13 +458,14 @@ def duplicate_task(request, task_id):
     if not (request.user.is_manager() or source.creator == request.user):
         raise PermissionDenied("Vous ne pouvez pas dupliquer cette tâche.")
 
+    personal_workspace = source.company.is_personal
     clone = Task.objects.create(
         title=f"Copie de {source.title}",
         description=source.description,
         company=source.company,
         creator=request.user,
-        assigned_to=source.assigned_to,
-        team=source.team,
+        assigned_to=request.user if personal_workspace else source.assigned_to,
+        team=None if personal_workspace else source.team,
         priority=source.priority,
         status=Status.TODO,
         start_date=source.start_date,
@@ -447,8 +479,8 @@ def duplicate_task(request, task_id):
             description=subtask.description,
             company=source.company,
             creator=request.user,
-            assigned_to=subtask.assigned_to,
-            team=subtask.team,
+            assigned_to=request.user if personal_workspace else subtask.assigned_to,
+            team=None if personal_workspace else subtask.team,
             parent=clone,
             priority=subtask.priority,
             status=Status.TODO,
@@ -502,7 +534,7 @@ class TaskTemplateListCreateView(generics.ListCreateAPIView):
         if not company:
             raise PermissionDenied("Le contexte d'une entreprise est obligatoire.")
         is_shared = serializer.validated_data.get('is_shared', True)
-        if self.request.user.role == 'employee':
+        if company.is_personal or self.request.user.role == 'employee':
             is_shared = False
         serializer.save(company=company, creator=self.request.user, is_shared=is_shared)
 
@@ -539,7 +571,7 @@ def instantiate_template(request, template_id):
     serializer.is_valid(raise_exception=True)
     assigned_to = serializer.validated_data.get('assigned_to')
     team = serializer.validated_data.get('team')
-    if request.user.role == 'employee':
+    if company.is_personal or request.user.role == 'employee':
         assigned_to = request.user
         team = None
     elif assigned_to is None:
@@ -582,7 +614,7 @@ def save_task_as_template(request, task_id):
     task = get_accessible_task(request, task_id)
     name = request.data.get('name', '').strip()
     is_shared = request.data.get('is_shared', True)
-    if request.user.role == 'employee':
+    if task.company.is_personal or request.user.role == 'employee':
         is_shared = False
     if not name:
         raise ValidationError({'name': 'Le nom du modèle est obligatoire.'})
@@ -633,6 +665,8 @@ def bulk_task_action(request):
         raise ValidationError({'task_ids': 'Une ou plusieurs tâches sont inaccessibles.'})
 
     action = serializer.validated_data['action']
+    if company.is_personal and action == 'assign':
+        raise PermissionDenied("L'assignation n'est pas disponible dans un espace personnel.")
     if action in {'assign', 'archive', 'restore'} and not request.user.is_manager():
         raise PermissionDenied("Cette action groupée nécessite le rôle de responsable.")
 
@@ -1004,6 +1038,8 @@ class TaskReportListCreateView(generics.ListCreateAPIView):
             return TaskReport.objects.none()
         task_id = self.kwargs['task_id']
         task = get_accessible_task(self.request, task_id)
+        if task.company.is_personal:
+            return TaskReport.objects.none()
         return TaskReport.objects.filter(task=task).select_related(
             'requested_by', 'reviewed_by'
         )
@@ -1025,6 +1061,10 @@ class TaskReportListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         task_id = self.kwargs['task_id']
         task = get_accessible_task(self.request, task_id)
+        if task.company.is_personal:
+            raise PermissionDenied(
+                "Dans un espace personnel, modifiez directement la date d'échéance de la tâche."
+            )
         if task.status == Status.COMPLETED:
             raise ValidationError({
                 'task': "Vous ne pouvez pas demander le report d'une tâche déjà terminée."
@@ -1062,6 +1102,8 @@ class TaskReportDetailView(generics.RetrieveUpdateAPIView):
 
     def get_queryset(self):
         task = get_accessible_task(self.request, self.kwargs['task_id'])
+        if task.company.is_personal:
+            return TaskReport.objects.none()
         return TaskReport.objects.filter(task=task)
     
     def get_serializer_class(self):
@@ -1072,6 +1114,8 @@ class TaskReportDetailView(generics.RetrieveUpdateAPIView):
     @transaction.atomic
     def perform_update(self, serializer):
         report = self.get_object()
+        if report.task.company.is_personal:
+            raise PermissionDenied("Les demandes de report ne sont pas utilisées dans un espace personnel.")
         
         # Only managers can review reports
         if not self.request.user.is_manager():
@@ -1178,7 +1222,7 @@ class ApprovalRequestListView(generics.ListAPIView):
 
     def get_queryset(self):
         company = get_requested_company(self.request)
-        if not company:
+        if not company or company.is_personal:
             return ApprovalRequest.objects.none()
         queryset = ApprovalRequest.objects.filter(company=company).select_related(
             'task', 'requested_by', 'reviewed_by'
@@ -1203,6 +1247,8 @@ class TaskApprovalRequestListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         task = get_accessible_task(self.request, self.kwargs['task_id'])
+        if task.company.is_personal:
+            return ApprovalRequest.objects.none()
         queryset = ApprovalRequest.objects.filter(task=task).select_related(
             'task', 'requested_by', 'reviewed_by'
         )
@@ -1213,6 +1259,8 @@ class TaskApprovalRequestListCreateView(generics.ListCreateAPIView):
     @transaction.atomic
     def perform_create(self, serializer):
         task = get_accessible_task(self.request, self.kwargs['task_id'])
+        if task.company.is_personal:
+            raise PermissionDenied("La validation n'est pas nécessaire dans un espace personnel.")
         user = self.request.user
         action = serializer.validated_data.get('action', ApprovalAction.TASK_COMPLETION)
 
@@ -1267,7 +1315,7 @@ class ApprovalRequestDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         company = get_requested_company(self.request)
-        if not company:
+        if not company or company.is_personal:
             return ApprovalRequest.objects.none()
         queryset = ApprovalRequest.objects.filter(company=company).select_related(
             'task', 'requested_by', 'reviewed_by'
@@ -1282,15 +1330,21 @@ class ApprovalRequestDetailView(generics.RetrieveAPIView):
             raise PermissionDenied("Seuls les responsables peuvent traiter une demande de validation.")
 
         company = get_requested_company(request)
+        if company and company.is_personal:
+            raise PermissionDenied("La validation n'est pas utilisée dans un espace personnel.")
         approval = get_object_or_404(
-            ApprovalRequest.objects.select_for_update().select_related(
-                'task', 'requested_by', 'reviewed_by'
-            ),
+            # Lock only the approval row. Nullable user joins cannot be locked
+            # by PostgreSQL and previously caused a 500 during review.
+            ApprovalRequest.objects.select_for_update(),
             id=kwargs['id'],
             company=company,
         )
         if approval.status != ApprovalStatus.PENDING:
             raise ValidationError({'status': "Cette demande a déjà été traitée."})
+        if approval.requested_by_id == request.user.id:
+            raise ValidationError({
+                'status': "Vous ne pouvez pas valider votre propre demande."
+            })
 
         serializer = ApprovalRequestReviewSerializer(
             approval,
@@ -1435,7 +1489,7 @@ def export_tasks_excel(request):
 
 class ProjectListCreateView(generics.ListCreateAPIView):
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated, IsCompanyOperational]
+    permission_classes = [IsAuthenticated, IsCompanyOperational, IsManagerOrAdministrator]
 
     def get_queryset(self):
         company = get_requested_company(self.request)
@@ -1458,12 +1512,15 @@ class ProjectListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         if not (user.is_administrator() or user.is_owner() or user.role in ['manager', 'owner', 'administrator']):
             raise ValidationError("Seuls les managers et propriétaires peuvent créer des projets.")
-        serializer.save(company=company, manager=serializer.validated_data.get('manager') or user)
+        if company.is_personal:
+            serializer.save(company=company, manager=user, members=[], teams=[])
+        else:
+            serializer.save(company=company, manager=serializer.validated_data.get('manager') or user)
 
 
 class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated, IsCompanyOperational]
+    permission_classes = [IsAuthenticated, IsCompanyOperational, IsManagerOrAdministrator]
 
     def get_queryset(self):
         company = get_requested_company(self.request)
@@ -1473,4 +1530,8 @@ class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     @transaction.atomic
     def perform_update(self, serializer):
-        serializer.save()
+        company = get_requested_company(self.request)
+        if company.is_personal:
+            serializer.save(manager=self.request.user, members=[], teams=[])
+        else:
+            serializer.save()

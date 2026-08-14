@@ -69,6 +69,9 @@ class User(AbstractUser):
     is_active = models.BooleanField(default=True)
     must_change_password = models.BooleanField(default=False)
     weekly_capacity_hours = models.PositiveSmallIntegerField(default=40)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    terms_version = models.CharField(max_length=20, blank=True)
+    privacy_version = models.CharField(max_length=20, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

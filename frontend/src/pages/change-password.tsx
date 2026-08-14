@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { KeyRound } from 'lucide-react'
 import { authService } from '@/services/auth'
 import { Button } from '@/components/ui/Button'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 
 export const Route = createFileRoute('/change-password')({
   beforeLoad: () => {
@@ -53,13 +54,13 @@ function ChangePasswordPage() {
         </p>
         <form onSubmit={handleSubmit} className="mt-7 space-y-4">
           <label className="block text-sm font-medium text-slate-700">Mot de passe temporaire
-            <input name="old_password" type="password" required autoComplete="current-password" className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3" />
+            <PasswordInput name="old_password" required autoComplete="current-password" className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3" />
           </label>
           <label className="block text-sm font-medium text-slate-700">Nouveau mot de passe
-            <input name="new_password" type="password" required minLength={8} autoComplete="new-password" className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3" />
+            <PasswordInput name="new_password" required minLength={8} autoComplete="new-password" className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3" />
           </label>
           <label className="block text-sm font-medium text-slate-700">Confirmer le nouveau mot de passe
-            <input name="new_password_confirm" type="password" required minLength={8} autoComplete="new-password" className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3" />
+            <PasswordInput name="new_password_confirm" required minLength={8} autoComplete="new-password" className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3" />
           </label>
           {(error || mutation.isError) && (
             <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

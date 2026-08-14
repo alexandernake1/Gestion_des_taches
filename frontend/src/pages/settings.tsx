@@ -9,6 +9,7 @@ import { requireAuthentication } from '@/router/auth'
 import { BellRing, Check, Key, ShieldCheck, Smartphone, UserRound, ArrowLeft } from 'lucide-react'
 import { useSmartBack } from '@/utils/navigation'
 import { requestPushPermission } from '@/utils/notifications'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 
 export const Route = createFileRoute('/settings')({
   beforeLoad: requireAuthentication,
@@ -110,6 +111,8 @@ function SettingsPage() {
     })
   }
 
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
+
   const inputClass = 'h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground transition-colors focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/25 placeholder:text-muted-foreground/60'
   const inputWithIconClass = 'h-11 w-full rounded-xl border border-border bg-background pl-11 pr-4 text-sm text-foreground transition-colors focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/25'
 
@@ -171,7 +174,7 @@ function SettingsPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-foreground">{currentUser?.full_name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{currentUser?.role_display}</p>
+                  <p className="truncate text-xs text-muted-foreground">{isPersonalWorkspace ? 'Compte personnel' : currentUser?.role_display}</p>
                 </div>
               </div>
             </div>
@@ -183,7 +186,11 @@ function SettingsPage() {
               <form onSubmit={saveProfile} className="space-y-8 p-6 sm:p-8 animate-fade-in">
                 <div>
                   <h3 className="text-lg font-bold text-foreground">Informations personnelles</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Ces informations seront visibles par les membres de votre entreprise.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {isPersonalWorkspace
+                      ? 'Ces informations permettent de personnaliser votre compte.'
+                      : 'Ces informations seront visibles par les membres de votre entreprise.'}
+                  </p>
                 </div>
                 
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -234,18 +241,18 @@ function SettingsPage() {
                   <label className="text-sm font-semibold text-foreground">Mot de passe actuel</label>
                   <div className="relative">
                     <Key className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <input name="old_password" type="password" required autoComplete="current-password" className={inputWithIconClass} />
+                    <PasswordInput name="old_password" required autoComplete="current-password" className={inputWithIconClass} />
                   </div>
                 </div>
 
                 <div className="space-y-5 max-w-md rounded-xl border border-primary/20 bg-primary/5 p-5">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground">Nouveau mot de passe</label>
-                    <input name="new_password" type="password" required minLength={8} autoComplete="new-password" placeholder="8 caractères minimum" className={inputClass} />
+                    <PasswordInput name="new_password" required minLength={8} autoComplete="new-password" placeholder="8 caractères minimum" className={inputClass} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground">Confirmation</label>
-                    <input name="new_password_confirm" type="password" required minLength={8} autoComplete="new-password" placeholder="Retapez le mot de passe" className={inputClass} />
+                    <PasswordInput name="new_password_confirm" required minLength={8} autoComplete="new-password" placeholder="Retapez le mot de passe" className={inputClass} />
                   </div>
                 </div>
 
@@ -271,12 +278,12 @@ function SettingsPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <PreferenceToggle name="notification_sound_enabled" label="Signal sonore SaaS" description="Émettre un son discret lors de la réception d'une notification." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_sound_enabled') !== 'false' : true} />
                   <PreferenceToggle name="notification_desktop_enabled" label="Notifications Push bureau" description="Afficher une alerte Windows/OS quand l'application est en arrière-plan." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_desktop_enabled') !== 'false' : true} />
-                  <PreferenceToggle name="assignments_enabled" label="Nouvelles assignations" description="Lorsqu'une tâche vous est confiée." defaultChecked={notificationPreferences.assignments_enabled} />
+                  {!isPersonalWorkspace && <PreferenceToggle name="assignments_enabled" label="Nouvelles assignations" description="Lorsqu'une tâche vous est confiée." defaultChecked={notificationPreferences.assignments_enabled} />}
                   <PreferenceToggle name="comments_enabled" label="Commentaires" description="Activité sur les tâches qui vous concernent." defaultChecked={notificationPreferences.comments_enabled} />
                   <PreferenceToggle name="task_reminders_enabled" label="Échéances proches" description="Rappel avant la date limite." defaultChecked={notificationPreferences.task_reminders_enabled} />
                   <PreferenceToggle name="overdue_alerts_enabled" label="Tâches en retard" description="Une alerte quotidienne par tâche en retard." defaultChecked={notificationPreferences.overdue_alerts_enabled} />
                   <PreferenceToggle name="daily_digest_enabled" label="Résumé quotidien" description="Une synthèse de votre charge du jour." defaultChecked={notificationPreferences.daily_digest_enabled} />
-                  <PreferenceToggle name="subscription_alerts_enabled" label="Abonnement et paiements" description="Alertes importantes pour les responsables." defaultChecked={notificationPreferences.subscription_alerts_enabled} />
+                  <PreferenceToggle name="subscription_alerts_enabled" label="Abonnement et paiements" description={isPersonalWorkspace ? 'Alertes importantes liées à votre forfait.' : 'Alertes importantes pour les responsables.'} defaultChecked={notificationPreferences.subscription_alerts_enabled} />
                 </div>
                 <div className="grid gap-5 rounded-xl border border-primary/20 bg-primary/5 p-5 sm:grid-cols-2">
                   <label className="text-sm font-semibold text-foreground">

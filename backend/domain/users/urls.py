@@ -16,11 +16,23 @@ from .views import (
     logout,
     register_company,
     company_email_availability,
+    complete_company_onboarding,
+    complete_personal_onboarding,
+    confirm_password_reset,
+    google_login,
+    request_password_reset,
+    RegisterView,
 )
 
 urlpatterns = [
+    path('register/', RegisterView.as_view(), name='register'),
     path('register/company/', register_company, name='register_company'),
     path('register/company/email-availability/', company_email_availability, name='company_email_availability'),
+    path('onboarding/company/', complete_company_onboarding, name='complete_company_onboarding'),
+    path('onboarding/personal/', complete_personal_onboarding, name='complete_personal_onboarding'),
+    path('google/', google_login, name='google_login'),
+    path('password-reset/', request_password_reset, name='request_password_reset'),
+    path('password-reset/confirm/', confirm_password_reset, name='confirm_password_reset'),
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', logout, name='logout'),

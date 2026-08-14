@@ -3,6 +3,34 @@ from django.dispatch import receiver
 from domain.tasks.models import Task, Status, TaskComment, TaskReport
 from domain.notifications.models import NotificationType
 from domain.notifications.services import create_smart_notification
+from domain.users.models import Role, User
+
+
+def notify_managers_of_assignment(instance, event_key):
+    """Give managers the assignment context that differs from the assignee copy."""
+    if instance.assigned_to:
+        target = instance.assigned_to.full_name or instance.assigned_to.email
+    elif instance.team:
+        target = f"l'équipe {instance.team.name}"
+    else:
+        return
+
+    reviewers = User.objects.filter(
+        company=instance.company,
+        role__in=[Role.OWNER, Role.MANAGER],
+        is_active=True,
+    )
+    if instance.assigned_to_id:
+        reviewers = reviewers.exclude(pk=instance.assigned_to_id)
+    for reviewer in reviewers:
+        create_smart_notification(
+            recipient=reviewer,
+            notification_type=NotificationType.NEW_ASSIGNMENT,
+            title="Affectation d'une tâche",
+            message=f"La tâche « {instance.title} » a été assignée à {target}.",
+            task=instance,
+            dedupe_key=f'manager-assignment:{instance.id}:{event_key}:{reviewer.id}',
+        )
 
 @receiver(pre_save, sender=Task)
 def task_pre_save(sender, instance, **kwargs):
@@ -27,22 +55,24 @@ def task_post_save(sender, instance, created, **kwargs):
                 recipient=instance.assigned_to,
                 notification_type=NotificationType.NEW_ASSIGNMENT,
                 title="Nouvelle tâche assignée",
-                message=f"Vous avez été assigné(e) à la tâche '{instance.title}'.",
+                message=f"La tâche « {instance.title} » vous a été assignée.",
                 task=instance,
                 dedupe_key=f'assignment:{instance.id}:{instance.assigned_to_id}',
             )
 
         # Notify all members of the assigned team (if any).
         if instance.team:
-            for member in instance.team.members.exclude(pk=instance.creator_id or 0):
+            excluded_ids = [instance.creator_id, instance.assigned_to_id]
+            for member in instance.team.members.exclude(pk__in=[pk for pk in excluded_ids if pk]):
                 create_smart_notification(
                     recipient=member,
                     notification_type=NotificationType.NEW_ASSIGNMENT,
                     title="Nouvelle tâche d'équipe",
-                    message=f"Une nouvelle tâche '{instance.title}' a été assignée à votre équipe '{instance.team.name}'.",
+                    message=f"La tâche « {instance.title} » a été assignée à votre équipe « {instance.team.name} ».",
                     task=instance,
                     dedupe_key=f'team-assignment:{instance.id}:{member.id}',
                 )
+        notify_managers_of_assignment(instance, 'created')
     else:
         # Check if the task was reassigned
         prev_assigned = getattr(instance, '_previous_assigned_to_id', None)
@@ -51,23 +81,27 @@ def task_post_save(sender, instance, created, **kwargs):
                 recipient=instance.assigned_to,
                 notification_type=NotificationType.NEW_ASSIGNMENT,
                 title="Nouvelle tâche assignée",
-                message=f"Vous avez été assigné(e) à la tâche '{instance.title}'.",
+                message=f"La tâche « {instance.title} » vous a été assignée.",
                 task=instance,
                 dedupe_key=f'assignment:{instance.id}:{instance.assigned_to_id}',
             )
+            notify_managers_of_assignment(instance, f'user-{instance.assigned_to_id}')
 
         # Check if the task team was changed
         prev_team = getattr(instance, '_previous_team_id', None)
         if instance.team_id and instance.team_id != prev_team:
-            for member in instance.team.members.exclude(pk=instance.creator_id or 0):
+            excluded_ids = [instance.creator_id, instance.assigned_to_id]
+            for member in instance.team.members.exclude(pk__in=[pk for pk in excluded_ids if pk]):
                 create_smart_notification(
                     recipient=member,
                     notification_type=NotificationType.NEW_ASSIGNMENT,
                     title="Nouvelle tâche d'équipe",
-                    message=f"Une nouvelle tâche '{instance.title}' a été assignée à votre équipe '{instance.team.name}'.",
+                    message=f"La tâche « {instance.title} » a été assignée à votre équipe « {instance.team.name} ».",
                     task=instance,
                     dedupe_key=f'team-assignment:{instance.id}:{member.id}',
                 )
+            if not instance.assigned_to_id or instance.assigned_to_id == prev_assigned:
+                notify_managers_of_assignment(instance, f'team-{instance.team_id}')
 
         # Only notify when the status *transitions* to COMPLETED (not on repeated saves).
         prev = getattr(instance, '_previous_status', None)

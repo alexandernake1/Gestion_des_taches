@@ -20,6 +20,12 @@ function getInitials(name: string): string {
     .toUpperCase()
 }
 
+const roleLabels: Record<string, string> = {
+  owner: 'Propriétaire',
+  manager: 'Manager',
+  employee: 'Employé',
+}
+
 export function Header({ title, onMenuClick }: HeaderProps) {
   const navigate = useNavigate()
   const { data: currentUser } = useQuery({
@@ -50,25 +56,25 @@ export function Header({ title, onMenuClick }: HeaderProps) {
     <header className="glass-heavy sticky top-0 z-30 flex h-[72px] items-center justify-between px-4 sm:px-6 lg:px-8">
 
       {/* ── Left: menu + title ─────────────────────────── */}
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onMenuClick}
           aria-label="Ouvrir le menu"
-          className="lg:hidden flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
 
         <div className="min-w-0">
-          <h1 className="truncate text-[18px] font-bold tracking-tight text-foreground leading-tight">
+          <h1 className="truncate text-[15px] font-bold leading-tight tracking-tight text-foreground sm:text-[18px]">
             {title}
           </h1>
         </div>
       </div>
 
       {/* ── Right: controls ────────────────────────────── */}
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
 
         {/* Theme toggle */}
         <ThemeToggle />
@@ -138,7 +144,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
               )}
             </div>
             <p className="text-[11px] text-muted-foreground truncate max-w-[160px]">
-              {currentUser?.is_superuser ? 'Plateforme SaaS' : (currentUser?.role_display || '')}
+              {currentUser?.is_superuser ? 'Plateforme SaaS' : currentUser?.is_personal_workspace ? 'Compte personnel' : (roleLabels[currentUser?.role || ''] || currentUser?.role_display || '')}
             </p>
           </div>
         </button>

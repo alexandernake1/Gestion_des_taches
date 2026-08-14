@@ -62,16 +62,22 @@ function SubscriptionPage() {
 
 
   const isOwner = currentUser?.role === 'owner'
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
+  const workspaceType = currentUser?.workspace_type || (isPersonalWorkspace ? 'personal' : 'company')
 
-  const { data: subscription, isLoading: subLoading, isError: subError, refetch } = useQuery({
-    queryKey: ['my-subscription'],
-    queryFn: subscriptionsService.getMySubscription,
+  const { data: subscriptionPage, isLoading: subscriptionLoading, isError: subscriptionError, refetch } = useQuery({
+    queryKey: ['subscription-page', workspaceType],
+    queryFn: async () => {
+      const [subscription, plans] = await Promise.all([
+        subscriptionsService.getMySubscription(),
+        subscriptionsService.listPlans(workspaceType),
+      ])
+      return { subscription, plans }
+    },
+    enabled: Boolean(currentUser),
   })
-
-  const { data: plans, isLoading: plansLoading } = useQuery({
-    queryKey: ['subscription-plans'],
-    queryFn: subscriptionsService.listPlans,
-  })
+  const subscription = subscriptionPage?.subscription
+  const plans = subscriptionPage?.plans || []
 
   const [planChangeSuccess, setPlanChangeSuccess] = useState<string | null>(null)
   const [pendingPayment, setPendingPayment] = useState<PaymentTransaction | null>(null)
@@ -84,6 +90,7 @@ function SubscriptionPage() {
   const changePlanMutation = useMutation({
     mutationFn: (planCode: string) => subscriptionsService.changePlan(planCode),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['subscription-page'] })
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] })
       setPlanChangeSuccess(`Forfait "${data?.plan_details?.name || 'nouveau'}" sélectionné — en attente de vérification.`)
       setTimeout(() => setPlanChangeSuccess(null), 6000)
@@ -98,6 +105,7 @@ function SubscriptionPage() {
       subscriptionsService.simulatePayment(pendingPayment!.reference, outcome),
     onSuccess: (payment) => {
       queryClient.invalidateQueries({ queryKey: ['payment-history'] })
+      queryClient.invalidateQueries({ queryKey: ['subscription-page'] })
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] })
       if (payment.status !== 'pending') {
         setPendingPayment(null)
@@ -144,7 +152,7 @@ function SubscriptionPage() {
     )
   }
 
-  if (subLoading || plansLoading) {
+  if (subscriptionLoading) {
     return (
       <Layout title="Abonnement & Offres">
         <div className="mx-auto max-w-7xl px-4 py-8 animate-pulse space-y-6">
@@ -159,7 +167,7 @@ function SubscriptionPage() {
     )
   }
 
-  if (subError || !subscription) {
+  if (subscriptionError || !subscription) {
     return (
       <Layout title="Abonnement & Offres">
         <div className="mx-auto max-w-7xl px-4 py-8">
@@ -186,7 +194,7 @@ function SubscriptionPage() {
         </Button>
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-950">Abonnement & Offres SaaS</h2>
-          <p className="mt-1 text-sm text-slate-500">Gérez le forfait de votre entreprise et suivez vos consommations de ressources.</p>
+          <p className="mt-1 text-sm text-slate-500">{isPersonalWorkspace ? 'Gérez votre forfait personnel et les fonctionnalités de votre espace privé.' : 'Gérez le forfait de votre entreprise et suivez vos consommations de ressources.'}</p>
         </div>
 
         {planChangeSuccess && (
@@ -196,12 +204,23 @@ function SubscriptionPage() {
           </div>
         )}
 
+        {startPaymentMutation.isError && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
+            <p className="text-sm font-semibold">
+              {startPaymentMutation.error instanceof Error
+                ? startPaymentMutation.error.message
+                : 'Le paiement en ligne est temporairement indisponible.'}
+            </p>
+          </div>
+        )}
+
         {subscription.is_suspended && (
           <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
             <ShieldAlert className="h-6 w-6 text-rose-600 shrink-0" />
             <div>
               <p className="font-semibold text-sm">Abonnement suspendu</p>
-              <p className="text-xs">L’accès en écriture de votre organisation est temporairement restreint. Veuillez contacter le support ou mettre à jour votre forfait.</p>
+              <p className="text-xs">L’accès en écriture de votre {isPersonalWorkspace ? 'espace' : 'organisation'} est temporairement restreint. Veuillez contacter le support ou mettre à jour votre forfait.</p>
             </div>
           </div>
         )}
@@ -227,7 +246,7 @@ function SubscriptionPage() {
               </div>
 
               {/* Usage Metrics Gauges */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:w-1/2">
+              {!isPersonalWorkspace && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:w-1/2">
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-sm">
                   <div className="flex items-center justify-between text-xs font-medium text-slate-300">
                     <span className="flex items-center gap-1.5"><Users className="h-4 w-4 text-indigo-400" /> Comptes Utilisateurs</span>
@@ -255,7 +274,7 @@ function SubscriptionPage() {
                     </div>
                   )}
                 </div>
-              </div>
+              </div>}
             </div>
           </CardContent>
         </Card>
@@ -264,7 +283,7 @@ function SubscriptionPage() {
         <div>
           <div className="mb-6">
             <h3 className="text-lg font-bold text-slate-950">Comparer les forfaits disponibles</h3>
-            <p className="text-sm text-slate-500">Choisissez l’offre adaptée aux besoins de votre entreprise.</p>
+            <p className="text-sm text-slate-500">{isPersonalWorkspace ? 'Choisissez l’offre adaptée à votre usage quotidien.' : 'Choisissez l’offre adaptée aux besoins de votre entreprise.'}</p>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -295,14 +314,14 @@ function SubscriptionPage() {
                     </div>
 
                     <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
-                      <li className="flex items-center gap-2">
+                      {!isPersonalWorkspace && <li className="flex items-center gap-2">
                         <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                         <span><strong>{plan.max_users === 0 ? 'Utilisateurs illimités' : `Jusqu’à ${plan.max_users} utilisateurs`}</strong></span>
-                      </li>
-                      <li className="flex items-center gap-2">
+                      </li>}
+                      {!isPersonalWorkspace && <li className="flex items-center gap-2">
                         <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                         <span><strong>{plan.max_teams === 0 ? 'Équipes illimitées' : `Jusqu’à ${plan.max_teams} équipes`}</strong></span>
-                      </li>
+                      </li>}
                       <li className="flex items-center gap-2">
                         <HardDrive className="h-4 w-4 text-slate-400 shrink-0" />
                         <span>{plan.storage_limit_mb === 0 ? 'Stockage illimité' : `${plan.storage_limit_mb} Mo de stockage`}</span>

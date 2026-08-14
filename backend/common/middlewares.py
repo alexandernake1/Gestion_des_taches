@@ -1,6 +1,8 @@
 from urllib.parse import parse_qs
+from http.cookies import SimpleCookie
 from channels.middleware import BaseMiddleware
 from channels.db import database_sync_to_async
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
@@ -17,13 +19,11 @@ def get_user_from_token(token_key):
 
 class JWTAuthMiddleware(BaseMiddleware):
     """
-    WebSocket middleware that authenticates the user via a JWT token passed in the query string.
-    Example: ws://domain.com/ws/notifications/?token=<jwt_token>
+    Authenticate WebSockets with the same HttpOnly JWT cookie as HTTP requests.
+    Query-string tokens are disabled by default because URLs are commonly logged.
     """
     async def __call__(self, scope, receive, send):
-        query_string = scope.get('query_string', b'').decode()
-        query_params = parse_qs(query_string)
-        token = query_params.get('token', [None])[0]
+        token = get_scope_token(scope)
 
         if token:
             scope['user'] = await get_user_from_token(token)
@@ -31,3 +31,18 @@ class JWTAuthMiddleware(BaseMiddleware):
             scope['user'] = AnonymousUser()
 
         return await super().__call__(scope, receive, send)
+
+
+def get_scope_token(scope):
+    headers = dict(scope.get('headers', []))
+    raw_cookie = headers.get(b'cookie', b'').decode('latin1')
+    cookies = SimpleCookie()
+    cookies.load(raw_cookie)
+    cookie = cookies.get(settings.JWT_COOKIE_NAME)
+    if cookie:
+        return cookie.value
+
+    if getattr(settings, 'WEBSOCKET_ALLOW_QUERY_TOKEN', False):
+        query_string = scope.get('query_string', b'').decode()
+        return parse_qs(query_string).get('token', [None])[0]
+    return None

@@ -10,13 +10,20 @@ from .models import (
 
 class CompanySerializer(serializers.ModelSerializer):
     """Serializer for Company model."""
+
+    workspace_type_display = serializers.CharField(
+        source='get_workspace_type_display',
+        read_only=True,
+    )
+    is_personal = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = Company
         fields = [
             'id', 'name', 'slug', 'logo', 'description', 'website',
             'contact_email', 'contact_phone', 'address',
-            'timezone', 'language', 'is_active', 'created_at', 'updated_at'
+            'timezone', 'language', 'workspace_type', 'workspace_type_display',
+            'is_personal', 'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -29,7 +36,7 @@ class CompanyCreateSerializer(serializers.ModelSerializer):
         fields = [
             'name', 'slug', 'logo', 'description', 'website',
             'contact_email', 'contact_phone', 'address',
-            'timezone', 'language'
+            'timezone', 'language', 'workspace_type'
         ]
     
     def validate_slug(self, value):
@@ -58,12 +65,14 @@ class CompanyUpdateSerializer(serializers.ModelSerializer):
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     billing_period_display = serializers.CharField(source='get_billing_period_display', read_only=True)
+    audience_display = serializers.CharField(source='get_audience_display', read_only=True)
 
     class Meta:
         model = SubscriptionPlan
         fields = [
             'id', 'name', 'code', 'description', 'price', 'billing_period',
-            'billing_period_display', 'max_users', 'max_teams', 'storage_limit_mb',
+            'billing_period_display', 'audience', 'audience_display',
+            'max_users', 'max_teams', 'storage_limit_mb',
             'feature_flags', 'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

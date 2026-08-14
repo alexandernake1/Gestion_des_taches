@@ -18,6 +18,8 @@ export const Route = createFileRoute('/users')({
   component: UsersPage,
 })
 
+const USERS_PER_PAGE = 12
+
 function UsersPage() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -25,6 +27,7 @@ function UsersPage() {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [userPage, setUserPage] = useState(1)
   const queryClient = useQueryClient()
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
@@ -96,10 +99,14 @@ function UsersPage() {
   const activeUsers = users?.filter((user) => user.is_active).length || 0
   const managers = users?.filter((user) => user.role === 'manager').length || 0
   const administrators = users?.filter((user) => user.role === 'owner').length || 0
+  const totalPages = Math.max(1, Math.ceil((users?.length || 0) / USERS_PER_PAGE))
+  const currentPage = Math.min(userPage, totalPages)
+  const visibleUsers = users?.slice((currentPage - 1) * USERS_PER_PAGE, currentPage * USERS_PER_PAGE)
   const clearFilters = () => {
     setSearch('')
     setRoleFilter('')
     setStatusFilter('')
+    setUserPage(1)
   }
 
   const getRoleBadge = (role: string) => {
@@ -119,14 +126,14 @@ function UsersPage() {
   return (
     <Layout title="Utilisateurs">
       <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <section className="mb-6 rounded-3xl border border-indigo-100 bg-gradient-to-br from-white via-indigo-50/60 to-violet-50 p-5 shadow-sm sm:p-7">
+        <section className="mb-6 rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
             <div>
               <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">
                 <ShieldCheck className="h-4 w-4" />Accès et responsabilités
               </div>
-              <h2 className="text-2xl font-black tracking-tight text-slate-950">{canManageAccounts ? 'Pilotez les accès de votre organisation' : 'Consultez vos collaborateurs'}</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{canManageAccounts ? 'Invitez les bonnes personnes, attribuez des rôles cohérents et gardez une trace des opérations sensibles.' : 'Retrouvez rapidement les membres actifs, leurs rôles et leurs coordonnées professionnelles.'}</p>
+              <h2 className="text-2xl font-black tracking-tight text-foreground">{canManageAccounts ? 'Pilotez les accès de votre organisation' : 'Consultez vos collaborateurs'}</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{canManageAccounts ? 'Invitez les bonnes personnes, attribuez des rôles cohérents et gardez une trace des opérations sensibles.' : 'Retrouvez rapidement les membres actifs, leurs rôles et leurs coordonnées professionnelles.'}</p>
             </div>
             {canManageAccounts && <div className="flex flex-col gap-2 sm:flex-row">
               {isOwner && <Button variant="secondary" onClick={() => setAuditOpen(true)}><History className="mr-2 h-4 w-4" />Historique</Button>}
@@ -140,12 +147,12 @@ function UsersPage() {
             <UserMetric icon={ShieldCheck} label="Propriétaire" value={administrators} />
           </div>
         </section>
-        <div className="mb-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-3">
+        <div className="mb-5 grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher un utilisateur…" aria-label="Rechercher un utilisateur" className="h-10 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm" />
+            <input value={search} onChange={(event) => { setSearch(event.target.value); setUserPage(1) }} placeholder="Rechercher un utilisateur…" aria-label="Rechercher un utilisateur" className="h-10 w-full rounded-xl border border-border bg-background pl-10 pr-3 text-sm text-foreground" />
           </div>
-            <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} aria-label="Filtrer par rôle" className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-10 text-sm">
+            <select value={roleFilter} onChange={(event) => { setRoleFilter(event.target.value); setUserPage(1) }} aria-label="Filtrer par rôle" className="h-10 w-full appearance-none rounded-xl border border-border bg-background pl-3 pr-10 text-sm text-foreground">
               <option value="">Tous les rôles</option>
               <option value="owner">Propriétaires</option>
               <option value="manager">Managers</option>
@@ -157,7 +164,7 @@ function UsersPage() {
               <button type="button" onClick={clearFilters} className="font-semibold text-indigo-600 hover:text-indigo-800">Tout effacer</button>
             </div>
           )}
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filtrer par statut" className="h-10 rounded-xl border border-slate-200 px-3 text-sm">
+          <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setUserPage(1) }} aria-label="Filtrer par statut" className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground">
             <option value="">Tous les statuts</option>
             <option value="active">Actifs</option>
             <option value="inactive">Inactifs</option>
@@ -174,7 +181,7 @@ function UsersPage() {
           </div>
         ) : (
           <div className="grid gap-4">
-            {users?.map((user) => (
+            {visibleUsers?.map((user) => (
               <UserCard
                 key={user.id}
                 user={user}
@@ -187,12 +194,24 @@ function UsersPage() {
               />
             ))}
             {users?.length === 0 && (
-              <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+              <div className="rounded-3xl border border-dashed border-border bg-card px-6 py-14 text-center">
                 <XCircle className="mx-auto h-9 w-9 text-slate-400" />
                 <h3 className="mt-4 font-bold text-slate-900">Aucun utilisateur trouvé</h3>
                 <p className="mt-2 text-sm text-slate-500">Modifiez les filtres pour élargir les résultats.</p>
                 <Button className="mt-5" variant="secondary" onClick={clearFilters}>Effacer les filtres</Button>
               </div>
+            )}
+            {(users?.length || 0) > USERS_PER_PAGE && (
+              <nav className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 sm:flex-row" aria-label="Pagination des utilisateurs">
+                <p className="text-sm text-muted-foreground">
+                  {((currentPage - 1) * USERS_PER_PAGE) + 1}–{Math.min(currentPage * USERS_PER_PAGE, users?.length || 0)} sur {users?.length || 0}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="secondary" size="sm" disabled={currentPage === 1} onClick={() => setUserPage((page) => Math.max(1, page - 1))}>Précédent</Button>
+                  <span className="min-w-20 text-center text-sm font-semibold text-foreground">Page {currentPage} / {totalPages}</span>
+                  <Button variant="secondary" size="sm" disabled={currentPage === totalPages} onClick={() => setUserPage((page) => Math.min(totalPages, page + 1))}>Suivant</Button>
+                </div>
+              </nav>
             )}
           </div>
         )}
@@ -221,16 +240,16 @@ function UsersPage() {
 
 function UserMetric({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/80 p-3.5 shadow-sm">
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-background/70 p-3.5 shadow-sm">
       <div className="rounded-xl bg-indigo-100 p-2 text-indigo-700"><Icon className="h-5 w-5" /></div>
-      <div><p className="text-xl font-black leading-none text-slate-950">{value}</p><p className="mt-1 text-xs font-semibold text-slate-500">{label}</p></div>
+      <div><p className="text-xl font-black leading-none text-foreground">{value}</p><p className="mt-1 text-xs font-semibold text-muted-foreground">{label}</p></div>
     </div>
   )
 }
 
 function UserCard({ user, getRoleBadge, onEdit, onToggleStatus, isToggling, onDelete, isDeleting }: { user: User; getRoleBadge: (role: string) => React.ReactNode; onEdit?: () => void; onToggleStatus?: () => void; isToggling: boolean; onDelete?: () => void; isDeleting: boolean }) {
   return (
-    <Card className="group relative cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 border-slate-200/60 bg-white">
+    <Card className="group relative cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10">
       <CardContent className="p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
@@ -241,13 +260,13 @@ function UserCard({ user, getRoleBadge, onEdit, onToggleStatus, isToggling, onDe
             </div>
             <div className="min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-3">
-                <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{user.full_name}</h3>
+                <h3 className="text-lg font-bold text-foreground transition-colors group-hover:text-indigo-600">{user.full_name}</h3>
                 {getRoleBadge(user.role)}
                 <Badge variant={user.is_active ? 'success' : 'danger'} className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
                   {user.is_active ? 'Actif' : 'Inactif'}
                 </Badge>
               </div>
-              <div className="flex flex-col gap-2 text-xs font-medium text-slate-500 sm:flex-row sm:items-center sm:gap-5">
+              <div className="flex flex-col gap-2 text-xs font-medium text-muted-foreground sm:flex-row sm:items-center sm:gap-5">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <Mail className="h-3.5 w-3.5" />
                   <span className="truncate">{user.email}</span>
@@ -266,7 +285,7 @@ function UserCard({ user, getRoleBadge, onEdit, onToggleStatus, isToggling, onDe
             </div>
           </div>
           {onEdit && (
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity mt-4 sm:mt-0">
+            <div className="mt-4 flex items-center gap-2 opacity-100 transition-opacity sm:mt-0 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
               {onToggleStatus && (
                 <Button variant="ghost" size="sm" onClick={onToggleStatus} disabled={isToggling} className="rounded-full">
                   {user.is_active ? <Archive className="mr-1.5 h-3.5 w-3.5" /> : <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" />}

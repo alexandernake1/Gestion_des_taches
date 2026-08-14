@@ -20,9 +20,10 @@ import { useNavigate } from '@tanstack/react-router'
 
 interface TimelineViewProps {
   tasks: Task[]
+  showAssignee?: boolean
 }
 
-export function TimelineView({ tasks }: TimelineViewProps) {
+export function TimelineView({ tasks, showAssignee = true }: TimelineViewProps) {
   const navigate = useNavigate()
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
 
@@ -253,7 +254,7 @@ export function TimelineView({ tasks }: TimelineViewProps) {
                         {task.is_blocked && <Lock className="inline-block mr-1.5 h-3 w-3 text-rose-500 shrink-0" />}
                         {task.title}
                       </div>
-                      {task.assigned_to_name && (
+                      {showAssignee && task.assigned_to_name && (
                         <div title={task.assigned_to_name} className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 border border-slate-200 text-[9px] font-bold text-slate-600 uppercase">
                           {task.assigned_to_name.substring(0, 2)}
                         </div>

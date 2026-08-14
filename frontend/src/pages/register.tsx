@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { Building2, Check, ChevronLeft, ChevronRight, CreditCard, ShieldCheck, UserRound } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowRight, CheckCircle2, UserRound } from 'lucide-react'
+import { useCallback, useState } from 'react'
 
-import { authService } from '@/services/auth'
-import { subscriptionsService } from '@/services/subscriptions'
+import { CaptchaWidget } from '@/components/auth/CaptchaWidget'
+import { isCaptchaEnabled } from '@/components/auth/config'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 import { redirectAuthenticatedUser } from '@/router/auth'
-import type { CompanyRegistrationRequest } from '@/domain/types'
+import { authService } from '@/services/auth'
+import type { RegisterRequest } from '@/domain/types'
 import { ApiError } from '@/utils/api'
 
 export const Route = createFileRoute('/register')({
@@ -14,14 +16,7 @@ export const Route = createFileRoute('/register')({
   component: RegisterPage,
 })
 
-const initialForm: CompanyRegistrationRequest = {
-  company_name: '',
-  company_slug: '',
-  website: '',
-  contact_email: '',
-  contact_phone: '',
-  address: '',
-  plan_code: '',
+const initialForm: RegisterRequest = {
   first_name: '',
   last_name: '',
   email: '',
@@ -33,20 +28,14 @@ const initialForm: CompanyRegistrationRequest = {
 
 function RegisterPage() {
   const navigate = useNavigate()
-  const [step, setStep] = useState(1)
   const [form, setForm] = useState(initialForm)
+  const [captchaToken, setCaptchaToken] = useState<string>()
+  const [captchaResetKey, setCaptchaResetKey] = useState(0)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
-  const [companyEmailError, setCompanyEmailError] = useState('')
-  const [checkingCompanyEmail, setCheckingCompanyEmail] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { data: plans = [], isLoading: plansLoading } = useQuery({
-    queryKey: ['public-subscription-plans'],
-    queryFn: subscriptionsService.listPlans,
-  })
-  const selectedPlan = plans.find((plan) => plan.code === form.plan_code)
 
-  const update = (field: keyof CompanyRegistrationRequest, value: string | boolean) => {
+  const update = (field: keyof RegisterRequest, value: string | boolean) => {
     setForm((current) => ({ ...current, [field]: value }))
     setError('')
     setFieldErrors((current) => {
@@ -55,45 +44,33 @@ function RegisterPage() {
       delete next[field]
       return next
     })
-    if (field === 'contact_email') setCompanyEmailError('')
   }
 
-  const validateCompanyEmail = async () => {
-    if (!form.contact_email) return false
-    setCheckingCompanyEmail(true)
+  const continueAfterAuthentication = useCallback(() => {
+    navigate({ to: '/onboarding' })
+  }, [navigate])
+
+  const handleGoogleCredential = useCallback(async (credential: string) => {
+    if (!form.accept_terms) {
+      setError("Acceptez les Conditions d'utilisation et consultez la Politique de confidentialité avant de continuer.")
+      return
+    }
+    if (isCaptchaEnabled && !captchaToken) {
+      setError("Confirmez que vous n'êtes pas un robot avant de continuer avec Google.")
+      return
+    }
+    setLoading(true)
+    setError('')
     try {
-      const result = await authService.checkCompanyEmail(form.contact_email)
-      const message = result.available ? '' : (result.message || "Cet email d'entreprise est déjà utilisé.")
-      setCompanyEmailError(message)
-      if (message) setError(message)
-      return result.available
+      const response = await authService.loginWithGoogle(credential, captchaToken, false, form.accept_terms)
+      navigate({ to: response.user.company ? '/dashboard' : '/onboarding' })
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Impossible de vérifier l'email de l'entreprise."
-      setCompanyEmailError(message)
-      setError(message)
-      return false
+      setError(err instanceof Error ? err.message : 'Connexion Google impossible.')
+      setCaptchaResetKey((key) => key + 1)
     } finally {
-      setCheckingCompanyEmail(false)
+      setLoading(false)
     }
-  }
-
-  const validateStep = () => {
-    if (step === 1 && (!form.company_name || !form.contact_email || !form.contact_phone)) {
-      setError('Renseignez le nom, l’email et le téléphone de l’entreprise.')
-      return false
-    }
-    if (step === 2 && !form.plan_code) {
-      setError('Choisissez un forfait pour continuer.')
-      return false
-    }
-    return true
-  }
-
-  const next = async () => {
-    if (!validateStep()) return
-    if (step === 1 && !(await validateCompanyEmail())) return
-    setStep((current) => Math.min(3, current + 1))
-  }
+  }, [captchaToken, form.accept_terms, navigate])
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -102,13 +79,18 @@ function RegisterPage() {
       setError('Les mots de passe ne correspondent pas.')
       return
     }
+    if (isCaptchaEnabled && !captchaToken) {
+      setError("Confirmez que vous n'êtes pas un robot.")
+      return
+    }
     setLoading(true)
     try {
-      await authService.register(form)
-      navigate({ to: '/dashboard' })
+      await authService.register({ ...form, captcha_token: captchaToken })
+      continueAfterAuthentication()
     } catch (err) {
       if (err instanceof ApiError) setFieldErrors(err.fieldErrors)
-      setError(err instanceof Error ? err.message : 'Création de l’espace impossible.')
+      setError(err instanceof Error ? err.message : 'Création du compte impossible.')
+      setCaptchaResetKey((key) => key + 1)
     } finally {
       setLoading(false)
     }
@@ -116,127 +98,62 @@ function RegisterPage() {
 
   return (
     <main className="app-surface min-h-screen px-4 py-8 sm:py-12">
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="mx-auto w-full max-w-4xl">
         <header className="mb-8 flex items-center justify-between">
           <a href="/login" className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
-              <Building2 className="h-5 w-5 text-white" />
-            </span>
-            <span><strong className="block text-slate-950">Activity</strong><span className="text-xs text-slate-500">Espace entreprise</span></span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20"><UserRound className="h-5 w-5 text-white" /></span>
+            <span><strong className="block text-slate-950">Activity</strong><span className="text-xs text-slate-500">Votre espace personnel</span></span>
           </a>
-          <a href="/login" className="text-sm font-semibold text-indigo-600 hover:text-indigo-800">Se connecter</a>
+          <a href="/login" className="rounded-xl border border-indigo-200 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50">Se connecter</a>
         </header>
 
-        <div className="grid overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5 lg:grid-cols-[280px_1fr]">
-          <aside className="bg-gradient-to-b from-slate-950 to-indigo-950 p-6 text-white sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-300">Création de votre espace</p>
-            <h1 className="mt-3 text-2xl font-black tracking-tight">Votre entreprise opérationnelle en quelques minutes.</h1>
-            <div className="mt-8 space-y-5">
-              <StepItem active={step === 1} done={step > 1} icon={Building2} number={1} title="Entreprise" />
-              <StepItem active={step === 2} done={step > 2} icon={CreditCard} number={2} title="Forfait et paiement" />
-              <StepItem active={step === 3} done={false} icon={UserRound} number={3} title="Compte propriétaire" />
-            </div>
-            <div className="mt-10 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-indigo-100">
-              Le premier compte devient automatiquement propriétaire et représente l’entreprise auprès du fournisseur de la solution.
+        <div className="grid overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5 lg:grid-cols-[300px_1fr]">
+          <aside className="bg-gradient-to-b from-slate-950 to-indigo-950 p-7 text-white sm:p-9">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-300">Compte gratuit</p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight">Commencez par votre espace.</h1>
+            <p className="mt-4 text-sm leading-6 text-indigo-100">La création d'une entreprise est facultative. Vous pourrez choisir un forfait et configurer votre organisation ensuite.</p>
+            <div className="mt-8 space-y-4 text-sm text-indigo-50">
+              {['Compte créé immédiatement', 'Entreprise facultative', 'Forfait choisi dans un second temps'].map((label) => (
+                <div key={label} className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-emerald-400" />{label}</div>
+              ))}
             </div>
           </aside>
 
           <form onSubmit={submit} className="p-6 sm:p-10">
-            {error && <div role="alert" className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+            <h2 className="text-2xl font-black tracking-tight text-slate-950">Créer mon compte gratuitement</h2>
+            <p className="mt-2 text-sm text-slate-500">Aucune information d'entreprise n'est demandée à cette étape.</p>
+            {error && <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-            {step === 1 && (
-              <section className="animate-fade-in">
-                <h2 className="text-2xl font-black tracking-tight text-slate-950">Informations de l’entreprise</h2>
-                <p className="mt-2 text-sm text-slate-500">Ces informations identifient votre organisation et son contact principal.</p>
-                <div className="mt-7 grid gap-6 sm:grid-cols-2">
-                  <Field name="company_name" label="Nom de l’entreprise" required value={form.company_name} error={fieldErrors.company_name?.[0]} onChange={(value) => update('company_name', value)} />
-                  <Field name="company_slug" label="Identifiant de l'espace (URL)" helpText="Ex: 'mon-entreprise' (facultatif)" value={form.company_slug || ''} error={fieldErrors.company_slug?.[0]} placeholder="mon-entreprise" onChange={(value) => update('company_slug', value)} />
-                  
-                  <div className="sm:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                    <p className="text-sm font-bold text-slate-700 mb-4">Coordonnées principales</p>
-                    <div className="grid gap-6 sm:grid-cols-2">
-                      <Field
-                        name="contact_email"
-                        label="Email de l'entreprise"
-                        type="email"
-                        required
-                        value={form.contact_email}
-                        error={companyEmailError || fieldErrors.contact_email?.[0]}
-                        onBlur={() => void validateCompanyEmail()}
-                        onChange={(value) => update('contact_email', value)}
-                      />
-                      <Field name="contact_phone" label="Téléphone de contact" type="tel" required value={form.contact_phone} error={fieldErrors.contact_phone?.[0]} onChange={(value) => update('contact_phone', value)} />
-                      <Field name="address" label="Adresse postale (Siège)" helpText="Où est située l'entreprise" value={form.address || ''} error={fieldErrors.address?.[0]} placeholder="123 Rue de Paris..." onChange={(value) => update('address', value)} />
-                      <Field name="website" label="Site web" type="url" value={form.website || ''} error={fieldErrors.website?.[0]} placeholder="https://..." onChange={(value) => update('website', value)} />
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
+            <div className="mt-7 grid gap-5 sm:grid-cols-2">
+              <Field name="first_name" label="Prénom" required value={form.first_name} error={fieldErrors.first_name?.[0]} onChange={(value) => update('first_name', value)} />
+              <Field name="last_name" label="Nom" required value={form.last_name} error={fieldErrors.last_name?.[0]} onChange={(value) => update('last_name', value)} />
+              <Field name="email" label="Adresse email" type="email" required value={form.email} error={fieldErrors.email?.[0]} onChange={(value) => update('email', value)} />
+              <Field name="phone" label="Téléphone" type="tel" value={form.phone || ''} error={fieldErrors.phone?.[0]} onChange={(value) => update('phone', value)} />
+              <Field name="password" label="Mot de passe" type="password" required value={form.password} error={fieldErrors.password?.[0]} onChange={(value) => update('password', value)} />
+              <Field name="password_confirm" label="Confirmation" type="password" required value={form.password_confirm} error={fieldErrors.password_confirm?.[0]} onChange={(value) => update('password_confirm', value)} />
+            </div>
 
-            {step === 2 && (
-              <section className="animate-fade-in">
-                <h2 className="text-2xl font-black tracking-tight text-slate-950">Choisissez votre forfait</h2>
-                <p className="mt-2 text-sm text-slate-500">Le paiement des offres payantes est simulé pendant la phase de test.</p>
-                {plansLoading ? <div className="mt-7 h-48 animate-pulse rounded-2xl bg-slate-100" /> : (
-                  <div className="mt-7 grid gap-4 sm:grid-cols-2">
-                    {plans.map((plan) => (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        onClick={() => update('plan_code', plan.code)}
-                        className={`relative rounded-2xl border p-5 text-left transition ${form.plan_code === plan.code ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-600/15' : 'border-slate-200 hover:border-indigo-300'}`}
-                      >
-                        {form.plan_code === plan.code && <Check className="absolute right-4 top-4 h-5 w-5 text-indigo-600" />}
-                        <p className="font-bold text-slate-950">{plan.name}</p>
-                        <p className="mt-2 text-2xl font-black text-indigo-700">{Number(plan.price) === 0 ? 'Gratuit' : `${Number(plan.price).toLocaleString('fr-FR')} FCFA`}</p>
-                        <p className="mt-3 text-xs leading-5 text-slate-500">{plan.max_users === 0 ? 'Utilisateurs illimités' : `${plan.max_users} utilisateurs`} · {plan.max_teams === 0 ? 'Équipes illimitées' : `${plan.max_teams} équipes`}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {selectedPlan && Number(selectedPlan.price) > 0 && (
-                  <div className="mt-5 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                    <ShieldCheck className="h-5 w-5 shrink-0" />
-                    <div><strong>Paiement de test sécurisé</strong><p className="mt-1 text-xs leading-5">La transaction sera automatiquement approuvée par le simulateur. L’intégration Ligdicash remplacera ce mécanisme sans modifier le parcours.</p></div>
-                  </div>
-                )}
-              </section>
-            )}
+            <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 text-sm text-slate-600 hover:bg-slate-50">
+              <input type="checkbox" checked={form.accept_terms} onChange={(event) => update('accept_terms', event.target.checked)} className="mt-0.5 h-4 w-4 accent-indigo-600" />
+              <span>
+                J'accepte les{' '}
+                <a href="/terms" target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} className="font-bold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900">
+                  Conditions d'utilisation
+                </a>{' '}
+                et je reconnais avoir pris connaissance de la{' '}
+                <a href="/privacy" target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} className="font-bold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900">
+                  Politique de confidentialité
+                </a>.
+              </span>
+            </label>
+            <div className="mt-5"><CaptchaWidget onToken={setCaptchaToken} action="register" resetKey={captchaResetKey} /></div>
 
-            {step === 3 && (
-              <section className="animate-fade-in">
-                <h2 className="text-2xl font-black tracking-tight text-slate-950">Créez le compte propriétaire</h2>
-                <p className="mt-2 text-sm text-slate-500">Ce compte pourra ensuite inviter les managers et employés.</p>
-                <div className="mt-7 grid gap-5 sm:grid-cols-2">
-                  <Field name="first_name" label="Prénom" required value={form.first_name} error={fieldErrors.first_name?.[0]} onChange={(value) => update('first_name', value)} />
-                  <Field name="last_name" label="Nom" required value={form.last_name} error={fieldErrors.last_name?.[0]} onChange={(value) => update('last_name', value)} />
-                  <Field name="email" label="Email (Identifiant)" type="email" helpText="Adresse utilisée pour la connexion" required value={form.email} error={fieldErrors.email?.[0]} onChange={(value) => update('email', value)} />
-                  <Field name="phone" label="Téléphone personnel" type="tel" value={form.phone || ''} error={fieldErrors.phone?.[0]} onChange={(value) => update('phone', value)} />
-                  <Field name="password" label="Mot de passe" type="password" required value={form.password} error={fieldErrors.password?.[0]} onChange={(value) => update('password', value)} />
-                  <Field name="password_confirm" label="Confirmez le mot de passe" type="password" required value={form.password_confirm} error={fieldErrors.password_confirm?.[0]} onChange={(value) => update('password_confirm', value)} />
-                </div>
-                <label className="mt-6 flex items-start gap-3 rounded-xl border border-slate-200 p-4 text-sm text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer">
-                  <input type="checkbox" checked={form.accept_terms} onChange={(event) => update('accept_terms', event.target.checked)} className="mt-0.5 accent-indigo-600 w-4 h-4" />
-                  <span>J’accepte les conditions d’utilisation et confirme être autorisé à créer cet espace pour l’entreprise.</span>
-                </label>
-              </section>
-            )}
+            <button type="submit" disabled={loading || !form.accept_terms || (isCaptchaEnabled && !captchaToken)} className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+              {loading ? 'Création en cours…' : <>Créer mon compte <ArrowRight className="h-4 w-4" /></>}
+            </button>
 
-            <footer className="mt-9 flex items-center justify-between border-t border-slate-100 pt-6">
-              <button type="button" onClick={() => setStep((current) => Math.max(1, current - 1))} disabled={step === 1} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800 disabled:invisible">
-                <ChevronLeft className="h-4 w-4" />Retour
-              </button>
-              {step < 3 ? (
-                <button type="button" onClick={() => void next()} disabled={checkingCompanyEmail} className="inline-flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-60">
-                  {checkingCompanyEmail ? 'Vérification…' : 'Continuer'}<ChevronRight className="h-4 w-4" />
-                </button>
-              ) : (
-                <button type="submit" disabled={loading || !form.accept_terms} className="inline-flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50">
-                  {loading ? 'Création en cours…' : Number(selectedPlan?.price || 0) > 0 ? 'Payer et créer l’espace' : 'Créer l\'espace'}
-                </button>
-              )}
-            </footer>
+            <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-slate-400"><span className="h-px flex-1 bg-slate-200" />ou<span className="h-px flex-1 bg-slate-200" /></div>
+            <GoogleSignInButton onCredential={handleGoogleCredential} />
           </form>
         </div>
       </div>
@@ -244,24 +161,16 @@ function RegisterPage() {
   )
 }
 
-function Field({ name, label, type = 'text', value, placeholder, required, helpText, error, onBlur, onChange }: { name: string; label: string; type?: string; value: string; placeholder?: string; required?: boolean; helpText?: string; error?: string; onBlur?: () => void; onChange: (value: string) => void }) {
-  const errorId = `${name}-error`
-  const hintId = `${name}-hint`
+function Field({ name, label, type = 'text', value, required, error, onChange }: { name: string; label: string; type?: string; value: string; required?: boolean; error?: string; onChange: (value: string) => void }) {
+  const inputClassName = `mt-1.5 h-11 w-full rounded-xl border px-3 text-sm font-normal focus:ring-1 ${error ? 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-indigo-500'}`
   return (
     <label htmlFor={name} className="block text-sm font-semibold text-slate-700">{label} {required && <span className="text-rose-500">*</span>}
-      <input id={name} name={name} type={type} required={required} value={value} placeholder={placeholder} onBlur={onBlur} onChange={(event) => onChange(event.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : helpText ? hintId : undefined} className={`mt-1.5 h-11 w-full rounded-xl border px-3 text-sm font-normal focus:ring-1 transition-colors ${error ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500'}`} />
-      {error ? <p id={errorId} role="alert" className="mt-1.5 text-xs font-medium text-rose-600">{error}</p> : helpText && <p id={hintId} className="mt-1.5 text-xs text-slate-400 font-medium">{helpText}</p>}
+      {type === 'password' ? (
+        <PasswordInput id={name} name={name} required={required} value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={error ? true : undefined} autoComplete="new-password" className={inputClassName} />
+      ) : (
+        <input id={name} name={name} type={type} required={required} value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={error ? true : undefined} className={inputClassName} />
+      )}
+      {error && <p role="alert" className="mt-1.5 text-xs font-medium text-rose-600">{error}</p>}
     </label>
-  )
-}
-
-function StepItem({ active, done, icon: Icon, number, title }: { active: boolean; done: boolean; icon: typeof Building2; number: number; title: string }) {
-  return (
-    <div className={`flex items-center gap-3 ${active || done ? 'text-white' : 'text-slate-500'}`}>
-      <span className={`flex h-10 w-10 items-center justify-center rounded-xl border ${active ? 'border-indigo-400 bg-indigo-500' : done ? 'border-emerald-400 bg-emerald-500' : 'border-white/10 bg-white/5'}`}>
-        {done ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
-      </span>
-      <span><span className="block text-[10px] font-bold uppercase tracking-wider">Étape {number}</span><strong className="text-sm">{title}</strong></span>
-    </div>
   )
 }

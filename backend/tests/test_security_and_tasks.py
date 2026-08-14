@@ -4,7 +4,11 @@ from io import BytesIO
 import openpyxl
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core import mail
+from django.contrib.auth.tokens import default_token_generator
 from django.test import override_settings
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -16,6 +20,7 @@ from domain.companies.models import (
     PaymentStatus,
     PaymentTransaction,
     SubscriptionPlan,
+    WorkspaceType,
 )
 from domain.tasks.models import (
     ApprovalRequest,
@@ -192,6 +197,42 @@ def test_due_and_overdue_notifications_are_deduplicated(tenant_data):
 
 
 @pytest.mark.django_db
+def test_assignment_notifications_are_worded_for_employee_and_manager(tenant_data):
+    Notification.objects.all().delete()
+    team = Team.objects.create(
+        name='Équipe du dossier client',
+        company=tenant_data['company_a'],
+        leader=tenant_data['employee_a'],
+    )
+    team.members.add(tenant_data['employee_a'])
+    task = Task.objects.create(
+        title='Préparer le dossier client',
+        company=tenant_data['company_a'],
+        creator=tenant_data['manager_a'],
+        assigned_to=tenant_data['employee_a'],
+        team=team,
+    )
+
+    employee_notifications = Notification.objects.filter(
+        recipient=tenant_data['employee_a'],
+        type=NotificationType.NEW_ASSIGNMENT,
+        task=task,
+    )
+    assert employee_notifications.count() == 1
+    employee_notification = employee_notifications.get()
+    manager_notification = Notification.objects.get(
+        recipient=tenant_data['manager_a'],
+        type=NotificationType.NEW_ASSIGNMENT,
+        task=task,
+    )
+    assert employee_notification.message == (
+        'La tâche « Préparer le dossier client » vous a été assignée.'
+    )
+    assert "La tâche « Préparer le dossier client » a été assignée à" in manager_notification.message
+    assert tenant_data['employee_a'].full_name in manager_notification.message
+
+
+@pytest.mark.django_db
 def test_disabled_reminders_and_assignments_are_respected(tenant_data):
     employee = tenant_data['employee_a']
     preference, _ = NotificationPreference.objects.get_or_create(user=employee)
@@ -320,7 +361,7 @@ def test_manager_cannot_create_any_account(api_client, tenant_data):
 
 
 @pytest.mark.django_db
-def test_public_registration_endpoint_is_closed(api_client):
+def test_public_registration_creates_personal_account_without_company(api_client):
     response = api_client.post(
         '/api/auth/register/',
         {
@@ -329,11 +370,344 @@ def test_public_registration_endpoint_is_closed(api_client):
             'last_name': 'User',
             'password': 'StrongPass123!',
             'password_confirm': 'StrongPass123!',
+            'accept_terms': True,
         },
         format='json',
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 201
+    user = User.objects.get(email='public@example.com')
+    assert user.company is None
+    assert user.role == Role.EMPLOYEE
+    assert user.terms_accepted_at is not None
+    assert user.terms_version == '2026-08-13'
+    assert user.privacy_version == '2026-08-13'
+    assert response.data['user']['company'] is None
+
+
+@pytest.mark.django_db
+def test_personal_account_can_complete_company_onboarding(api_client):
+    plan = SubscriptionPlan.objects.create(
+        name='Gratuit',
+        code='company-onboarding-free',
+        price=0,
+        audience=WorkspaceType.COMPANY,
+    )
+    user = User.objects.create_user(
+        email='personal@example.com',
+        password='StrongPass123!',
+        first_name='Compte',
+        last_name='Personnel',
+    )
+    api_client.force_authenticate(user)
+
+    response = api_client.post(
+        '/api/auth/onboarding/company/',
+        {
+            'company_name': 'Nouvelle structure',
+            'contact_email': 'contact@structure.test',
+            'contact_phone': '+22670000000',
+            'plan_code': plan.code,
+        },
+        format='json',
+    )
+
+    assert response.status_code == 201
+    user.refresh_from_db()
+    assert user.company.name == 'Nouvelle structure'
+    assert user.role == Role.OWNER
+    assert user.company.subscription.plan == plan
+
+
+@pytest.mark.django_db
+def test_personal_onboarding_creates_private_workspace_and_self_assigned_tasks(api_client):
+    plan = SubscriptionPlan.objects.create(
+        name='Personnel Test',
+        code='personal-test',
+        price=0,
+        audience=WorkspaceType.PERSONAL,
+        max_users=1,
+        max_teams=0,
+    )
+    user = User.objects.create_user(
+        email='solo@example.com',
+        password='StrongPass123!',
+        first_name='Solo',
+        last_name='User',
+    )
+    api_client.force_authenticate(user)
+
+    onboarding = api_client.post(
+        '/api/auth/onboarding/personal/',
+        {'plan_code': plan.code},
+        format='json',
+    )
+
+    assert onboarding.status_code == 201
+    user.refresh_from_db()
+    workspace = user.company
+    assert workspace.workspace_type == WorkspaceType.PERSONAL
+    assert workspace.subscription.plan == plan
+    assert onboarding.data['user']['is_personal_workspace'] is True
+    assert onboarding.data['user']['company_name'] == 'Mon espace personnel'
+
+    other_user = User.objects.create_user(
+        email='other-solo@example.com',
+        password='StrongPass123!',
+        first_name='Other',
+        last_name='User',
+        company=workspace,
+    )
+    team = Team.objects.create(
+        name='Équipe interdite',
+        company=workspace,
+        leader=user,
+    )
+    task_response = api_client.post(
+        '/api/tasks/',
+        {
+            'title': 'Ma tâche personnelle',
+            'status': 'todo',
+            'priority': 'normal',
+            'assigned_to': other_user.id,
+            'team': team.id,
+            'requires_completion_approval': True,
+        },
+        format='json',
+    )
+
+    assert task_response.status_code == 201
+    task = Task.objects.get(pk=task_response.data['id'])
+    assert task.assigned_to == user
+    assert task.team is None
+    assert task.requires_completion_approval is False
+
+    team_response = api_client.post(
+        '/api/teams/',
+        {'name': 'Nouvelle équipe', 'leader': user.id},
+        format='json',
+    )
+    assert team_response.status_code == 403
+
+    project_response = api_client.post(
+        '/api/projects/',
+        {
+            'name': 'Objectif personnel',
+            'status': 'in_progress',
+            'health': 'on_track',
+            'manager': other_user.id,
+            'members': [other_user.id],
+            'teams': [team.id],
+        },
+        format='json',
+    )
+    assert project_response.status_code == 201
+    project = Project.objects.get(pk=project_response.data['id'])
+    assert project.manager == user
+    assert not project.members.exists()
+    assert not project.teams.exists()
+
+    template_response = api_client.post(
+        '/api/tasks/templates/',
+        {
+            'name': 'Routine personnelle',
+            'title': 'Ma routine',
+            'priority': 'normal',
+            'is_shared': True,
+        },
+        format='json',
+    )
+    assert template_response.status_code == 201
+    assert template_response.data['is_shared'] is False
+
+    task.due_date = date.today() + timedelta(days=2)
+    task.save(update_fields=['due_date', 'updated_at'])
+    report_response = api_client.post(
+        f'/api/tasks/{task.id}/reports/',
+        {
+            'new_due_date': date.today() + timedelta(days=4),
+            'reason': 'Je réorganise mon planning personnel.',
+        },
+        format='json',
+    )
+    assert report_response.status_code == 403
+
+    approval_response = api_client.post(
+        f'/api/tasks/{task.id}/approvals/',
+        {
+            'action': 'task_completion',
+            'reason': 'La tâche est terminée.',
+        },
+        format='json',
+    )
+    assert approval_response.status_code == 403
+
+    bulk_assignment = api_client.post(
+        '/api/tasks/bulk/',
+        {
+            'task_ids': [task.id],
+            'action': 'assign',
+            'assigned_to': other_user.id,
+        },
+        format='json',
+    )
+    assert bulk_assignment.status_code == 403
+
+
+@pytest.mark.django_db
+def test_plan_catalog_and_changes_respect_workspace_type(api_client):
+    personal_plan = SubscriptionPlan.objects.create(
+        name='Personnel Filtré',
+        code='personal-filtered',
+        price=0,
+        audience=WorkspaceType.PERSONAL,
+    )
+    company_plan = SubscriptionPlan.objects.create(
+        name='Entreprise Filtrée',
+        code='company-filtered',
+        price=0,
+        audience=WorkspaceType.COMPANY,
+    )
+
+    catalog = api_client.get('/api/companies/plans/', {'audience': 'personal'})
+    assert catalog.status_code == 200
+    assert personal_plan.code in {plan['code'] for plan in catalog.data}
+    assert company_plan.code not in {plan['code'] for plan in catalog.data}
+
+    user = User.objects.create_user(
+        email='personal-plan@example.com',
+        password='StrongPass123!',
+        first_name='Plan',
+        last_name='Personnel',
+    )
+    api_client.force_authenticate(user)
+    assert api_client.post(
+        '/api/auth/onboarding/personal/',
+        {'plan_code': personal_plan.code},
+        format='json',
+    ).status_code == 201
+
+    rejected = api_client.post(
+        '/api/companies/subscription/change-plan/',
+        {'plan_code': company_plan.code},
+        format='json',
+    )
+    assert rejected.status_code == 404
+
+
+@pytest.mark.django_db
+def test_personal_workspace_can_be_converted_to_company_without_losing_tasks(api_client):
+    personal_plan = SubscriptionPlan.objects.create(
+        name='Personnel Conversion',
+        code='personal-conversion',
+        price=0,
+        audience=WorkspaceType.PERSONAL,
+    )
+    company_plan = SubscriptionPlan.objects.create(
+        name='Entreprise Conversion',
+        code='company-conversion',
+        price=0,
+        audience=WorkspaceType.COMPANY,
+    )
+    user = User.objects.create_user(
+        email='conversion@example.com',
+        password='StrongPass123!',
+        first_name='Compte',
+        last_name='Conversion',
+    )
+    api_client.force_authenticate(user)
+    api_client.post(
+        '/api/auth/onboarding/personal/',
+        {'plan_code': personal_plan.code},
+        format='json',
+    )
+    user.refresh_from_db()
+    original_workspace_id = user.company_id
+    task = Task.objects.create(
+        title='Tâche à conserver',
+        company=user.company,
+        creator=user,
+        assigned_to=user,
+    )
+
+    conversion = api_client.post(
+        '/api/auth/onboarding/company/',
+        {
+            'company_name': 'Ma nouvelle entreprise',
+            'company_slug': 'ma-nouvelle-entreprise',
+            'contact_email': user.email,
+            'contact_phone': '+22670000000',
+            'plan_code': company_plan.code,
+        },
+        format='json',
+    )
+
+    assert conversion.status_code == 201
+    user.refresh_from_db()
+    task.refresh_from_db()
+    assert user.company_id == original_workspace_id
+    assert user.company.workspace_type == WorkspaceType.COMPANY
+    assert user.company.name == 'Ma nouvelle entreprise'
+    assert user.company.subscription.plan == company_plan
+    assert task.company_id == original_workspace_id
+
+
+@pytest.mark.django_db
+def test_password_reset_is_non_enumerating_and_changes_password(api_client):
+    user = User.objects.create_user(
+        email='reset@example.com',
+        password='StrongPass123!',
+        first_name='Reset',
+        last_name='User',
+    )
+    known = api_client.post('/api/auth/password-reset/', {'email': user.email}, format='json')
+    unknown = api_client.post('/api/auth/password-reset/', {'email': 'unknown@example.com'}, format='json')
+
+    assert known.status_code == unknown.status_code == 200
+    assert known.data == unknown.data
+    assert len(mail.outbox) == 1
+    message = mail.outbox[0]
+    assert message.subject == '[Activity Control] Réinitialisez votre mot de passe'
+    assert '/reset-password?uid=' in message.body
+    assert len(message.alternatives) == 1
+    assert 'Choisir un nouveau mot de passe' in message.alternatives[0][0]
+
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    confirmed = api_client.post(
+        '/api/auth/password-reset/confirm/',
+        {
+            'uid': uid,
+            'token': token,
+            'new_password': 'AnotherStrong123!',
+            'new_password_confirm': 'AnotherStrong123!',
+        },
+        format='json',
+    )
+    assert confirmed.status_code == 200
+    user.refresh_from_db()
+    assert user.check_password('AnotherStrong123!')
+
+
+@pytest.mark.django_db
+def test_password_reset_keeps_generic_response_when_email_delivery_fails(api_client, monkeypatch):
+    user = User.objects.create_user(
+        email='delivery-failure@example.com',
+        password='StrongPass123!',
+        first_name='Delivery',
+        last_name='Failure',
+    )
+
+    def smtp_failure(*args, **kwargs):
+        raise OSError('SMTP unavailable')
+
+    monkeypatch.setattr('domain.users.emails.send_mail', smtp_failure)
+    response = api_client.post('/api/auth/password-reset/', {'email': user.email}, format='json')
+
+    assert response.status_code == 200
+    assert response.data == {
+        'detail': "Si un compte correspond à cette adresse, un email a été envoyé."
+    }
 
 
 @pytest.mark.django_db
@@ -367,6 +741,8 @@ def test_company_registration_creates_owner_and_free_subscription(api_client):
     assert response.status_code == 201
     owner = User.objects.get(email='owner-new@example.com')
     assert owner.role == Role.OWNER
+    assert owner.terms_accepted_at is not None
+    assert owner.terms_version == '2026-08-13'
     assert owner.company.contact_phone == '+22670000000'
     assert owner.company.subscription.status == 'active'
     assert response.data['access']
@@ -514,7 +890,37 @@ def test_project_rejects_team_from_another_company(api_client, tenant_data):
 
 
 @pytest.mark.django_db
-def test_task_assignment_automatically_links_person_and_team_to_project(api_client, tenant_data):
+def test_employee_cannot_access_project_api(api_client, tenant_data):
+    project = Project.objects.create(
+        name='Projet réservé au pilotage',
+        company=tenant_data['company_a'],
+        manager=tenant_data['manager_a'],
+    )
+    api_client.force_authenticate(tenant_data['employee_a'])
+
+    list_response = api_client.get('/api/projects/')
+    detail_response = api_client.get(f'/api/projects/{project.id}/')
+
+    assert list_response.status_code == 403
+    assert detail_response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_project_detail_does_not_cross_tenants(api_client, tenant_data):
+    foreign_project = Project.objects.create(
+        name='Projet société B',
+        company=tenant_data['company_b'],
+        manager=tenant_data['employee_b'],
+    )
+    api_client.force_authenticate(tenant_data['manager_a'])
+
+    response = api_client.get(f'/api/projects/{foreign_project.id}/')
+
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_task_assignment_links_person_for_an_existing_project_team(api_client, tenant_data):
     manager = tenant_data['manager_a']
     employee = tenant_data['employee_a']
     team = Team.objects.create(
@@ -528,6 +934,7 @@ def test_task_assignment_automatically_links_person_and_team_to_project(api_clie
         company=tenant_data['company_a'],
         manager=manager,
     )
+    project.teams.add(team)
     api_client.force_authenticate(manager)
 
     response = api_client.post(
@@ -547,6 +954,58 @@ def test_task_assignment_automatically_links_person_and_team_to_project(api_clie
     project.refresh_from_db()
     assert project.members.filter(id=employee.id).exists()
     assert project.teams.filter(id=team.id).exists()
+
+
+@pytest.mark.django_db
+def test_project_task_inherits_single_team_and_its_leader(api_client, tenant_data):
+    manager = tenant_data['manager_a']
+    team = Team.objects.create(
+        name='Équipe projet unique',
+        company=tenant_data['company_a'],
+        leader=manager,
+    )
+    project = Project.objects.create(
+        name='Projet hérité',
+        company=tenant_data['company_a'],
+        manager=manager,
+    )
+    project.teams.add(team)
+    api_client.force_authenticate(manager)
+
+    response = api_client.post(
+        '/api/tasks/',
+        {'title': 'Tâche héritée', 'project': project.id, 'priority': 'normal'},
+        format='json',
+    )
+
+    assert response.status_code == 201
+    task = Task.objects.get(id=response.data['id'])
+    assert task.team == team
+    assert task.assigned_to == manager
+
+
+@pytest.mark.django_db
+def test_project_task_rejects_team_outside_project(api_client, tenant_data):
+    manager = tenant_data['manager_a']
+    allowed_team = Team.objects.create(name='Équipe autorisée', company=tenant_data['company_a'])
+    other_team = Team.objects.create(name='Équipe externe au projet', company=tenant_data['company_a'])
+    project = Project.objects.create(name='Projet cadré', company=tenant_data['company_a'], manager=manager)
+    project.teams.add(allowed_team)
+    api_client.force_authenticate(manager)
+
+    response = api_client.post(
+        '/api/tasks/',
+        {
+            'title': 'Tâche incohérente',
+            'project': project.id,
+            'team': other_team.id,
+            'priority': 'normal',
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert 'team' in response.data
 
 
 @pytest.mark.django_db
@@ -614,6 +1073,26 @@ def test_owner_can_complete_test_payment_and_receive_notification(api_client, te
         recipient=tenant_data['owner_a'],
         type='payment_succeeded',
     ).exists()
+
+
+@pytest.mark.django_db
+@override_settings(PAYMENT_PROVIDER='disabled')
+def test_disabled_payment_provider_does_not_create_fake_transaction(api_client, tenant_data):
+    plan = SubscriptionPlan.objects.create(
+        name='Paiement désactivé',
+        code='disabled-payment',
+        price=15000,
+    )
+    api_client.force_authenticate(tenant_data['owner_a'])
+
+    response = api_client.post(
+        '/api/companies/subscription/payments/start/',
+        {'plan_code': plan.code},
+        format='json',
+    )
+
+    assert response.status_code == 503
+    assert not PaymentTransaction.objects.filter(company=tenant_data['company_a']).exists()
 
 
 @pytest.mark.django_db
@@ -1415,6 +1894,54 @@ def test_deactivated_company_member_cannot_login(api_client, tenant_data):
 
 
 @pytest.mark.django_db
+def test_login_remember_me_controls_cookie_persistence(api_client, tenant_data):
+    credentials = {
+        'email': tenant_data['employee_a'].email,
+        'password': 'StrongPass123!',
+    }
+
+    session_response = api_client.post('/api/auth/login/', credentials, format='json')
+
+    assert session_response.status_code == 200
+    assert session_response.cookies['access_token']['max-age'] == ''
+    assert session_response.cookies['refresh_token']['max-age'] == ''
+    assert session_response.cookies['refresh_token']['httponly'] is True
+    assert session_response.cookies['refresh_token']['samesite'] == 'Lax'
+    assert RefreshToken(session_response.cookies['refresh_token'].value)['remember_me'] is False
+
+    persistent_response = api_client.post(
+        '/api/auth/login/',
+        {**credentials, 'remember_me': True},
+        format='json',
+    )
+
+    assert persistent_response.status_code == 200
+    assert persistent_response.cookies['access_token']['max-age'] == 3600
+    assert persistent_response.cookies['refresh_token']['max-age'] == 604800
+    assert RefreshToken(persistent_response.cookies['refresh_token'].value)['remember_me'] is True
+
+
+@pytest.mark.django_db
+def test_refresh_preserves_remember_me_cookie_policy(api_client, tenant_data):
+    login_response = api_client.post(
+        '/api/auth/login/',
+        {
+            'email': tenant_data['employee_a'].email,
+            'password': 'StrongPass123!',
+            'remember_me': True,
+        },
+        format='json',
+    )
+    api_client.cookies['refresh_token'] = login_response.cookies['refresh_token'].value
+
+    response = api_client.post('/api/auth/refresh/', {}, format='json')
+
+    assert response.status_code == 200
+    assert response.cookies['access_token']['max-age'] == 3600
+    assert response.cookies['refresh_token']['max-age'] == 604800
+
+
+@pytest.mark.django_db
 def test_logout_blacklists_refresh_token(api_client, tenant_data):
     user = tenant_data['employee_a']
     refresh = RefreshToken.for_user(user)
@@ -1699,7 +2226,6 @@ def test_employee_requests_completion_and_manager_approves(api_client, tenant_da
         type=NotificationType.APPROVAL_REQUESTED,
         task=task,
     ).exists()
-
     duplicate = api_client.post(
         f'/api/tasks/{task.id}/approvals/',
         {'action': 'task_completion', 'reason': 'Seconde demande.'},
@@ -1734,6 +2260,73 @@ def test_employee_requests_completion_and_manager_approves(api_client, tenant_da
         type=NotificationType.APPROVAL_APPROVED,
         task=task,
     ).exists()
+
+
+@pytest.mark.django_db
+def test_task_exposes_pending_approval_and_no_fake_subtask_progress(api_client, tenant_data):
+    task = Task.objects.create(
+        title='Livrable en validation',
+        company=tenant_data['company_a'],
+        creator=tenant_data['manager_a'],
+        assigned_to=tenant_data['employee_a'],
+        status=Status.IN_PROGRESS,
+        requires_completion_approval=True,
+    )
+    ApprovalRequest.objects.create(
+        company=tenant_data['company_a'],
+        task=task,
+        requested_by=tenant_data['employee_a'],
+        reason='Livrable prêt.',
+    )
+    api_client.force_authenticate(tenant_data['employee_a'])
+
+    response = api_client.get(f'/api/tasks/{task.id}/')
+
+    assert response.status_code == 200
+    assert response.data['approval_pending'] is True
+    assert response.data['status_display'] == 'En attente de validation'
+    assert response.data['progress_percent'] is None
+
+
+@pytest.mark.django_db
+def test_completed_late_task_preserves_deadline_information(api_client, tenant_data):
+    task = Task.objects.create(
+        title='Livraison tardive',
+        company=tenant_data['company_a'],
+        creator=tenant_data['manager_a'],
+        assigned_to=tenant_data['employee_a'],
+        status=Status.COMPLETED,
+        due_date=date.today() - timedelta(days=2),
+        completed_at=timezone.now(),
+    )
+    api_client.force_authenticate(tenant_data['manager_a'])
+
+    response = api_client.get(f'/api/tasks/{task.id}/')
+
+    assert response.status_code == 200
+    assert response.data['is_overdue'] is False
+    assert response.data['deadline_status'] == 'completed_late'
+    assert response.data['status_display'] == 'Terminée en retard'
+
+
+@pytest.mark.django_db
+def test_deferred_task_becomes_overdue_after_its_new_deadline(api_client, tenant_data):
+    task = Task.objects.create(
+        title='Report arrivé à échéance',
+        company=tenant_data['company_a'],
+        creator=tenant_data['manager_a'],
+        assigned_to=tenant_data['employee_a'],
+        status=Status.DEFERRED,
+        due_date=date.today() - timedelta(days=1),
+    )
+    api_client.force_authenticate(tenant_data['employee_a'])
+
+    response = api_client.get(f'/api/tasks/{task.id}/')
+
+    assert response.status_code == 200
+    assert response.data['is_overdue'] is True
+    assert response.data['deadline_status'] == 'overdue'
+    assert response.data['status_display'] == 'En retard'
 
 
 @pytest.mark.django_db

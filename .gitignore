@@ -23,6 +23,7 @@ db.sqlite3-journal
 /static/
 /media/
 /backend/media/
+/backups/
 
 # Node
 node_modules/

@@ -7,13 +7,22 @@ from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from common.permissions.permissions import IsAdministrator, IsSameCompany, IsSuperUser
 from common.utils import get_requested_company
-from .models import Company, SubscriptionPlan, CompanySubscription, PaymentTransaction, SystemAnnouncement, PlatformAuditLog
+from .models import (
+    Company,
+    CompanySubscription,
+    PaymentTransaction,
+    PlatformAuditLog,
+    SubscriptionPlan,
+    SystemAnnouncement,
+    WorkspaceType,
+)
 from .serializers import (
     CompanySerializer,
     CompanyCreateSerializer,
     CompanyUpdateSerializer,
     SubscriptionPlanSerializer,
     CompanySubscriptionSerializer,
+    AdminCompanySubscriptionUpdateSerializer,
     ChangePlanSerializer,
     CompleteTestPaymentSerializer,
     PaymentTransactionSerializer,
@@ -173,8 +182,14 @@ class SubscriptionPlanListView(generics.ListAPIView):
     """List available subscription plans."""
     permission_classes = [AllowAny]
     serializer_class = SubscriptionPlanSerializer
-    queryset = SubscriptionPlan.objects.filter(is_active=True)
     pagination_class = None
+
+    def get_queryset(self):
+        queryset = SubscriptionPlan.objects.filter(is_active=True)
+        audience = self.request.query_params.get('audience')
+        if audience in WorkspaceType.values:
+            queryset = queryset.filter(audience=audience)
+        return queryset
 
 
 @extend_schema(
@@ -194,7 +209,13 @@ def my_subscription(request):
     subscription, _ = CompanySubscription.objects.get_or_create(
         company=company,
         defaults={
-            'plan': SubscriptionPlan.objects.filter(code='free').first() or SubscriptionPlan.objects.first(),
+            'plan': (
+                SubscriptionPlan.objects.filter(
+                    audience=company.workspace_type,
+                    is_active=True,
+                ).first()
+                or SubscriptionPlan.objects.filter(is_active=True).first()
+            ),
             'status': 'trial',
         }
     )
@@ -251,7 +272,11 @@ def change_subscription_plan(request):
     plan_code = serializer.validated_data['plan_code']
 
     try:
-        new_plan = SubscriptionPlan.objects.get(code=plan_code, is_active=True)
+        new_plan = SubscriptionPlan.objects.get(
+            code=plan_code,
+            audience=company.workspace_type,
+            is_active=True,
+        )
     except SubscriptionPlan.DoesNotExist:
         return Response(
             {"detail": f"Subscription plan '{plan_code}' not found."},
@@ -396,11 +421,17 @@ def start_payment(request):
             {'detail': "Seul le propriétaire peut démarrer un paiement."},
             status=status.HTTP_403_FORBIDDEN,
         )
+    if settings.PAYMENT_PROVIDER != 'test':
+        return Response(
+            {'detail': 'Le paiement en ligne n’est pas encore activé sur cet environnement.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
     serializer = StartTestPaymentSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     try:
         plan = SubscriptionPlan.objects.get(
             code=serializer.validated_data['plan_code'],
+            audience=request.user.company.workspace_type,
             is_active=True,
         )
     except SubscriptionPlan.DoesNotExist:
@@ -424,7 +455,9 @@ def start_payment(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def simulate_payment(request, reference):
-    if not settings.DEBUG:
+    if settings.PAYMENT_PROVIDER != 'test' or not (
+        settings.DEBUG or settings.ALLOW_TEST_PAYMENT_SIMULATOR
+    ):
         return Response(
             {'detail': 'Le simulateur est désactivé hors environnement de test.'},
             status=status.HTTP_404_NOT_FOUND,

@@ -11,7 +11,7 @@ import { DateInput } from '@/components/ui/DateInput'
 import { Modal } from '@/components/ui/Modal'
 import { useConfirmation } from '@/components/ui/confirmation'
 import { Badge } from '@/components/ui/Badge'
-import { requireAuthentication } from '@/router/auth'
+import { requireManagement } from '@/router/auth'
 import { projectsService, type CreateProjectPayload } from '@/services/projects'
 import { subscriptionsService } from '@/services/subscriptions'
 import { authService } from '@/services/auth'
@@ -19,7 +19,7 @@ import { teamsService } from '@/services/teams'
 import type { Project, ProjectHealth, ProjectStatus, Team } from '@/domain/types'
 
 export const Route = createFileRoute('/projects')({
-  beforeLoad: requireAuthentication,
+  beforeLoad: requireManagement,
   component: ProjectsPage,
 })
 
@@ -46,6 +46,12 @@ export function ProjectsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: authService.getCurrentUser,
+  })
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
+
   const { data: subscription } = useQuery({
     queryKey: ['mySubscription'],
     queryFn: subscriptionsService.getMySubscription,
@@ -59,12 +65,14 @@ export function ProjectsPage() {
   const { data: usersData } = useQuery({
     queryKey: ['companyUsers'],
     queryFn: () => authService.list({ is_active: true }),
+    enabled: Boolean(currentUser && !isPersonalWorkspace),
   })
   const users = usersData || []
 
   const { data: teams = [] } = useQuery({
     queryKey: ['teams'],
     queryFn: teamsService.list,
+    enabled: Boolean(currentUser && !isPersonalWorkspace),
   })
 
   // Check tiering: free/starter plans can be restricted or prompt upgrade
@@ -83,13 +91,13 @@ export function ProjectsPage() {
   const completedCount = projects.filter((p) => p.status === 'completed').length
 
   return (
-    <Layout title="Projets & Portefeuille">
+    <Layout title={isPersonalWorkspace ? 'Mes projets' : 'Projets & Portefeuille'}>
       <div className="space-y-8 p-4 sm:p-8 max-w-7xl mx-auto">
         {/* Header section */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-black text-foreground">Portefeuille de Projets</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-foreground">{isPersonalWorkspace ? 'Mes projets' : 'Portefeuille de Projets'}</h1>
               {isFreePlan && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
                   <Sparkles className="h-3.5 w-3.5" /> PRO
@@ -97,7 +105,9 @@ export function ProjectsPage() {
               )}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Pilotez les grands chantiers stratégiques de votre organisation et suivez l'avancement en temps réel.
+              {isPersonalWorkspace
+                ? "Regroupez vos tâches par objectif et suivez simplement l'avancement de vos projets."
+                : "Pilotez les grands chantiers stratégiques de votre organisation et suivez l'avancement en temps réel."}
             </p>
           </div>
           <Button
@@ -196,7 +206,9 @@ export function ProjectsPage() {
             <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/40" />
             <h3 className="mt-4 text-lg font-bold text-foreground">Aucun projet trouvé</h3>
             <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
-              Créez votre premier projet pour organiser vos tâches en grands objectifs d'équipe.
+              {isPersonalWorkspace
+                ? 'Créez votre premier projet pour organiser vos tâches autour d’un objectif.'
+                : "Créez votre premier projet pour organiser vos tâches en grands objectifs d'équipe."}
             </p>
             <Button
               onClick={() => {
@@ -214,6 +226,7 @@ export function ProjectsPage() {
               <ProjectCard
                 key={project.id}
                 project={project}
+                showCollaboration={!isPersonalWorkspace}
                 onOpen={() => navigate({ to: '/projects/$projectId', params: { projectId: String(project.id) } })}
                 onEdit={() => {
                   setEditingProject(project)
@@ -245,6 +258,7 @@ export function ProjectsPage() {
           project={editingProject}
           users={users}
           teams={teams}
+          isPersonalWorkspace={isPersonalWorkspace}
         />
       </div>
     </Layout>
@@ -270,11 +284,13 @@ function ProjectCard({
   onOpen,
   onEdit,
   onDelete,
+  showCollaboration,
 }: {
   project: Project
   onOpen: () => void
   onEdit: () => void
   onDelete: () => void
+  showCollaboration: boolean
 }) {
   const healthInfo = healthBadges[project.health] || healthBadges.on_track
   const statusInfo = statusBadges[project.status] || statusBadges.in_progress
@@ -331,7 +347,7 @@ function ProjectCard({
 
       {/* Footer details & Action buttons */}
       <div className="mt-6 border-t border-border pt-4">
-        {(project.team_details || []).length > 0 && (
+        {showCollaboration && (project.team_details || []).length > 0 && (
           <div className="mb-4 flex flex-wrap gap-1.5">
             {project.team_details?.map((team) => (
               <span key={team.id} className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
@@ -341,10 +357,10 @@ function ProjectCard({
           </div>
         )}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5 font-medium">
+          {showCollaboration && <div className="flex items-center gap-1.5 font-medium">
             <UserRound className="h-3.5 w-3.5" />
             <span>{project.manager_name || 'Non assigné'}</span>
-          </div>
+          </div>}
           {project.due_date && (
             <div className="flex items-center gap-1 font-medium">
               <Calendar className="h-3.5 w-3.5" />
@@ -354,7 +370,7 @@ function ProjectCard({
         </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <div className="flex -space-x-2">
+          {showCollaboration && <div className="flex -space-x-2">
             {(project.member_details || []).slice(0, 3).map((m) => (
               <div
                 key={m.id}
@@ -369,7 +385,7 @@ function ProjectCard({
                 +{(project.member_details || []).length - 3}
               </div>
             )}
-          </div>
+          </div>}
 
           <div className="flex items-center gap-1">
             <button
@@ -402,12 +418,14 @@ function ProjectFormModal({
   project,
   users,
   teams,
+  isPersonalWorkspace,
 }: {
   isOpen: boolean
   onClose: () => void
   project: Project | null
   users: { id: string | number; full_name: string; email: string }[]
   teams: Team[]
+  isPersonalWorkspace: boolean
 }) {
   const queryClient = useQueryClient()
   const isEditing = !!project
@@ -435,8 +453,8 @@ function ProjectFormModal({
       health: String(form.get('health')),
       start_date: form.get('start_date') ? String(form.get('start_date')) : undefined,
       due_date: form.get('due_date') ? String(form.get('due_date')) : undefined,
-      manager: form.get('manager') ? Number(form.get('manager')) : undefined,
-      teams: form.getAll('teams').map((id) => Number(id)),
+      manager: isPersonalWorkspace ? undefined : form.get('manager') ? Number(form.get('manager')) : undefined,
+      teams: isPersonalWorkspace ? [] : form.getAll('teams').map((id) => Number(id)),
     }
     mutation.mutate(data)
   }
@@ -444,7 +462,7 @@ function ProjectFormModal({
   const inputClass = 'h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Modifier le projet' : 'Nouveau projet stratégique'} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Modifier le projet' : isPersonalWorkspace ? 'Nouveau projet' : 'Nouveau projet stratégique'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-foreground">Nom du projet *</label>
@@ -483,7 +501,7 @@ function ProjectFormModal({
           </div>
         </div>
 
-        <div className="space-y-2">
+        {!isPersonalWorkspace && <div className="space-y-2">
           <div>
             <label className="text-xs font-bold text-foreground">Équipes rattachées au projet</label>
             <p className="mt-0.5 text-xs text-muted-foreground">Sélectionnez une ou plusieurs équipes qui participeront au projet.</p>
@@ -511,9 +529,9 @@ function ProjectFormModal({
               Aucune équipe disponible. Créez d’abord une équipe depuis le module Équipes.
             </div>
           )}
-        </div>
+        </div>}
 
-        <div className="space-y-1.5">
+        {!isPersonalWorkspace && <div className="space-y-1.5">
           <label className="text-xs font-bold text-foreground">Responsable</label>
           <select name="manager" defaultValue={project?.manager || ''} className={inputClass}>
             <option value="">Sélectionner un manager</option>
@@ -523,7 +541,7 @@ function ProjectFormModal({
               </option>
             ))}
           </select>
-        </div>
+        </div>}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">

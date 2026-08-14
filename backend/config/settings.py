@@ -15,6 +15,12 @@ else:
     load_dotenv()
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+
+
+def env_list(name, default=''):
+    return [value.strip() for value in os.getenv(name, default).split(',') if value.strip()]
+
+
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY:
     if DEBUG:
@@ -24,7 +30,7 @@ if not SECRET_KEY:
             'SECRET_KEY must be configured when DEBUG is disabled.'
         )
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
 
 INSTALLED_APPS = [
     'daphne',
@@ -86,22 +92,24 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-try:
-    import redis
-    r = redis.Redis.from_url(os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'), socket_connect_timeout=1)
-    r.ping()
+USE_IN_MEMORY_CHANNEL_LAYER = os.getenv(
+    'USE_IN_MEMORY_CHANNEL_LAYER',
+    'True' if DEBUG else 'False',
+).lower() == 'true'
+
+if USE_IN_MEMORY_CHANNEL_LAYER:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
+else:
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
                 'hosts': [os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')],
             },
-        },
-    }
-except Exception:
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
 
@@ -200,12 +208,20 @@ JWT_COOKIE_SECURE = os.getenv(
     'True' if not DEBUG else 'False',
 ).lower() == 'true'
 JWT_COOKIE_HTTP_ONLY = True
-JWT_COOKIE_SAMESITE = 'Lax'
+JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
+WEBSOCKET_ALLOW_QUERY_TOKEN = os.getenv(
+    'WEBSOCKET_ALLOW_QUERY_TOKEN',
+    'False',
+).lower() == 'true'
 
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = env_list(
+    'CSRF_TRUSTED_ORIGINS',
+    ','.join(CORS_ALLOWED_ORIGINS),
+)
 
 if not DEBUG:
     # Enable at the edge in production. Keeping the default off also prevents
@@ -222,6 +238,9 @@ if not DEBUG:
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = 'same-origin'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Spectacular Settings
 SPECTACULAR_SETTINGS = {
@@ -242,6 +261,7 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
     'process-subscription-lifecycle-hourly': {
         'task': 'domain.companies.tasks.process_subscription_lifecycle',
@@ -267,8 +287,17 @@ if AWS_STORAGE_BUCKET_NAME:
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Gestion des Tâches <noreply@gestiontaches.com>')
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 10))
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Activity Control <noreply@gestiontaches.com>')
+PASSWORD_RESET_TIMEOUT = int(os.getenv('PASSWORD_RESET_TIMEOUT', 3600))
 APP_FRONTEND_URL = os.getenv('APP_FRONTEND_URL', 'http://localhost:5173')
+GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
+TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
+PAYMENT_PROVIDER = os.getenv('PAYMENT_PROVIDER', 'disabled')
+ALLOW_TEST_PAYMENT_SIMULATOR = os.getenv(
+    'ALLOW_TEST_PAYMENT_SIMULATOR',
+    'False',
+).lower() == 'true'

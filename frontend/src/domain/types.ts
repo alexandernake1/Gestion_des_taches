@@ -8,6 +8,8 @@ export interface User {
   avatar?: string;
   company?: number;
   company_name?: string;
+  workspace_type?: WorkspaceType;
+  is_personal_workspace: boolean;
   role: Role;
   role_display: string;
   is_active: boolean;
@@ -20,6 +22,7 @@ export interface User {
 }
 
 export type Role = 'owner' | 'manager' | 'employee';
+export type WorkspaceType = 'personal' | 'company';
 
 export interface UserAuditLog {
   id: string;
@@ -58,6 +61,8 @@ export interface ProjectMember {
 export interface ProjectTeam {
   id: number;
   name: string;
+  leader_id?: number;
+  leader_name?: string;
   member_count: number;
 }
 
@@ -98,6 +103,9 @@ export interface Company {
   address?: string;
   timezone: string;
   language: string;
+  workspace_type: WorkspaceType;
+  workspace_type_display: string;
+  is_personal: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -114,6 +122,8 @@ export interface SubscriptionPlan {
   price: number;
   billing_period: BillingPeriod;
   billing_period_display: string;
+  audience: WorkspaceType;
+  audience_display: string;
   max_users: number;
   max_teams: number;
   storage_limit_mb: number;
@@ -199,8 +209,11 @@ export interface Task {
   dependencies?: number[];
   dependency_details?: Array<Pick<Task, 'id' | 'title' | 'status'>>;
   subtask_count?: number;
-  progress_percent?: number;
+  progress_percent?: number | null;
   is_blocked?: boolean;
+  approval_pending?: boolean;
+  deadline_status?: 'on_time' | 'overdue' | 'deferred' | 'completed_on_time' | 'completed_late';
+  deadline_status_display?: string;
   priority: Priority;
   priority_display?: string;
   status: Status;
@@ -340,11 +353,13 @@ export interface NotificationPreference {
 export interface LoginRequest {
   email: string;
   password: string;
+  remember_me?: boolean;
+  captcha_token?: string;
 }
 
 export interface LoginResponse {
-  access: string;
-  refresh: string;
+  access?: string;
+  refresh?: string;
   user: User;
 }
 
@@ -355,9 +370,11 @@ export interface RegisterRequest {
   password: string;
   password_confirm: string;
   phone?: string;
+  accept_terms: boolean;
+  captcha_token?: string;
 }
 
-export interface CompanyRegistrationRequest extends RegisterRequest {
+export interface CompanyOnboardingRequest {
   company_name: string;
   company_slug?: string;
   website?: string;
@@ -365,8 +382,13 @@ export interface CompanyRegistrationRequest extends RegisterRequest {
   contact_phone: string;
   address?: string;
   plan_code: string;
-  accept_terms: boolean;
 }
+
+export interface PersonalOnboardingRequest {
+  plan_code: string;
+}
+
+export interface CompanyRegistrationRequest extends RegisterRequest, CompanyOnboardingRequest {}
 
 export interface CompanyRegistrationResponse extends LoginResponse {
   company: Company;

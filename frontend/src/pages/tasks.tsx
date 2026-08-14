@@ -35,7 +35,7 @@ const exportScopeTitles: Record<string, string> = {
 const exportStatusTitles: Record<string, string> = {
   todo: 'À faire',
   in_progress: 'En cours',
-  on_hold: 'En attente',
+  on_hold: 'En pause',
   deferred: 'Reportées',
   completed: 'Terminées',
 }
@@ -72,10 +72,13 @@ function TasksPage() {
 
 
   const isEmployee = currentUser?.role === 'employee'
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
 
   // Employees only have personal + team scopes.
   // Managers/admins/owners have personal + assigned + all.
-  const scopes = isEmployee
+  const scopes = isPersonalWorkspace
+    ? [{ id: 'all', label: 'Mes tâches' }]
+    : isEmployee
     ? [
         { id: 'assigned', label: 'Assignées à moi' },
         { id: 'mine', label: 'Créées par moi' },
@@ -105,6 +108,10 @@ function TasksPage() {
   useEffect(() => {
     if (currentUser?.is_superuser) setScope('all')
   }, [currentUser?.is_superuser])
+
+  useEffect(() => {
+    if (isPersonalWorkspace) setScope('all')
+  }, [isPersonalWorkspace])
 
   // Sécurité pour forcer la vue 'list' si la vue sauvegardée n'est plus autorisée
   useEffect(() => {
@@ -234,7 +241,11 @@ function TasksPage() {
     updateStatusMutation.mutate({ taskId, newStatus })
   }
 
-  const getStatusBadge = (status: Status) => {
+  const getStatusBadge = (task: Task) => {
+    if (task.approval_pending) return <Badge variant="warning">En attente de validation</Badge>
+    if (task.deadline_status === 'overdue') return <Badge variant="danger">En retard</Badge>
+    if (task.deadline_status === 'completed_late') return <Badge variant="warning">Terminée en retard</Badge>
+    const status = task.status
     const variants = {
       todo: 'default',
       in_progress: 'info',
@@ -245,9 +256,9 @@ function TasksPage() {
     const labels = {
       todo: 'À faire',
       in_progress: 'En cours',
-      on_hold: 'En attente',
+      on_hold: 'En pause',
       deferred: 'Reportée',
-      completed: 'Complétée'
+      completed: 'Terminée'
     }
     return <Badge variant={variants[status]}>{labels[status]}</Badge>
   }
@@ -286,30 +297,32 @@ function TasksPage() {
             <div>
               <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em]" style={{ color: 'hsl(var(--primary))' }}>
                 <SlidersHorizontal className="h-4 w-4" />
-                {isEmployee ? 'Mon espace de travail' : 'Centre de pilotage'}
+                {isPersonalWorkspace || isEmployee ? 'Mon espace de travail' : 'Centre de pilotage'}
               </div>
               <h2 className="text-2xl font-black tracking-tight text-foreground">
-                {isEmployee ? 'Concentrez-vous sur l’essentiel' : 'Gardez les priorités sous contrôle'}
+                {isPersonalWorkspace || isEmployee ? 'Concentrez-vous sur l’essentiel' : 'Gardez les priorités sous contrôle'}
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                {isEmployee
+                {isPersonalWorkspace
+                  ? 'Organisez vos tâches, vos échéances et votre progression dans une vue adaptée à votre quotidien.'
+                  : isEmployee
                   ? 'Retrouvez vos tâches assignées, vos échéances et votre progression dans une vue adaptée à votre quotidien.'
                   : 'Suivez la charge, repérez les retards et faites avancer le travail de l’équipe depuis un seul écran.'}
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-3">
               {hasExports && (
-                <Button size="lg" variant="secondary" onClick={openExportModal} className="shrink-0">
-                  Exporter (Excel)
+                <Button size="lg" variant="secondary" onClick={openExportModal} className="min-w-0">
+                  Exporter<span className="hidden sm:inline"> (Excel)</span>
                 </Button>
               )}
-              <Button size="lg" variant="secondary" onClick={() => navigate({ to: '/tasks/templates' })} className="shrink-0">
+              <Button size="lg" variant="secondary" onClick={() => navigate({ to: '/tasks/templates' })} className={hasExports ? 'min-w-0' : 'col-span-2 min-w-0'}>
                 <LayoutTemplate className="mr-2 h-4 w-4 text-indigo-500" />
                 Modèles
               </Button>
-              <Button size="lg" onClick={() => navigate({ to: '/tasks/create' })} className="shrink-0">
+              <Button size="lg" onClick={() => navigate({ to: '/tasks/create' })} className="col-span-2 min-w-0 sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
-                {isEmployee ? 'Créer une tâche personnelle' : 'Créer et assigner une tâche'}
+                {isPersonalWorkspace ? 'Créer une tâche' : isEmployee ? 'Créer une tâche personnelle' : 'Créer et assigner une tâche'}
               </Button>
             </div>
           </div>
@@ -322,13 +335,13 @@ function TasksPage() {
         </section>
 
         <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-          <div className="flex w-full overflow-x-auto rounded-xl border border-border bg-card p-1 lg:w-fit">
+          {!isPersonalWorkspace && <div className="flex w-full overflow-x-auto rounded-xl border border-border bg-card p-1 lg:w-fit">
             {scopes.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setScope(item.id)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+                className={`shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
                   scope === item.id
                     ? 'text-white shadow-sm'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -338,7 +351,7 @@ function TasksPage() {
                 {item.label}
               </button>
             ))}
-          </div>
+          </div>}
           <div className="flex w-full overflow-x-auto rounded-xl border border-border bg-card p-1 lg:w-fit">
             {[
               { id: 'list', label: 'Liste', icon: List },
@@ -350,7 +363,7 @@ function TasksPage() {
                 key={item.id}
                 type="button"
                 onClick={() => setView(item.id as typeof view)}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                   view === item.id
                     ? 'text-white shadow-sm'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -381,7 +394,7 @@ function TasksPage() {
                 <option value="" className="text-slate-900">Changer le statut…</option>
                 <option value="todo" className="text-slate-900">À faire</option>
                 <option value="in_progress" className="text-slate-900">En cours</option>
-                <option value="on_hold" className="text-slate-900">En attente</option>
+                <option value="on_hold" className="text-slate-900">En pause</option>
                 <option value="completed" className="text-slate-900">Terminée</option>
               </select>
               {!isEmployee && <button type="button" onClick={async () => {
@@ -422,9 +435,9 @@ function TasksPage() {
               <option value="">Tous les statuts</option>
               <option value="todo">À faire</option>
               <option value="in_progress">En cours</option>
-              <option value="on_hold">En attente</option>
+              <option value="on_hold">En pause</option>
               <option value="deferred">Reportée</option>
-              <option value="completed">Complétée</option>
+              <option value="completed">Terminée</option>
             </select>
             <select
               value={priorityFilter}
@@ -462,6 +475,7 @@ function TasksPage() {
             onOpen={(task) => navigate({ to: '/tasks/$taskId', params: { taskId: String(task.id) } })}
             getPriorityBadge={getPriorityBadge}
             onStatusChange={changeTaskStatus}
+            showAssignee={!isPersonalWorkspace}
           />
         ) : view === 'calendar' ? (
           <CalendarView
@@ -470,9 +484,10 @@ function TasksPage() {
             onReschedule={(task, dueDate) => rescheduleMutation.mutate({ taskId: task.id, dueDate })}
             canReschedule={(task) => !isEmployee || String(task.creator) === String(currentUser?.id)}
             error={rescheduleMutation.isError ? (rescheduleMutation.error instanceof Error ? rescheduleMutation.error.message : 'Replanification impossible.') : undefined}
+            showAssignee={!isPersonalWorkspace}
           />
         ) : view === 'timeline' ? (
-          <TimelineView tasks={tasks || []} />
+          <TimelineView tasks={tasks || []} showAssignee={!isPersonalWorkspace} />
         ) : (
           <div className="grid gap-4">
             {tasks?.map((task) => (
@@ -483,6 +498,7 @@ function TasksPage() {
                 onToggle={() => setSelectedIds((current) => current.includes(task.id) ? current.filter((id) => id !== task.id) : [...current, task.id])}
                 getStatusBadge={getStatusBadge}
                 getPriorityBadge={getPriorityBadge}
+                showAssignee={!isPersonalWorkspace}
               />
             ))}
             {tasks?.length === 0 && (
@@ -600,7 +616,7 @@ function SummaryMetric({
   )
 }
 
-function TaskCard({ task, selected, onToggle, getStatusBadge, getPriorityBadge }: { task: Task; selected: boolean; onToggle: () => void; getStatusBadge: (s: Status) => React.ReactNode; getPriorityBadge: (p: Priority) => React.ReactNode }) {
+function TaskCard({ task, selected, onToggle, getStatusBadge, getPriorityBadge, showAssignee }: { task: Task; selected: boolean; onToggle: () => void; getStatusBadge: (s: Status) => React.ReactNode; getPriorityBadge: (p: Priority) => React.ReactNode; showAssignee: boolean }) {
   const navigate = useNavigate()
   const isOverdue = task.status !== 'completed'
     && !!task.due_date
@@ -621,14 +637,14 @@ function TaskCard({ task, selected, onToggle, getStatusBadge, getPriorityBadge }
           <div className="min-w-0 flex-1">
             <div className="mb-2 flex flex-wrap items-center gap-3">
               <h3 className="text-[15px] font-bold text-foreground group-hover:text-primary transition-colors">{task.title}</h3>
-              {getStatusBadge(task.status)}
+              {getStatusBadge(task)}
               {getPriorityBadge(task.priority)}
             </div>
             {task.description && (
               <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">{task.description}</p>
             )}
             <div className="flex flex-col gap-2 text-xs font-medium text-muted-foreground sm:flex-row sm:items-center sm:gap-5">
-              <div className="flex items-center gap-1.5">
+              {showAssignee && <div className="flex items-center gap-1.5">
                 <div
                   className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold uppercase text-white"
                   style={{ background: 'hsl(var(--primary) / 0.70)' }}
@@ -636,7 +652,7 @@ function TaskCard({ task, selected, onToggle, getStatusBadge, getPriorityBadge }
                   {task.assigned_to_name ? task.assigned_to_name.substring(0, 2) : '?'}
                 </div>
                 <span>{task.assigned_to_name || 'Non assigné'}</span>
-              </div>
+              </div>}
               {task.due_date && (
                 <div className={`flex items-center gap-1.5 rounded-md px-2 py-0.5 ${
                   isOverdue
@@ -663,12 +679,15 @@ function TaskCard({ task, selected, onToggle, getStatusBadge, getPriorityBadge }
   )
 }
 
-const kanbanColumns: Array<{ status: Status; label: string; color: string; textColor: string; bgColor: string; dotColor: string }> = [
+type KanbanColumnStatus = Status | 'pending_approval'
+
+const kanbanColumns: Array<{ status: KanbanColumnStatus; label: string; color: string; textColor: string; bgColor: string; dotColor: string }> = [
   { status: 'todo', label: 'À faire', color: 'border-slate-300', textColor: 'text-slate-700', bgColor: 'bg-slate-100', dotColor: 'bg-slate-400' },
   { status: 'in_progress', label: 'En cours', color: 'border-blue-400', textColor: 'text-blue-700', bgColor: 'bg-blue-100', dotColor: 'bg-blue-500' },
-  { status: 'on_hold', label: 'En attente', color: 'border-amber-400', textColor: 'text-amber-700', bgColor: 'bg-amber-100', dotColor: 'bg-amber-500' },
+  { status: 'on_hold', label: 'En pause', color: 'border-amber-400', textColor: 'text-amber-700', bgColor: 'bg-amber-100', dotColor: 'bg-amber-500' },
+  { status: 'pending_approval', label: 'En attente de validation', color: 'border-violet-400', textColor: 'text-violet-700', bgColor: 'bg-violet-100', dotColor: 'bg-violet-500' },
   { status: 'deferred', label: 'Reportées', color: 'border-orange-400', textColor: 'text-orange-700', bgColor: 'bg-orange-100', dotColor: 'bg-orange-500' },
-  { status: 'completed', label: 'Complétées', color: 'border-emerald-400', textColor: 'text-emerald-700', bgColor: 'bg-emerald-100', dotColor: 'bg-emerald-500' },
+  { status: 'completed', label: 'Terminées', color: 'border-emerald-400', textColor: 'text-emerald-700', bgColor: 'bg-emerald-100', dotColor: 'bg-emerald-500' },
 ]
 
 function KanbanView({
@@ -676,20 +695,23 @@ function KanbanView({
   onOpen,
   getPriorityBadge,
   onStatusChange,
+  showAssignee,
 }: {
   tasks: Task[]
   onOpen: (task: Task) => void
   getPriorityBadge: (priority: Priority) => React.ReactNode
   onStatusChange: (taskId: number, newStatus: Status) => void
+  showAssignee: boolean
 }) {
   const draggedId = useRef<number | null>(null)
-  const [draggingOver, setDraggingOver] = useState<Status | null>(null)
+  const [draggingOver, setDraggingOver] = useState<KanbanColumnStatus | null>(null)
 
   const handleDragStart = (taskId: number) => {
     draggedId.current = taskId
   }
 
-  const handleDrop = (newStatus: Status) => {
+  const handleDrop = (newStatus: KanbanColumnStatus) => {
+    if (newStatus === 'pending_approval') return
     if (draggedId.current) {
       onStatusChange(draggedId.current, newStatus)
       draggedId.current = null
@@ -699,14 +721,18 @@ function KanbanView({
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar w-full">
-      {kanbanColumns.map((column) => {
-        const columnTasks = tasks.filter((task) => task.status === column.status)
+      {kanbanColumns.filter((column) => showAssignee || column.status !== 'pending_approval').map((column) => {
+        const columnTasks = tasks.filter((task) => (
+          column.status === 'pending_approval'
+            ? task.approval_pending
+            : !task.approval_pending && task.status === column.status
+        ))
         const isOver = draggingOver === column.status
         return (
           <section
             key={column.status}
             className={`w-[85vw] max-w-[320px] shrink-0 snap-center sm:w-[320px] lg:w-full lg:max-w-none lg:shrink rounded-3xl border p-4 transition-all duration-300 flex-1 ${isOver ? 'bg-primary/5 shadow-inner border-primary/30' : 'bg-muted/40 backdrop-blur-sm border-border/50'} ${column.color.replace('border-', 'border-t-[3px] border-t-').replace('300', '400')}`}
-            onDragOver={(e) => { e.preventDefault(); setDraggingOver(column.status) }}
+            onDragOver={(e) => { if (column.status !== 'pending_approval') { e.preventDefault(); setDraggingOver(column.status) } }}
             onDragLeave={() => setDraggingOver(null)}
             onDrop={() => handleDrop(column.status)}
           >
@@ -721,7 +747,7 @@ function KanbanView({
               {columnTasks.map((task) => (
                 <div
                   key={task.id}
-                  draggable
+                  draggable={!task.approval_pending}
                   onDragStart={() => handleDragStart(task.id)}
                   className="group cursor-grab rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-card hover:border-primary/40 hover:shadow-md active:cursor-grabbing active:scale-[0.98]"
                 >
@@ -734,7 +760,7 @@ function KanbanView({
                       {task.is_blocked && <Lock className="inline-block mr-1.5 h-3 w-3 text-rose-500 shrink-0" />}
                       {task.title}
                     </p>
-                    {task.assigned_to_name && (
+                    {showAssignee && task.assigned_to_name && (
                        <div className="mt-2.5 flex items-center gap-1.5">
                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted border border-border/60 text-[9px] font-bold text-muted-foreground uppercase">
                            {task.assigned_to_name.substring(0, 2)}
@@ -772,12 +798,14 @@ function CalendarView({
   onReschedule,
   canReschedule,
   error,
+  showAssignee,
 }: {
   tasks: Task[]
   onOpen: (task: Task) => void
   onReschedule: (task: Task, dueDate: string) => void
   canReschedule: (task: Task) => boolean
   error?: string
+  showAssignee: boolean
 }) {
   const [month, setMonth] = useState(() => {
     const firstDate = tasks.find((task) => task.due_date)?.due_date
@@ -868,7 +896,7 @@ function CalendarView({
           <div className="grid gap-2 lg:grid-cols-2">
             {undatedTasks.map((task) => (
               <div key={task.id} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
-                <button type="button" onClick={() => onOpen(task)} className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-bold text-slate-800">{task.title}</p><p className="text-xs text-slate-400">{task.estimated_hours || 1} h · {task.assigned_to_name || 'Non assignée'}</p></button>
+                <button type="button" onClick={() => onOpen(task)} className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-bold text-slate-800">{task.title}</p><p className="text-xs text-slate-400">{task.estimated_hours || 1} h{showAssignee ? ` · ${task.assigned_to_name || 'Non assignée'}` : ''}</p></button>
                 {canReschedule(task) && <input type="date" aria-label={`Planifier ${task.title}`} onChange={(event) => event.target.value && onReschedule(task, event.target.value)} className="h-9 rounded-lg border border-slate-200 px-2 text-xs" />}
               </div>
             ))}

@@ -10,6 +10,11 @@ import { Route as rootRoute } from './routes'
 import { Route as IndexRouteImport } from '../pages/index'
 import { Route as LoginRouteImport } from '../pages/login'
 import { Route as RegisterRouteImport } from '../pages/register'
+import { Route as PrivacyRouteImport } from '../pages/privacy'
+import { Route as TermsRouteImport } from '../pages/terms'
+import { Route as OnboardingRouteImport } from '../pages/onboarding'
+import { Route as ForgotPasswordRouteImport } from '../pages/forgot-password'
+import { Route as ResetPasswordRouteImport } from '../pages/reset-password'
 import { Route as ChangePasswordRouteImport } from '../pages/change-password'
 import { Route as DashboardRouteImport } from '../pages/dashboard'
 import { Route as TasksRouteImport } from '../pages/tasks'
@@ -44,6 +49,31 @@ const LoginRoute = LoginRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRoute,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRoute,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRoute,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRoute,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRoute,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRoute,
 } as any)
 const ChangePasswordRoute = ChangePasswordRouteImport.update({
@@ -170,6 +200,41 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRoute
+      parentRoute: typeof rootRoute
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRoute
+      parentRoute: typeof rootRoute
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRoute
+      parentRoute: typeof rootRoute
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRoute
+      parentRoute: typeof rootRoute
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRoute
+      parentRoute: typeof rootRoute
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRoute
       parentRoute: typeof rootRoute
     }
     '/change-password': {
@@ -319,6 +384,11 @@ export const routeTree = rootRoute.addChildren([
   IndexRoute,
   LoginRoute,
   RegisterRoute,
+  PrivacyRoute,
+  TermsRoute,
+  OnboardingRoute,
+  ForgotPasswordRoute,
+  ResetPasswordRoute,
   ChangePasswordRoute,
   DashboardRoute,
   TasksRoute,

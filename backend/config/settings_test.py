@@ -14,5 +14,13 @@ PASSWORD_HASHERS = [
 ]
 
 SECURE_SSL_REDIRECT = False
+USE_IN_MEMORY_CHANNEL_LAYER = True
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+PAYMENT_PROVIDER = 'test'
+ALLOW_TEST_PAYMENT_SIMULATOR = True
 
 

@@ -1,17 +1,53 @@
 import { api } from '@/utils/api';
-import type { CompanyRegistrationRequest, CompanyRegistrationResponse, LoginRequest, LoginResponse, User, UserAuditLog, ChangePasswordRequest, UpdateProfileRequest } from '@/domain/types';
+import type { CompanyOnboardingRequest, CompanyRegistrationResponse, PersonalOnboardingRequest, LoginRequest, LoginResponse, RegisterRequest, User, UserAuditLog, ChangePasswordRequest, UpdateProfileRequest } from '@/domain/types';
+
+const AUTHENTICATION_KEY = 'is_authenticated'
+
+function rememberAuthentication(persistent = false) {
+  localStorage.removeItem(AUTHENTICATION_KEY)
+  sessionStorage.removeItem(AUTHENTICATION_KEY)
+  const storage = persistent ? localStorage : sessionStorage
+  storage.setItem(AUTHENTICATION_KEY, 'true')
+}
+
+function forgetAuthentication() {
+  localStorage.removeItem(AUTHENTICATION_KEY)
+  sessionStorage.removeItem(AUTHENTICATION_KEY)
+}
 
 export const authService = {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const response = await api.post<LoginResponse>('/auth/login/', credentials);
-    localStorage.setItem('is_authenticated', 'true');
+    rememberAuthentication(Boolean(credentials.remember_me));
     return response;
   },
 
-  async register(data: CompanyRegistrationRequest): Promise<CompanyRegistrationResponse> {
-    const response = await api.post<CompanyRegistrationResponse>('/auth/register/company/', data);
-    localStorage.setItem('is_authenticated', 'true');
+  async register(data: RegisterRequest): Promise<LoginResponse> {
+    const response = await api.post<LoginResponse>('/auth/register/', data);
+    rememberAuthentication();
     return response;
+  },
+
+  async completeCompanyOnboarding(data: CompanyOnboardingRequest): Promise<CompanyRegistrationResponse> {
+    return api.post<CompanyRegistrationResponse>('/auth/onboarding/company/', data);
+  },
+
+  async completePersonalOnboarding(data: PersonalOnboardingRequest): Promise<CompanyRegistrationResponse> {
+    return api.post<CompanyRegistrationResponse>('/auth/onboarding/personal/', data);
+  },
+
+  async loginWithGoogle(credential: string, captcha_token?: string, remember_me = false, accept_terms = false): Promise<LoginResponse> {
+    const response = await api.post<LoginResponse>('/auth/google/', { credential, captcha_token, remember_me, accept_terms });
+    rememberAuthentication(remember_me);
+    return response;
+  },
+
+  async requestPasswordReset(email: string, captcha_token?: string): Promise<{ detail: string }> {
+    return api.post('/auth/password-reset/', { email, captcha_token });
+  },
+
+  async confirmPasswordReset(data: { uid: string; token: string; new_password: string; new_password_confirm: string }): Promise<{ detail: string }> {
+    return api.post('/auth/password-reset/confirm/', data);
   },
 
   async checkCompanyEmail(email: string): Promise<{ available: boolean; message?: string }> {
@@ -24,7 +60,7 @@ export const authService = {
     } catch {
       // Local logout must still complete if the server fails.
     }
-    localStorage.removeItem('is_authenticated');
+    forgetAuthentication();
     localStorage.removeItem('impersonated_company_id');
   },
 
@@ -45,7 +81,8 @@ export const authService = {
   },
 
   isAuthenticated(): boolean {
-    return localStorage.getItem('is_authenticated') === 'true';
+    return localStorage.getItem(AUTHENTICATION_KEY) === 'true'
+      || sessionStorage.getItem(AUTHENTICATION_KEY) === 'true';
   },
 
   getToken(): string | null {

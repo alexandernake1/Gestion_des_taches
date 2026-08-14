@@ -147,7 +147,7 @@ class TeamListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Team
-        fields = ['id', 'name', 'leader_name', 'member_count', 'is_active']
+        fields = ['id', 'name', 'leader', 'leader_name', 'member_count', 'is_active']
     
     def get_member_count(self, obj) -> int:
         return obj.members.count()

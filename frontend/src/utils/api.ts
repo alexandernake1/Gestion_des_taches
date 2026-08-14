@@ -167,6 +167,7 @@ async function request<T>(
         return request<T>(endpoint, options, true);
       }
       localStorage.removeItem('is_authenticated');
+      sessionStorage.removeItem('is_authenticated');
       localStorage.removeItem('impersonated_company_id');
       if (window.location.pathname !== '/login') {
         window.location.assign('/login');

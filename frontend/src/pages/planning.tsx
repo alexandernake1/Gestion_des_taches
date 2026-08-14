@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, CalendarRange, Clock3, UserRound,
 import { useState } from 'react'
 
 import { Layout } from '@/components/layout/Layout'
+import { Button } from '@/components/ui/Button'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { requireManagement } from '@/router/auth'
 import { tasksService } from '@/services/tasks'
@@ -14,6 +15,12 @@ export const Route = createFileRoute('/planning')({
   beforeLoad: requireManagement,
   component: PlanningPage,
 })
+
+const memberRoleLabels: Record<string, string> = {
+  owner: 'Propriétaire',
+  manager: 'Manager',
+  employee: 'Employé',
+}
 
 function Metric({ icon: Icon, label, value, alert }: { icon: React.ElementType; label: string; value: string | number; alert?: boolean }) {
   return (
@@ -86,6 +93,7 @@ function PlanningPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [week, setWeek] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [showAllMembers, setShowAllMembers] = useState(false)
   const weekKey = format(week, 'yyyy-MM-dd')
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['workload', weekKey],
@@ -104,6 +112,8 @@ function PlanningPage() {
   const utilization = data?.total_capacity_hours
     ? Math.round((data.total_scheduled_hours * 100) / data.total_capacity_hours)
     : 0
+  const members = data?.members || []
+  const visibleMembers = showAllMembers ? members : members.slice(0, 12)
 
   return (
     <Layout title="Planification">
@@ -183,17 +193,17 @@ function PlanningPage() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
                   <Users className="h-4 w-4" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900">Membres de l'équipe</h3>
+                <h3 className="text-xl font-bold text-foreground">Membres de l'équipe</h3>
               </div>
               
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-2">
-                {data?.members.map((member) => (
+                {visibleMembers.map((member) => (
                   <div 
                     key={member.id} 
                     className={`group relative overflow-hidden rounded-3xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
                       member.is_overloaded 
-                        ? 'border-rose-200 bg-gradient-to-b from-white to-rose-50/50 shadow-rose-100/50' 
-                        : 'border-slate-200 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-indigo-200 hover:shadow-indigo-100'
+                        ? 'border-rose-300/60 bg-card shadow-rose-500/10'
+                        : 'border-border bg-card shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-indigo-400/60 hover:shadow-indigo-500/10'
                     }`}
                   >
                     {/* Top alert bar if overloaded */}
@@ -217,16 +227,16 @@ function PlanningPage() {
                             )}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 text-lg">{member.name}</p>
-                            <p className="text-sm font-medium capitalize text-slate-400">{member.role}</p>
+                            <p className="text-lg font-bold text-foreground">{member.name}</p>
+                            <p className="text-sm font-medium text-muted-foreground">{memberRoleLabels[member.role] || member.role}</p>
                           </div>
                         </div>
                       </div>
                       
-                      <div className="mt-6 flex items-center justify-between gap-6 rounded-2xl bg-slate-50/50 p-4 border border-slate-100">
+                      <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl border border-border bg-muted/40 p-4">
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Planifié</p>
-                          <p className={`text-2xl font-black ${member.is_overloaded ? 'text-rose-600' : 'text-slate-900'}`}>
+                          <p className={`text-2xl font-black ${member.is_overloaded ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'}`}>
                             {member.scheduled_hours} <span className="text-base font-semibold text-slate-400">/ {member.capacity_hours}h</span>
                           </p>
                           <p className="mt-1 text-xs font-medium text-slate-500">
@@ -244,6 +254,13 @@ function PlanningPage() {
                   </div>
                 ))}
               </div>
+              {members.length > 12 && (
+                <div className="flex justify-center">
+                  <Button variant="secondary" onClick={() => setShowAllMembers((visible) => !visible)}>
+                    {showAllMembers ? 'Réduire la liste' : `Afficher les ${members.length - 12} autres membres`}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Unassigned Tasks Pool */}
@@ -252,13 +269,13 @@ function PlanningPage() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
                   <Zap className="h-4 w-4" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900">Tâches à assigner</h3>
+                <h3 className="text-xl font-bold text-foreground">Tâches à assigner</h3>
               </div>
               
-              <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
-                  <p className="text-sm font-bold text-slate-900">Tâches prévues cette semaine</p>
-                  <span className="flex h-6 items-center justify-center rounded-full bg-slate-100 px-2.5 text-xs font-bold text-slate-600">
+              <div className="rounded-3xl border border-border bg-card p-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <div className="flex items-center justify-between border-b border-border px-4 py-4">
+                  <p className="text-sm font-bold text-foreground">Tâches prévues cette semaine</p>
+                  <span className="flex h-6 items-center justify-center rounded-full bg-muted px-2.5 text-xs font-bold text-muted-foreground">
                     {data?.unassigned_tasks.length || 0}
                   </span>
                 </div>
@@ -267,14 +284,14 @@ function PlanningPage() {
                   {data?.unassigned_tasks.map((task) => (
                     <div 
                       key={task.id} 
-                      className="group flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md"
+                      className="group flex flex-col gap-3 rounded-2xl border border-border bg-background/70 p-4 shadow-sm transition-all hover:border-indigo-400/60 hover:shadow-md"
                     >
                       <button 
                         type="button" 
                         onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: String(task.id) } })} 
                         className="text-left"
                       >
-                        <p className="font-bold text-slate-900 transition-colors group-hover:text-indigo-600">
+                        <p className="font-bold text-foreground transition-colors group-hover:text-indigo-600">
                           {task.title}
                         </p>
                         <div className="mt-2 flex items-center gap-3 text-xs font-medium text-slate-500">

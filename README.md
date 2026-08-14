@@ -40,10 +40,9 @@ Every user should understand the application in less than 5 minutes.
 ### Backend Structure
 ```
 backend/
-├── core/              # Core Django settings
+├── config/            # Django, ASGI and Celery configuration
 ├── domain/            # Domain models
 ├── services/          # Business logic
-├── repositories/      # Data access layer
 ├── api/               # REST API endpoints
 ├── common/            # Shared utilities
 └── tests/             # Tests
@@ -108,9 +107,12 @@ npm run dev
 
 ## User Roles
 
-- **Administrator**: Full access to all features
-- **Manager**: Can create tasks, assign to team members, view reports
-- **Employee**: Can create personal tasks, view assigned tasks
+- **Owner**: manages the company, accounts and subscription.
+- **Manager**: manages operational work, teams, projects and employee accounts.
+- **Employee**: works on visible tasks and creates personal tasks.
+- **Platform super-administrator**: supervises tenants through an explicitly selected company context.
+
+The authoritative permission matrix is documented in [`docs/ROLES.md`](docs/ROLES.md).
 
 ## MVP Features
 

@@ -5,14 +5,24 @@ import { subscriptionsService } from '@/services/subscriptions'
 import { tasksService } from '@/services/tasks'
 import { useQuery } from '@tanstack/react-query'
 
-const navigation = [
+interface NavigationItem {
+  name: string
+  href: string
+  icon: React.ElementType
+  roles: string[]
+  companyOnly?: boolean
+  personalOnly?: boolean
+}
+
+const navigation: NavigationItem[] = [
   { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'employee'] },
   { name: 'Tâches', href: '/tasks', icon: CheckSquare2, roles: ['owner', 'manager', 'employee'] },
   { name: 'Projets', href: '/projects', icon: FolderKanban, roles: ['owner', 'manager', 'employee'] },
-  { name: 'Validations', href: '/approvals', icon: ClipboardCheck, roles: ['owner', 'manager', 'employee'] },
-  { name: 'Équipes', href: '/teams', icon: Users, roles: ['owner', 'manager'] },
-  { name: 'Utilisateurs', href: '/users', icon: UserRound, roles: ['owner', 'manager'] },
+  { name: 'Validations', href: '/approvals', icon: ClipboardCheck, roles: ['owner', 'manager', 'employee'], companyOnly: true },
+  { name: 'Équipes', href: '/teams', icon: Users, roles: ['owner', 'manager'], companyOnly: true },
+  { name: 'Utilisateurs', href: '/users', icon: UserRound, roles: ['owner', 'manager'], companyOnly: true },
   { name: 'Abonnement', href: '/subscription', icon: CreditCard, roles: ['owner'] },
+  { name: 'Créer une entreprise', href: '/onboarding', icon: Building2, roles: ['owner'], personalOnly: true },
   { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['owner', 'manager', 'employee'] },
 ]
 
@@ -50,10 +60,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     enabled: !!currentUser?.company && !currentUser?.is_superuser,
   })
   const hasProjectsFeature = currentUser?.is_superuser || !!subscription?.plan_details?.feature_flags?.has_projects
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
   const impersonatedCompanyId = localStorage.getItem('impersonated_company_id')
   const hasCompany = (!!currentUser?.company && !currentUser?.is_superuser) || (currentUser?.is_superuser && !!impersonatedCompanyId)
   const canReviewApprovals = Boolean(
-    currentUser?.is_superuser || currentUser?.role === 'owner' || currentUser?.role === 'manager',
+    !isPersonalWorkspace && (currentUser?.is_superuser || currentUser?.role === 'owner' || currentUser?.role === 'manager'),
   )
   const { data: pendingApprovals = [] } = useQuery({
     queryKey: ['sidebar-pending-approvals'],
@@ -71,12 +82,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const visibleNavigation = navigation.filter((item) => {
     if (!hasCompany || !currentUser) return false
     if (!item.roles.includes(currentUser.role) && !currentUser.is_superuser) return false
+    if (item.companyOnly && isPersonalWorkspace) return false
+    if (item.personalOnly && !isPersonalWorkspace) return false
     if (item.href === '/projects' && !hasProjectsFeature) return false
     return true
   })
   const navigationLabel = (item: (typeof navigation)[number]) => {
     if (item.href === '/tasks') {
-      return currentUser?.role === 'employee' ? 'Mes tâches' : 'Pilotage des tâches'
+      return isPersonalWorkspace || currentUser?.role === 'employee' ? 'Mes tâches' : 'Pilotage des tâches'
     }
     if (item.href === '/users' && currentUser?.role === 'manager') {
       return 'Collaborateurs'
@@ -94,7 +107,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const displayName = currentUser?.full_name || currentUser?.email || 'Utilisateur'
   const roleLabel = currentUser?.is_superuser
     ? 'Super Administrateur'
-    : currentUser?.role_display || ''
+    : isPersonalWorkspace
+      ? 'Compte personnel'
+      : ({ owner: 'Propriétaire', manager: 'Manager', employee: 'Employé' }[currentUser?.role || ''] || currentUser?.role_display || '')
 
   return (
     <>
@@ -139,11 +154,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
               }}
             >
-              <Building2 className="h-4.5 w-4.5 text-white" strokeWidth={2} />
+              {isPersonalWorkspace
+                ? <UserRound className="h-4.5 w-4.5 text-white" strokeWidth={2} />
+                : <Building2 className="h-4.5 w-4.5 text-white" strokeWidth={2} />}
             </div>
             <div className="min-w-0">
               <p className="truncate text-[14px] font-bold leading-tight text-white tracking-tight">
-                {currentUser?.is_superuser ? 'Activity' : (currentUser?.company_name || 'Activity')}
+                {currentUser?.is_superuser ? 'Activity' : (isPersonalWorkspace ? 'Mon espace personnel' : currentUser?.company_name || 'Activity')}
               </p>
               <p
                 className="text-[10px] font-semibold uppercase tracking-[0.15em]"
@@ -277,6 +294,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <LogOut className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
             <span>Déconnexion</span>
           </button>
+          <div className="mt-2 flex items-center justify-center gap-3 text-[10px] font-semibold" style={{ color: 'hsl(var(--sidebar-text-muted))' }}>
+            <Link to="/privacy" onClick={onClose} className="hover:text-white">Confidentialité</Link>
+            <span aria-hidden="true">•</span>
+            <Link to="/terms" onClick={onClose} className="hover:text-white">Conditions</Link>
+          </div>
         </div>
       </aside>
     </>

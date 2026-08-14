@@ -1,10 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Building2, ArrowRight, Zap, BarChart3, Users } from 'lucide-react'
 import { authService } from '@/services/auth'
 import { redirectAuthenticatedUser } from '@/router/auth'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { CaptchaWidget } from '@/components/auth/CaptchaWidget'
+import { isCaptchaEnabled } from '@/components/auth/config'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import { PasswordInput } from '@/components/auth/PasswordInput'
 
 export const Route = createFileRoute('/login')({
   beforeLoad: redirectAuthenticatedUser,
@@ -34,30 +38,57 @@ function LoginPage() {
   const queryClient = useQueryClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string>()
+  const [captchaResetKey, setCaptchaResetKey] = useState(0)
+
+  const redirectAfterLogin = useCallback((user: Awaited<ReturnType<typeof authService.getCurrentUser>>) => {
+    if (user.must_change_password) navigate({ to: '/change-password' })
+    else if (user.is_superuser && !user.company) navigate({ to: '/admin/companies' })
+    else if (!user.company) navigate({ to: '/onboarding' })
+    else navigate({ to: '/dashboard' })
+  }, [navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    if (isCaptchaEnabled && !captchaToken) {
+      setError("Confirmez que vous n'êtes pas un robot.")
+      return
+    }
     setLoading(true)
 
     try {
-      const response = await authService.login({ email, password })
+      const response = await authService.login({ email, password, remember_me: rememberMe, captcha_token: captchaToken })
       queryClient.clear() // Clear cache from any previous sessions
-      
-      if (response.user.must_change_password) {
-        navigate({ to: '/change-password' })
-      } else if (response.user.is_superuser && !response.user.company) {
-        navigate({ to: '/admin/companies' })
-      } else {
-        navigate({ to: '/dashboard' })
-      }
+      redirectAfterLogin(response.user)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connexion impossible. Vérifiez vos identifiants.')
+      setCaptchaResetKey((key) => key + 1)
       setLoading(false)
     }
   }
+
+  const handleGoogleCredential = useCallback(async (credential: string) => {
+    if (isCaptchaEnabled && !captchaToken) {
+      setError("Confirmez que vous n'êtes pas un robot avant de continuer avec Google.")
+      return
+    }
+    setError('')
+    setLoading(true)
+    try {
+      const response = await authService.loginWithGoogle(credential, captchaToken, rememberMe)
+      queryClient.clear()
+      redirectAfterLogin(response.user)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Connexion Google impossible.')
+      setCaptchaResetKey((key) => key + 1)
+    } finally {
+      setLoading(false)
+    }
+  }, [captchaToken, queryClient, redirectAfterLogin, rememberMe])
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2" style={{ background: 'hsl(var(--background))' }}>
@@ -208,6 +239,7 @@ function LoginPage() {
                   id="login-email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -217,13 +249,14 @@ function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="login-password" className="mb-1.5 block text-[13px] font-semibold text-foreground">
-                  Mot de passe
-                </label>
-                <input
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label htmlFor="login-password" className="block text-[13px] font-semibold text-foreground">Mot de passe</label>
+                  <a href="/forgot-password" className="text-xs font-bold text-primary hover:underline">Mot de passe oublié ?</a>
+                </div>
+                <PasswordInput
                   id="login-password"
                   name="password"
-                  type="password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -233,10 +266,25 @@ function LoginPage() {
               </div>
             </div>
 
+            <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(event) => setRememberMe(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-indigo-600"
+              />
+              <span>
+                <strong className="font-semibold text-slate-700">Se souvenir de moi</strong>
+                <span className="mt-0.5 block text-xs text-slate-500">Garde votre session active pendant 7 jours sur cet appareil.</span>
+              </span>
+            </label>
+
+            <CaptchaWidget onToken={setCaptchaToken} action="login" resetKey={captchaResetKey} />
+
             <button
               type="submit"
               id="login-submit"
-              disabled={loading}
+              disabled={loading || (isCaptchaEnabled && !captchaToken)}
               className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-white shadow-cta transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none"
               style={{
                 background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
@@ -259,6 +307,9 @@ function LoginPage() {
             </button>
           </form>
 
+          <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"><span className="h-px flex-1 bg-border" />ou<span className="h-px flex-1 bg-border" /></div>
+          <GoogleSignInButton onCredential={handleGoogleCredential} />
+
           {/* Register CTA */}
           <div
             className="mt-8 rounded-xl border p-4 text-center"
@@ -268,17 +319,23 @@ function LoginPage() {
             }}
           >
             <p className="text-[13px] font-medium text-foreground">
-              Votre entreprise n'a pas encore d'espace ?
+              Vous n'avez pas encore de compte ?
             </p>
             <a
               href="/register"
               className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-bold transition-colors"
               style={{ color: 'hsl(var(--primary))' }}
             >
-              Créer l'espace de mon entreprise
+              Créer gratuitement mon compte
               <ArrowRight className="h-3.5 w-3.5" />
             </a>
           </div>
+
+          <p className="mt-5 text-center text-[11px] text-slate-500">
+            <a href="/privacy" className="font-semibold hover:text-indigo-700 hover:underline">Politique de confidentialité</a>
+            <span className="mx-2">•</span>
+            <a href="/terms" className="font-semibold hover:text-indigo-700 hover:underline">Conditions d'utilisation</a>
+          </p>
 
         </div>
       </div>

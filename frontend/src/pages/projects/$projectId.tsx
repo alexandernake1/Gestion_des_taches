@@ -9,21 +9,23 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { TaskForm } from '@/components/tasks/TaskForm'
-import { requireAuthentication } from '@/router/auth'
+import { requireManagement } from '@/router/auth'
 import { projectsService } from '@/services/projects'
 import { tasksService } from '@/services/tasks'
 import { authService } from '@/services/auth'
 import type { Status, TaskCreateRequest } from '@/domain/types'
 
 export const Route = createFileRoute('/projects/$projectId')({
-  beforeLoad: requireAuthentication,
+  beforeLoad: requireManagement,
   component: ProjectDetailPage,
 })
 
-const statusColumns: { id: Status; label: string; color: string }[] = [
+const statusColumns: { id: Status | 'pending_approval'; label: string; color: string }[] = [
   { id: 'todo', label: 'À faire', color: 'border-slate-300 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300' },
   { id: 'in_progress', label: 'En cours', color: 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' },
-  { id: 'on_hold', label: 'En attente', color: 'border-amber-300 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300' },
+  { id: 'on_hold', label: 'En pause', color: 'border-amber-300 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300' },
+  { id: 'pending_approval', label: 'En attente de validation', color: 'border-violet-300 bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300' },
+  { id: 'deferred', label: 'Reportée', color: 'border-orange-300 bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300' },
   { id: 'completed', label: 'Terminée', color: 'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300' },
 ]
 
@@ -33,6 +35,11 @@ export function ProjectDetailPage() {
   const numericId = Number(projectId)
   const [activeTab, setActiveTab] = useState<'kanban' | 'timeline'>('kanban')
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: authService.getCurrentUser,
+  })
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
 
   const { data: project, isLoading: isProjectLoading } = useQuery({
     queryKey: ['project', numericId],
@@ -107,7 +114,7 @@ export function ProjectDetailPage() {
           </div>
 
           {/* Progress bar and key details */}
-          <div className="grid gap-6 sm:grid-cols-3 pt-6 border-t border-border">
+          <div className={`grid gap-6 pt-6 border-t border-border ${isPersonalWorkspace ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-bold">
                 <span className="text-muted-foreground">Progression Globale</span>
@@ -124,7 +131,7 @@ export function ProjectDetailPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            {!isPersonalWorkspace && <div className="flex items-center gap-3">
               <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
                 <UserRound className="h-5 w-5" />
               </div>
@@ -132,7 +139,7 @@ export function ProjectDetailPage() {
                 <p className="text-xs font-bold text-muted-foreground">Responsable</p>
                 <p className="text-sm font-semibold text-foreground">{project.manager_name || 'Non assigné'}</p>
               </div>
-            </div>
+            </div>}
 
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
@@ -148,7 +155,7 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
-        {(project.team_details || []).length > 0 && (
+        {!isPersonalWorkspace && (project.team_details || []).length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <h3 className="text-sm font-bold text-foreground">Équipes participant au projet</h3>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -191,9 +198,13 @@ export function ProjectDetailPage() {
 
         {/* Kanban Board Tab */}
         {activeTab === 'kanban' && (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {statusColumns.map((col) => {
-              const colTasks = tasks.filter((t) => t.status === col.id)
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {statusColumns.filter((col) => !isPersonalWorkspace || col.id !== 'pending_approval').map((col) => {
+              const colTasks = tasks.filter((task) => (
+                col.id === 'pending_approval'
+                  ? task.approval_pending
+                  : !task.approval_pending && task.status === col.id
+              ))
               return (
                 <div key={col.id} className="flex flex-col rounded-2xl border border-border bg-card/60 p-4 space-y-4">
                   <div className="flex items-center justify-between">
@@ -222,11 +233,13 @@ export function ProjectDetailPage() {
                             <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
                           )}
                           <div className="flex items-center justify-between pt-2 border-t border-border/60 text-[11px] text-muted-foreground">
-                            <span>{task.assigned_to_name || 'Non assigné'}</span>
+                            {!isPersonalWorkspace && <span>{task.assigned_to_name || 'Non assigné'}</span>}
                             {task.due_date && (
                               <span>{new Date(task.due_date).toLocaleDateString('fr-FR')}</span>
                             )}
                           </div>
+                          {task.deadline_status === 'overdue' && <span className="inline-flex rounded-lg bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700">En retard</span>}
+                          {task.deadline_status === 'completed_late' && <span className="inline-flex rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">Terminée en retard</span>}
                         </div>
                       ))
                     )}
@@ -258,7 +271,7 @@ export function ProjectDetailPage() {
                           {task.title}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground">Assigné à : {task.assigned_to_name || 'Non assigné'}</p>
+                      {!isPersonalWorkspace && <p className="text-xs text-muted-foreground">Assigné à : {task.assigned_to_name || 'Non assigné'}</p>}
                     </div>
 
                     <div className="flex items-center gap-4 text-xs font-semibold">
@@ -304,7 +317,10 @@ function CreateProjectTaskModal({
     queryKey: ['current-user'],
     queryFn: authService.getCurrentUser,
   })
-  const canAssign = Boolean(currentUser?.is_superuser || currentUser?.role === 'owner' || currentUser?.role === 'manager')
+  const canAssign = Boolean(
+    !currentUser?.is_personal_workspace
+    && (currentUser?.is_superuser || currentUser?.role === 'owner' || currentUser?.role === 'manager'),
+  )
 
   const mutation = useMutation({
     mutationFn: (data: TaskCreateRequest) => tasksService.create(data),

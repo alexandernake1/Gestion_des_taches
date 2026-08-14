@@ -7,7 +7,7 @@ from domain.teams.models import Team
 class Status(models.TextChoices):
     TODO = 'todo', 'À faire'
     IN_PROGRESS = 'in_progress', 'En cours'
-    ON_HOLD = 'on_hold', 'En attente'
+    ON_HOLD = 'on_hold', 'En pause'
     DEFERRED = 'deferred', 'Reportée'
     COMPLETED = 'completed', 'Terminée'
 
@@ -252,10 +252,52 @@ class Task(models.Model):
     
     @property
     def is_overdue(self):
-        if self.due_date and self.status not in [Status.COMPLETED, Status.DEFERRED]:
+        if self.due_date and self.status != Status.COMPLETED:
             from django.utils import timezone
             return timezone.now().date() > self.due_date
         return False
+
+    @property
+    def approval_pending(self):
+        annotated = getattr(self, 'pending_approval_flag', None)
+        if annotated is not None:
+            return annotated
+        return self.approval_requests.filter(status=ApprovalStatus.PENDING).exists()
+
+    @property
+    def deadline_status(self):
+        """State of the deadline, kept separate from the work lifecycle."""
+        if self.status == Status.COMPLETED:
+            if self.due_date and self.completed_at:
+                from django.utils import timezone
+                if timezone.localtime(self.completed_at).date() > self.due_date:
+                    return 'completed_late'
+            return 'completed_on_time'
+        if self.is_overdue:
+            return 'overdue'
+        if self.status == Status.DEFERRED:
+            return 'deferred'
+        return 'on_time'
+
+    @property
+    def deadline_status_display(self):
+        return {
+            'deferred': 'Reportée',
+            'completed_late': 'Terminée en retard',
+            'completed_on_time': 'Terminée dans les délais',
+            'overdue': 'En retard',
+            'on_time': 'Dans les délais',
+        }[self.deadline_status]
+
+    @property
+    def effective_status_display(self):
+        if self.approval_pending:
+            return 'En attente de validation'
+        if self.deadline_status == 'overdue':
+            return 'En retard'
+        if self.deadline_status == 'completed_late':
+            return 'Terminée en retard'
+        return self.get_status_display()
 
     @property
     def is_blocked(self):
@@ -265,10 +307,10 @@ class Task(models.Model):
         )
 
     @property
-    def progress_percent(self):
+    def progress_percent(self) -> int | None:
         total = self.subtasks.filter(is_active=True).count()
         if total == 0:
-            return 100 if self.status == Status.COMPLETED else 0
+            return None
         completed = self.subtasks.filter(
             is_active=True,
             status=Status.COMPLETED,

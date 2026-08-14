@@ -1,8 +1,71 @@
 import logging
+from html import escape
+
 from django.conf import settings
 from django.core.mail import send_mail
 
 logger = logging.getLogger(__name__)
+
+
+def send_password_reset_link_email(user, reset_url: str) -> bool:
+    """Send the self-service password reset link without exposing delivery errors."""
+    first_name = escape(user.first_name or "")
+    safe_email = escape(user.email)
+    safe_reset_url = escape(reset_url, quote=True)
+    greeting = f"Bonjour {user.first_name}," if user.first_name else "Bonjour,"
+
+    plain_message = (
+        f"{greeting}\n\n"
+        "Une demande de réinitialisation a été effectuée pour votre compte Activity Control.\n\n"
+        "Choisissez un nouveau mot de passe en ouvrant ce lien :\n"
+        f"{reset_url}\n\n"
+        "Ce lien est personnel, utilisable une seule fois et expire dans une heure. "
+        "Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email : "
+        "votre mot de passe actuel reste inchangé.\n\n"
+        "L'équipe Activity Control"
+    )
+    html_message = f"""
+    <!doctype html>
+    <html lang="fr">
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+      <body style="margin:0;background:#f4f6fb;color:#101828;font-family:Arial,sans-serif;padding:32px 16px">
+        <div style="max-width:600px;margin:auto;background:#fff;border:1px solid #e4e7ec;border-radius:18px;overflow:hidden">
+          <div style="background:#0b102b;padding:24px 32px;color:#fff">
+            <div style="font-size:20px;font-weight:800;letter-spacing:.2px">Activity Control</div>
+            <div style="margin-top:5px;color:#b8c0ff;font-size:13px">Sécurité du compte</div>
+          </div>
+          <div style="padding:32px">
+            <h1 style="font-size:25px;line-height:1.25;margin:0 0 18px">Réinitialisez votre mot de passe</h1>
+            <p style="line-height:1.65;margin:0 0 16px">Bonjour{f' {first_name}' if first_name else ''},</p>
+            <p style="line-height:1.65;margin:0 0 24px">Une demande de réinitialisation a été effectuée pour le compte <strong>{safe_email}</strong>.</p>
+            <div style="text-align:center;margin:28px 0">
+              <a href="{safe_reset_url}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;padding:14px 24px;border-radius:10px">Choisir un nouveau mot de passe</a>
+            </div>
+            <div style="background:#f8fafc;border-left:4px solid #6366f1;border-radius:8px;padding:15px 17px;font-size:14px;line-height:1.55">
+              Ce lien est personnel, utilisable une seule fois et expire dans une heure.
+            </div>
+            <p style="line-height:1.65;margin:24px 0 0;color:#475467;font-size:14px">Vous n'avez rien demandé ? Ignorez cet email : votre mot de passe actuel reste inchangé.</p>
+          </div>
+          <div style="border-top:1px solid #eef0f4;padding:18px 32px;color:#667085;font-size:12px">Email automatique — ne communiquez jamais ce lien à une autre personne.</div>
+        </div>
+      </body>
+    </html>
+    """
+
+    try:
+        send_mail(
+            subject="[Activity Control] Réinitialisez votre mot de passe",
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        logger.info("Password reset link email sent to user id=%s", user.pk)
+        return True
+    except Exception:
+        logger.exception("Password reset link email failed for user id=%s", user.pk)
+        return False
 
 
 def send_user_invitation_email(user, temp_password: str) -> bool:

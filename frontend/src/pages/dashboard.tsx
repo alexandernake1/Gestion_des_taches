@@ -42,7 +42,8 @@ function DashboardPage() {
 
 
 
-  const isManagement = currentUser?.role === 'owner' || currentUser?.role === 'manager'
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
+  const isManagement = !isPersonalWorkspace && (currentUser?.role === 'owner' || currentUser?.role === 'manager')
   const isSuperUserNotImpersonating = currentUser?.is_superuser && !localStorage.getItem('impersonated_company_id')
   const enabledQueries = !isSuperUserNotImpersonating
   const [selectedTeamId, setSelectedTeamId] = useState<number | string | undefined>()
@@ -263,7 +264,7 @@ function DashboardPage() {
             accent="amber"
           />
           <StatCard
-            title="Complétées"
+            title="Terminées"
             value={overview?.completed || 0}
             icon={<CheckCircle className="h-6 w-6 text-emerald-600" />}
             loading={overviewLoading}
@@ -390,7 +391,7 @@ function DashboardPage() {
                         <p className="text-3xl font-black text-slate-900">{userStats?.new_tasks_this_week || 0}</p>
                       </div>
                       <div className="bg-emerald-50/80 backdrop-blur-sm rounded-2xl p-4 border border-emerald-200/60 transition-all hover:bg-emerald-100 hover:shadow-md hover:-translate-y-0.5">
-                        <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1">Résolues</p>
+                        <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1">Terminées</p>
                         <p className="text-3xl font-black text-emerald-800">{userStats?.completed_this_week || 0}</p>
                       </div>
                     </div>
@@ -502,10 +503,10 @@ function WelcomeBanner({
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black tracking-tight lg:text-4xl drop-shadow-sm flex items-center gap-3">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-white animate-pulse">
+            <span className="text-white">
               Bonjour, {userName}
             </span> 
-            <span className="animate-bounce">👋</span>
+            <span aria-hidden="true">👋</span>
           </h1>
           <p className="mt-3 text-[15px] font-medium text-white/90 max-w-xl leading-relaxed drop-shadow-sm">
             {isManagement
@@ -698,7 +699,7 @@ function StatCard({ title, value, icon, loading, accent }: { title: string; valu
   const c = colorMap[accent] ?? colorMap.indigo
 
   return (
-    <Card className="group relative overflow-hidden border border-slate-200/60 bg-white/80 backdrop-blur-md shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-slate-300">
+    <Card className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-border hover:shadow-lg">
       {/* Accent stripe */}
       <div
         className="absolute left-0 top-0 bottom-0 w-[4px] rounded-l-2xl transition-all duration-300 group-hover:w-[6px]"
@@ -718,14 +719,14 @@ function StatCard({ title, value, icon, loading, accent }: { title: string; valu
             >
               {icon}
             </div>
-            <p className="text-[13px] font-bold text-slate-500 uppercase tracking-wider">{title}</p>
+            <p className="text-[13px] font-bold uppercase tracking-wider text-muted-foreground">{title}</p>
           </div>
         </CardHeader>
         <CardContent className="pt-3 pb-5">
           {loading ? (
             <div className="h-10 w-24 skeleton rounded-lg" />
           ) : (
-            <p className="text-[36px] font-black tracking-tighter text-slate-800 leading-none">
+            <p className="text-[36px] font-black leading-none tracking-tighter text-foreground">
               {value}
             </p>
           )}

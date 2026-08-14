@@ -17,9 +17,9 @@ export function getStatusBadge(status: Status) {
   const labels: Record<Status, string> = {
     todo: 'À faire',
     in_progress: 'En cours',
-    on_hold: 'En attente',
+    on_hold: 'En pause',
     deferred: 'Reportée',
-    completed: 'Complétée',
+    completed: 'Terminée',
   }
   return <Badge variant={variants[status]}>{labels[status]}</Badge>
 }
@@ -44,9 +44,9 @@ export function getPriorityBadge(priority: Priority) {
 export const STATUS_LABELS: Record<Status, string> = {
   todo: 'À faire',
   in_progress: 'En cours',
-  on_hold: 'En attente',
+  on_hold: 'En pause',
   deferred: 'Reportée',
-  completed: 'Complétée',
+  completed: 'Terminée',
 }
 
 export const PRIORITY_LABELS: Record<Priority, string> = {

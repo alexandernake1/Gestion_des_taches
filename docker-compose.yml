@@ -1,3 +1,10 @@
+x-backend-image: &backend-image
+  image: gestion_des_taches-backend
+  build:
+    context: ./backend
+    args:
+      SOURCE_CACHE_BUST: 20260813-legal-pages
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -25,8 +32,17 @@ services:
       timeout: 5s
       retries: 10
 
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: activity_tracker_mailpit
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: 500
+    ports:
+      - "127.0.0.1:8025:8025"
+
   backend:
-    build: ./backend
+    <<: *backend-image
     container_name: activity_tracker_backend
     restart: unless-stopped
     depends_on:
@@ -34,23 +50,70 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     env_file:
       - .env
     volumes:
       - static_data:/app/staticfiles
       - media_data:/app/media
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/ready/', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  celery_worker:
+    <<: *backend-image
+    container_name: activity_tracker_celery_worker
+    restart: unless-stopped
+    command: celery -A config worker --loglevel=INFO --concurrency=2 --uid=nobody --gid=nogroup
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+
+  celery_beat:
+    <<: *backend-image
+    container_name: activity_tracker_celery_beat
+    restart: unless-stopped
+    command: celery -A config beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule --uid=nobody --gid=nogroup
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
+        SOURCE_CACHE_BUST: 20260813-legal-pages
     container_name: activity_tracker_frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     volumes:
       - static_data:/usr/share/nginx/html/static:ro
       - media_data:/usr/share/nginx/html/media:ro
     ports:
       - "80:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   postgres_data:

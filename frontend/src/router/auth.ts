@@ -7,6 +7,7 @@ function authenticatedHome(user: User) {
   if (user.is_superuser && !impersonatedCompanyId) {
     return '/admin/companies'
   }
+  if (!user.company) return '/onboarding'
   return '/dashboard'
 }
 
@@ -35,7 +36,7 @@ export async function requireManagement() {
     if (!impersonated) {
       throw redirect({ to: '/admin/companies' })
     }
-  } else if (!user.company || user.role === 'employee') {
+  } else if (!user.company || user.is_personal_workspace || user.role === 'employee') {
     throw redirect({ to: '/dashboard' })
   }
   return user
@@ -44,7 +45,15 @@ export async function requireManagement() {
 export async function requireCompanyMember() {
   const user = await requireAuthentication()
   if (!user.is_superuser && !user.company) {
-    throw redirect({ to: '/login' })
+    throw redirect({ to: '/onboarding' })
+  }
+  return user
+}
+
+export async function requireCollaborativeWorkspace() {
+  const user = await requireCompanyMember()
+  if (!user.is_superuser && user.is_personal_workspace) {
+    throw redirect({ to: '/dashboard' })
   }
   return user
 }

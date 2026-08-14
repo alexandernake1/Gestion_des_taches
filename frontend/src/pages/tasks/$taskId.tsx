@@ -11,7 +11,7 @@ import { TaskApprovalPanel } from '@/components/tasks/TaskApprovalPanel'
 import { tasksService } from '@/services/tasks'
 import { authService } from '@/services/auth'
 import { teamsService } from '@/services/teams'
-import type { Task, TaskAttachment, TaskCreateRequest, TaskReport, Status, Priority } from '@/domain/types'
+import type { Task, TaskAttachment, TaskCreateRequest, TaskReport, Priority } from '@/domain/types'
 import { ArrowLeft, Calendar, CalendarClock, Clock, Copy, Edit, FileText, GitBranch, LayoutTemplate, ListChecks, MessageSquare, Paperclip, Plus, ShieldCheck, Trash2, User } from 'lucide-react'
 import { useState } from 'react'
 import { requireCompanyMember } from '@/router/auth'
@@ -41,9 +41,7 @@ function TaskDetailPage() {
     queryKey: ['current-user'],
     queryFn: authService.getCurrentUser,
   })
-
-
-
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
   const { data: comments = [] } = useQuery({
     queryKey: ['task-comments', taskId],
     queryFn: () => tasksService.getComments(Number(taskId)),
@@ -62,10 +60,12 @@ function TaskDetailPage() {
   const { data: reports = [] } = useQuery({
     queryKey: ['task-reports', taskId],
     queryFn: () => tasksService.getReports(Number(taskId)),
+    enabled: Boolean(currentUser && !isPersonalWorkspace),
   })
   const { data: approvals = [] } = useQuery({
     queryKey: ['task-approvals', taskId],
     queryFn: () => tasksService.getTaskApprovals(Number(taskId)),
+    enabled: Boolean(currentUser && !isPersonalWorkspace),
   })
   const { data: subtasks = [] } = useQuery({
     queryKey: ['task-subtasks', taskId],
@@ -78,7 +78,7 @@ function TaskDetailPage() {
   const { data: currentTeam } = useQuery({
     queryKey: ['team', task?.team],
     queryFn: () => teamsService.get(Number(task?.team)),
-    enabled: !!task?.team,
+    enabled: !isPersonalWorkspace && !!task?.team,
   })
 
   const deleteMutation = useMutation({
@@ -140,8 +140,8 @@ function TaskDetailPage() {
       parent: Number(taskId),
       priority: task?.priority || 'normal',
       status: 'todo',
-      assigned_to: data.assigned_to,
-      team: task?.team,
+      assigned_to: isPersonalWorkspace ? undefined : data.assigned_to,
+      team: isPersonalWorkspace ? undefined : task?.team,
       due_date: task?.due_date,
     }),
     onSuccess: () => {
@@ -158,7 +158,11 @@ function TaskDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['task-templates'] }),
   })
 
-  const getStatusBadge = (status: Status) => {
+  const getStatusBadge = (item: Pick<Task, 'status' | 'approval_pending' | 'deadline_status'>) => {
+    if (item.approval_pending) return <Badge variant="warning">En attente de validation</Badge>
+    if (item.deadline_status === 'overdue') return <Badge variant="danger">En retard</Badge>
+    if (item.deadline_status === 'completed_late') return <Badge variant="warning">Terminée en retard</Badge>
+    const status = item.status
     const variants = {
       todo: 'default',
       in_progress: 'info',
@@ -169,9 +173,9 @@ function TaskDetailPage() {
     const labels = {
       todo: 'À faire',
       in_progress: 'En cours',
-      on_hold: 'En attente',
+      on_hold: 'En pause',
       deferred: 'Reportée',
-      completed: 'Complétée'
+      completed: 'Terminée'
     }
     return <Badge variant={variants[status]}>{labels[status]}</Badge>
   }
@@ -262,6 +266,9 @@ function TaskDetailPage() {
   )
 
   const canCreateSubtask = canManageTask || String(task.team_leader_id) === String(currentUser?.id)
+  const visibleHistory = isPersonalWorkspace
+    ? history.filter((item) => !['assigned_to', 'team', 'approval_requested', 'approval_approved', 'approval_rejected'].includes(item.field_name))
+    : history
 
   return (
     <Layout title="Détails de la tâche">
@@ -278,7 +285,7 @@ function TaskDetailPage() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex-1">
                 <div className="mb-4 flex flex-wrap items-center gap-3">
-                  {getStatusBadge(task.status)}
+                  {getStatusBadge(task)}
                   {getPriorityBadge(task.priority)}
                 </div>
                 <h1 className="text-2xl font-black text-slate-900 sm:text-3xl mb-3 tracking-tight">{task.title}</h1>
@@ -298,7 +305,7 @@ function TaskDetailPage() {
                       const name = window.prompt('Nom du modèle réutilisable :', task.title)
                       if (name?.trim()) {
                         let isShared = false
-                        if (currentUser?.role !== 'employee') {
+                        if (!isPersonalWorkspace && currentUser?.role !== 'employee') {
                           const result = await confirmAction({
                             title: 'Visibilité du modèle',
                             description: 'Choisissez si ce modèle doit être accessible à toute l’entreprise ou uniquement à vous.',
@@ -333,7 +340,7 @@ function TaskDetailPage() {
                   </Button>
                 </div>
               )}
-              {!canManageTask && task.requires_completion_approval && task.status !== 'completed' && (
+              {!isPersonalWorkspace && !canManageTask && task.requires_completion_approval && task.status !== 'completed' && (
                 <Button onClick={() => setActiveTab('approvals')} className="shrink-0">
                   <ShieldCheck className="mr-2 h-4 w-4" />
                   {approvals.some((approval) => approval.status === 'pending') ? 'Suivre la validation' : 'Demander la validation'}
@@ -355,21 +362,23 @@ function TaskDetailPage() {
               </div>
             )}
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-                  <User className="h-4 w-4 text-slate-400" /> Assigné à
-                </h3>
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700 uppercase">
-                    {task.assigned_to_name ? task.assigned_to_name.substring(0, 2) : '?'}
+            <div className={`grid gap-6 sm:grid-cols-2 ${isPersonalWorkspace ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
+              {!isPersonalWorkspace && (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <User className="h-4 w-4 text-slate-400" /> Assigné à
+                  </h3>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold uppercase text-indigo-700">
+                      {task.assigned_to_name ? task.assigned_to_name.substring(0, 2) : '?'}
+                    </div>
+                    <p className="font-semibold text-slate-900">{task.assigned_to_name || 'Non assigné'}</p>
                   </div>
-                  <p className="font-semibold text-slate-900">{task.assigned_to_name || 'Non assigné'}</p>
                 </div>
-              </div>
+              )}
 
               <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                   <Calendar className="h-4 w-4 text-slate-400" /> Échéance
                 </h3>
                 <p className="font-semibold text-slate-900">
@@ -378,7 +387,7 @@ function TaskDetailPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                   <Clock className="h-4 w-4 text-slate-400" /> Début
                 </h3>
                 <p className="font-semibold text-slate-900">
@@ -386,12 +395,14 @@ function TaskDetailPage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-                  <User className="h-4 w-4 text-slate-400" /> Équipe
-                </h3>
-                <p className="font-semibold text-slate-900">{task.team_name || 'Non assignée'}</p>
-              </div>
+              {!isPersonalWorkspace && (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <User className="h-4 w-4 text-slate-400" /> Équipe
+                  </h3>
+                  <p className="font-semibold text-slate-900">{task.team_name || 'Non assignée'}</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-8 flex items-center gap-4 text-xs font-medium text-muted-foreground">
@@ -415,10 +426,12 @@ function TaskDetailPage() {
           <div className="flex gap-1 overflow-x-auto border-b border-slate-100 p-2">
             {[
               { id: 'structure', label: 'Structure', count: subtasks.length + (task.dependencies?.length || 0), icon: ListChecks },
-              { id: 'activity', label: 'Activité', count: comments.length + history.length, icon: MessageSquare },
+              { id: 'activity', label: 'Activité', count: comments.length + visibleHistory.length, icon: MessageSquare },
               { id: 'attachments', label: 'Documents', count: attachments.length, icon: Paperclip },
-              { id: 'approvals', label: 'Validations', count: approvals.length, icon: ShieldCheck },
-              { id: 'reports', label: 'Reports', count: reports.length, icon: CalendarClock },
+              ...(!isPersonalWorkspace ? [
+                { id: 'approvals', label: 'Validations', count: approvals.length, icon: ShieldCheck },
+                { id: 'reports', label: 'Reports', count: reports.length, icon: CalendarClock },
+              ] : []),
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -441,10 +454,10 @@ function TaskDetailPage() {
               <div className="grid gap-6 lg:grid-cols-2">
                 <section>
                   <div className="mb-3 flex items-center justify-between">
-                    <div><h3 className="font-bold text-slate-900">Sous-tâches</h3><p className="text-xs text-slate-500">Progression : {task.progress_percent || 0}%</p></div>
-                    <span className="text-xs font-semibold text-slate-500">{subtasks.filter((item) => item.status === 'completed').length}/{subtasks.length}</span>
+                    <div><h3 className="font-bold text-slate-900">Sous-tâches</h3><p className="text-xs text-slate-500">{subtasks.length ? `Progression : ${task.progress_percent ?? 0}%` : 'Aucune sous-tâche'}</p></div>
+                    {subtasks.length > 0 && <span className="text-xs font-semibold text-slate-500">{subtasks.filter((item) => item.status === 'completed').length}/{subtasks.length}</span>}
                   </div>
-                  <div className="mb-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${task.progress_percent || 0}%` }} /></div>
+                  {subtasks.length > 0 && <div className="mb-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${task.progress_percent ?? 0}%` }} /></div>}
                   {canCreateSubtask && (
                     <form className="mb-3 flex flex-col sm:flex-row gap-2" onSubmit={(event) => {
                       event.preventDefault()
@@ -455,19 +468,19 @@ function TaskDetailPage() {
                       form.reset()
                     }}>
                       <input name="title" required placeholder="Ajouter une sous-tâche…" className="h-10 flex-1 rounded-xl border border-slate-200 px-3 text-sm" />
-                      <select name="assigned_to" className="h-10 rounded-xl border border-slate-200 px-3 text-sm min-w-[150px]">
+                      {!isPersonalWorkspace && <select name="assigned_to" className="h-10 rounded-xl border border-slate-200 px-3 text-sm min-w-[150px]">
                         <option value="">Assigner à...</option>
                         {currentTeam?.member_details?.map(member => (
                           <option key={member.id} value={member.id}>{member.full_name}</option>
                         ))}
-                      </select>
+                      </select>}
                       <Button type="submit" disabled={createSubtaskMutation.isPending}><Plus className="h-4 w-4" /></Button>
                     </form>
                   )}
                   <div className="space-y-2">
                     {subtasks.map((subtask) => (
                       <button key={subtask.id} type="button" onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: String(subtask.id) } })} className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5 text-left hover:border-indigo-200">
-                        <span className="truncate text-sm font-semibold text-slate-700">{subtask.title}</span>{getStatusBadge(subtask.status)}
+                        <span className="truncate text-sm font-semibold text-slate-700">{subtask.title}</span>{getStatusBadge(subtask)}
                       </button>
                     ))}
                     {subtasks.length === 0 && <p className="rounded-xl bg-slate-50 py-6 text-center text-sm text-slate-400">Aucune sous-tâche.</p>}
@@ -494,7 +507,7 @@ function TaskDetailPage() {
                     {task.dependency_details?.map((dependency) => (
                       <div key={dependency.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5">
                         <button type="button" onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: String(dependency.id) } })} className="truncate text-left text-sm font-semibold text-slate-700">{dependency.title}</button>
-                        <div className="flex items-center gap-2">{getStatusBadge(dependency.status)}
+                        <div className="flex items-center gap-2">{getStatusBadge(dependency)}
                           {canManageTask && <button type="button" onClick={() => dependenciesMutation.mutate((task.dependencies || []).filter((id) => id !== dependency.id))} className="text-xs font-bold text-rose-500">Retirer</button>}
                         </div>
                       </div>
@@ -509,7 +522,7 @@ function TaskDetailPage() {
               <div className="pt-2">
                 <TaskActivityFeed 
                   taskId={Number(taskId)} 
-                  history={history} 
+                  history={visibleHistory}
                   comments={comments} 
                   currentUserId={currentUser?.id} 
                 />
@@ -539,11 +552,11 @@ function TaskDetailPage() {
                 {attachments.length === 0 && <EmptyTab icon={Paperclip} label="Aucun document joint." />}
               </div>
             )}
-            {activeTab === 'approvals' && currentUser && (
+            {!isPersonalWorkspace && activeTab === 'approvals' && currentUser && (
               <TaskApprovalPanel task={task} currentUser={currentUser} />
             )}
 
-            {activeTab === 'reports' && (
+            {!isPersonalWorkspace && activeTab === 'reports' && (
               <div className="space-y-3">
                 {task.due_date ? (
                   <form className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-4" onSubmit={(event) => {
@@ -603,7 +616,7 @@ function TaskDetailPage() {
             isOpen={isEditModalOpen}
             onClose={() => setIsEditModalOpen(false)}
             task={task}
-            canAssign={currentUser?.role === 'owner' || currentUser?.role === 'manager'}
+            canAssign={!currentUser?.is_personal_workspace && (currentUser?.role === 'owner' || currentUser?.role === 'manager')}
             onSuccess={() => {
               setIsEditModalOpen(false)
               queryClient.invalidateQueries({ queryKey: ['task', taskId] })

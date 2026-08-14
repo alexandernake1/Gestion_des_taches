@@ -1,13 +1,15 @@
 import { api } from '@/utils/api';
-import type { CompanySubscription, PaymentTransaction, SubscriptionPlan } from '@/domain/types';
+import type { CompanySubscription, PaymentTransaction, SubscriptionPlan, WorkspaceType } from '@/domain/types';
 
 export const subscriptionsService = {
   async getMySubscription(): Promise<CompanySubscription> {
     return api.get<CompanySubscription>('/companies/subscription/');
   },
 
-  async listPlans(): Promise<SubscriptionPlan[]> {
-    return api.getList<SubscriptionPlan>('/companies/plans/');
+  async listPlans(audience?: WorkspaceType): Promise<SubscriptionPlan[]> {
+    return api.getList<SubscriptionPlan>('/companies/plans/', {
+      params: audience ? { audience } : undefined,
+    });
   },
 
   async adminListPlans(): Promise<SubscriptionPlan[]> {

@@ -10,13 +10,13 @@ export function useWebSocket() {
   const ws = useRef<WebSocket | null>(null)
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
-    if (!token) return
-
-    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/^http/, 'ws')
-    const url = `${baseUrl}/ws/notifications/?token=${token}`
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const url = `${protocol}//${window.location.host}/ws/notifications/`
+    let disposed = false
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined
 
     const connect = () => {
+      if (disposed) return
       ws.current = new WebSocket(url)
 
       ws.current.onopen = () => {
@@ -77,14 +77,16 @@ export function useWebSocket() {
       }
 
       ws.current.onclose = () => {
-        console.log('WebSocket disconnected, attempting to reconnect in 3s...')
-        setTimeout(connect, 3000)
+        if (disposed) return
+        reconnectTimer = setTimeout(connect, 3000)
       }
     }
 
     connect()
 
     return () => {
+      disposed = true
+      if (reconnectTimer) clearTimeout(reconnectTimer)
       if (ws.current) {
         ws.current.onclose = null;
         ws.current.close()

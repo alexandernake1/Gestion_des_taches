@@ -63,7 +63,7 @@ def process_user_notifications(user, now=None):
     tasks = Task.objects.filter(
         assigned_to=user,
         is_active=True,
-    ).exclude(status__in=[Status.COMPLETED, Status.DEFERRED])
+    ).exclude(status=Status.COMPLETED)
     created = 0
 
     if preferences.task_reminders_enabled:

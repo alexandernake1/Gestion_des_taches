@@ -10,11 +10,11 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { useConfirmation } from '@/components/ui/confirmation'
 import { authService } from '@/services/auth'
 import { tasksService } from '@/services/tasks'
-import { requireCompanyMember } from '@/router/auth'
+import { requireCollaborativeWorkspace } from '@/router/auth'
 import type { ApprovalRequest, ApprovalStatus, TaskReport } from '@/domain/types'
 
 export const Route = createFileRoute('/approvals')({
-  beforeLoad: requireCompanyMember,
+  beforeLoad: requireCollaborativeWorkspace,
   component: ApprovalsPage,
 })
 

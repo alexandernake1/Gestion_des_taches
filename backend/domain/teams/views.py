@@ -61,6 +61,11 @@ class TeamListCreateView(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         # Quota checks – super-admins are exempt.
         company = get_requested_company(request)
+        if company and company.is_personal:
+            return Response(
+                {"detail": "Les équipes sont réservées aux espaces entreprise."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         if not request.user.is_superuser and company and hasattr(company, 'subscription'):
             subscription = company.subscription
             if subscription.is_suspended():

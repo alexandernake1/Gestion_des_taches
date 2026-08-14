@@ -33,6 +33,8 @@ function TaskTemplatesPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const isEmployee = currentUser?.role === 'employee'
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
+  const isPrivateOnly = isEmployee || isPersonalWorkspace
 
   const createMutation = useMutation({
     mutationFn: tasksService.createTemplate,
@@ -45,7 +47,7 @@ function TaskTemplatesPage() {
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    const isSharedVal = isEmployee ? false : formData.get('is_shared') === 'true'
+    const isSharedVal = isPrivateOnly ? false : formData.get('is_shared') === 'true'
 
     createMutation.mutate({
       name: formData.get('name') as string,
@@ -106,7 +108,7 @@ function TaskTemplatesPage() {
                   <div className="flex justify-between items-start mb-3 gap-2">
                     <h3 className="font-bold text-foreground text-lg leading-tight">{template.name}</h3>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {template.is_shared === false ? (
+                      {!isPersonalWorkspace && (template.is_shared === false ? (
                         <Badge variant="warning" className="flex items-center gap-1">
                           <Lock className="h-3 w-3" /> Personnel
                         </Badge>
@@ -114,7 +116,7 @@ function TaskTemplatesPage() {
                         <Badge variant="info" className="flex items-center gap-1">
                           <Building2 className="h-3 w-3" /> Entreprise
                         </Badge>
-                      )}
+                      ))}
                       {getPriorityBadge(template.priority)}
                     </div>
                   </div>
@@ -167,9 +169,9 @@ function TaskTemplatesPage() {
               </div>
             </div>
 
-            <div>
+            {!isPersonalWorkspace && <div>
               <label className="block text-sm font-medium text-foreground mb-1">Portée du modèle</label>
-              {isEmployee ? (
+              {isPrivateOnly ? (
                 <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 p-3 text-xs font-semibold text-amber-700 dark:text-amber-400 border border-amber-500/20">
                   <Lock className="h-4 w-4 shrink-0" />
                   <span>Modèle personnel (visible et réservé uniquement à votre compte)</span>
@@ -180,7 +182,7 @@ function TaskTemplatesPage() {
                   <option value="false">🔒 Personnel (Visible par moi uniquement)</option>
                 </select>
               )}
-            </div>
+            </div>}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
               <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Annuler</Button>

@@ -29,7 +29,8 @@ function CreateTaskPage() {
   })
 
 
-  const canAssign = currentUser?.role === 'owner' || currentUser?.role === 'manager'
+  const canAssign = !currentUser?.is_personal_workspace && (currentUser?.role === 'owner' || currentUser?.role === 'manager')
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
 
   const { data: users } = useQuery({
     queryKey: ['users'],
@@ -89,7 +90,7 @@ function CreateTaskPage() {
             <div className="flex gap-2 overflow-x-auto pb-1">
               {templates.map((template) => (
                 <Button key={template.id} type="button" size="sm" variant="secondary" disabled={instantiateMutation.isPending} onClick={() => instantiateMutation.mutate(template.id)} className="shrink-0 flex items-center gap-1.5">
-                  <span>{template.is_shared === false ? '🔒' : '🏢'}</span>
+                  {!isPersonalWorkspace && <span>{template.is_shared === false ? '🔒' : '🏢'}</span>}
                   <span>{template.name}</span>
                 </Button>
               ))}

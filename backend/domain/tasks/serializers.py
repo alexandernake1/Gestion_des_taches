@@ -53,7 +53,13 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def get_team_details(self, obj):
         return [
-            {'id': team.id, 'name': team.name, 'member_count': team.members.count()}
+            {
+                'id': team.id,
+                'name': team.name,
+                'leader_id': team.leader_id,
+                'leader_name': team.leader.full_name if team.leader else '',
+                'member_count': team.members.count(),
+            }
             for team in obj.teams.all()
         ]
 
@@ -86,6 +92,28 @@ def validate_task_dates(attrs, instance=None):
     return attrs
 
 
+def validate_project_team(attrs, instance=None):
+    """Keep task assignment inside the teams explicitly attached to a project."""
+    project = attrs.get('project', getattr(instance, 'project', None))
+    team = attrs.get('team', getattr(instance, 'team', None))
+    if not project:
+        return attrs
+
+    project_teams = project.teams.filter(is_active=True)
+    team_count = project_teams.count()
+    if team and not project_teams.filter(pk=team.pk).exists():
+        raise serializers.ValidationError({
+            'team': "Sélectionnez une équipe rattachée à ce projet."
+        })
+    if not team and team_count == 1:
+        attrs['team'] = project_teams.first()
+    elif not team and team_count > 1 and instance is None:
+        raise serializers.ValidationError({
+            'team': "Ce projet comporte plusieurs équipes. Choisissez l'équipe responsable."
+        })
+    return attrs
+
+
 class TaskSerializer(serializers.ModelSerializer):
     """Serializer for Task model."""
     
@@ -94,11 +122,14 @@ class TaskSerializer(serializers.ModelSerializer):
     team_name = serializers.CharField(source='team.name', read_only=True)
     team_leader_id = serializers.IntegerField(source='team.leader_id', read_only=True)
     project_name = serializers.CharField(source='project.name', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    status_display = serializers.CharField(source='effective_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
     is_blocked = serializers.BooleanField(read_only=True)
-    progress_percent = serializers.IntegerField(read_only=True)
+    progress_percent = serializers.IntegerField(read_only=True, allow_null=True)
+    approval_pending = serializers.BooleanField(read_only=True)
+    deadline_status = serializers.CharField(read_only=True)
+    deadline_status_display = serializers.CharField(read_only=True)
     subtask_count = serializers.IntegerField(source='subtasks.count', read_only=True)
     dependency_details = serializers.SerializerMethodField()
     
@@ -109,6 +140,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'assigned_to', 'assigned_to_name', 'team', 'team_name', 'team_leader_id', 'priority',
             'priority_display', 'status', 'status_display', 'start_date', 'due_date',
             'completed_at', 'is_overdue', 'is_blocked', 'progress_percent',
+            'approval_pending', 'deadline_status', 'deadline_status_display',
             'parent', 'dependencies', 'dependency_details', 'subtask_count',
             'is_active', 'archived_at', 'created_at', 'updated_at',
             'recurrence_frequency', 'recurrence_interval',
@@ -192,6 +224,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'parent': "La tâche parente est invalide."})
         if any(task.company != company for task in dependencies):
             raise serializers.ValidationError({'dependencies': "Les dépendances doivent appartenir à la même entreprise."})
+        validate_project_team(attrs)
         return validate_task_dates(attrs)
 
 
@@ -265,6 +298,9 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'status': "Cette tâche exige une validation. Envoyez une demande de clôture à un responsable."
                 })
+        validate_project_team(attrs, self.instance)
+        if 'team' in attrs and 'assigned_to' not in attrs:
+            attrs['assigned_to'] = attrs['team'].leader if attrs['team'] else None
         return validate_task_dates(attrs, self.instance)
 
 
@@ -275,11 +311,14 @@ class TaskListSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.CharField(source='assigned_to.full_name', read_only=True)
     team_name = serializers.CharField(source='team.name', read_only=True)
     team_leader_id = serializers.IntegerField(source='team.leader_id', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    status_display = serializers.CharField(source='effective_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
     is_blocked = serializers.BooleanField(read_only=True)
-    progress_percent = serializers.IntegerField(read_only=True)
+    progress_percent = serializers.IntegerField(read_only=True, allow_null=True)
+    approval_pending = serializers.BooleanField(read_only=True)
+    deadline_status = serializers.CharField(read_only=True)
+    deadline_status_display = serializers.CharField(read_only=True)
     
     class Meta:
         model = Task
@@ -288,6 +327,7 @@ class TaskListSerializer(serializers.ModelSerializer):
             'assigned_to', 'assigned_to_name', 'team', 'team_name', 'team_leader_id', 'status',
             'status_display', 'priority', 'priority_display', 'start_date',
             'due_date', 'is_overdue', 'is_blocked', 'progress_percent',
+            'approval_pending', 'deadline_status', 'deadline_status_display',
             'parent', 'created_at', 'recurrence_frequency',
             'estimated_hours',
             'requires_completion_approval',
@@ -367,8 +407,9 @@ class TaskTemplateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         user = self.context['request'].user
+        company = get_requested_company(self.context['request'])
         # Employees cannot create shared company templates; their templates are always personal
-        if user and getattr(user, 'role', None) == 'employee':
+        if (company and company.is_personal) or (user and getattr(user, 'role', None) == 'employee'):
             attrs['is_shared'] = False
         return attrs
 

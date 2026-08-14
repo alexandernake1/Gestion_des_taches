@@ -12,6 +12,7 @@ dj-database-url==2.2.0
 djangorestframework-simplejwt==5.3.1
 django-allauth==0.61.1
 dj-rest-auth==5.0.2
+google-auth==2.56.3
 
 # Storage
 django-storages==1.14.3

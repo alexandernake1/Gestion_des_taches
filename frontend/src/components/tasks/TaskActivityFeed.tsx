@@ -47,7 +47,7 @@ function formatValue(field: string, value?: string) {
     const statuses: Record<string, string> = {
       todo: 'À faire',
       in_progress: 'En cours',
-      on_hold: 'En attente',
+      on_hold: 'En pause',
       deferred: 'Reportée',
       completed: 'Terminée'
     }

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { DateInput } from '@/components/ui/DateInput'
 import { projectsService } from '@/services/projects'
@@ -40,6 +41,7 @@ export function TaskForm({
   const { data: projects = [] } = useQuery({
     queryKey: ['projects-list'],
     queryFn: () => projectsService.list(),
+    enabled: canAssign || Boolean(lockedProjectId),
   })
 
   const { data: fetchedUsers = [], isLoading: usersLoading } = useQuery({
@@ -56,6 +58,43 @@ export function TaskForm({
 
   const users = providedUsers ?? fetchedUsers
   const teams = providedTeams ?? fetchedTeams
+  const effectiveProjectId = lockedProjectId ?? initialData?.project
+  const [selectedProjectId, setSelectedProjectId] = useState(effectiveProjectId ? String(effectiveProjectId) : '')
+  const [selectedTeamId, setSelectedTeamId] = useState(initialData?.team ? String(initialData.team) : '')
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState(initialData?.assigned_to ? String(initialData.assigned_to) : '')
+  const selectedProject = projects.find((project) => String(project.id) === selectedProjectId)
+  const projectTeamIds = useMemo(
+    () => new Set((selectedProject?.teams || []).map(String)),
+    [selectedProject?.teams],
+  )
+  const availableTeams = selectedProject
+    ? teams.filter((team) => projectTeamIds.has(String(team.id)))
+    : teams
+  const selectedTeam = teams.find((team) => String(team.id) === selectedTeamId)
+
+  useEffect(() => {
+    if (!selectedProject || selectedTeamId || (selectedProject.teams || []).length !== 1) return
+    const inheritedTeam = teams.find((team) => String(team.id) === String(selectedProject.teams?.[0]))
+    if (!inheritedTeam) return
+    setSelectedTeamId(String(inheritedTeam.id))
+    if (inheritedTeam.leader) setSelectedAssigneeId(String(inheritedTeam.leader))
+  }, [selectedProject, selectedTeamId, teams])
+
+  const handleProjectChange = (projectId: string) => {
+    setSelectedProjectId(projectId)
+    const project = projects.find((item) => String(item.id) === projectId)
+    const teamIds = new Set((project?.teams || []).map(String))
+    if (teamIds.size && !teamIds.has(selectedTeamId)) {
+      setSelectedTeamId('')
+      setSelectedAssigneeId('')
+    }
+  }
+
+  const handleTeamChange = (teamId: string) => {
+    setSelectedTeamId(teamId)
+    const team = teams.find((item) => String(item.id) === teamId)
+    setSelectedAssigneeId(team?.leader ? String(team.leader) : '')
+  }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -87,8 +126,6 @@ export function TaskForm({
     onSubmit(data)
   }
 
-  const effectiveProjectId = lockedProjectId ?? initialData?.project
-
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -117,7 +154,7 @@ export function TaskForm({
       </div>
 
       {/* Project */}
-      <div>
+      {(canAssign || lockedProjectId) && <div>
         <label className={labelClass}>🗂️ Projet associé</label>
         {lockedProjectId ? (
           <>
@@ -130,7 +167,8 @@ export function TaskForm({
         ) : (
           <select
             name="project"
-            defaultValue={effectiveProjectId ?? ''}
+            value={selectedProjectId}
+            onChange={(event) => handleProjectChange(event.target.value)}
             className={selectClass}
           >
             <option value="">— Sans projet —</option>
@@ -139,7 +177,7 @@ export function TaskForm({
             ))}
           </select>
         )}
-      </div>
+      </div>}
 
       {/* Status + Priority */}
       <div className="grid grid-cols-2 gap-4">
@@ -148,9 +186,9 @@ export function TaskForm({
           <select name="status" defaultValue={initialData?.status || 'todo'} className={selectClass} required>
             <option value="todo">À faire</option>
             <option value="in_progress">En cours</option>
-            <option value="on_hold">En attente</option>
+            <option value="on_hold">En pause</option>
             <option value="deferred">Reportée</option>
-            <option value="completed">Complétée</option>
+            <option value="completed">Terminée</option>
           </select>
         </div>
         <div>
@@ -165,12 +203,12 @@ export function TaskForm({
       </div>
 
       {/* Assignment */}
-      {canAssign ? (
+      {canAssign && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className={labelClass}>Assigné à</label>
-            <select name="assigned_to" defaultValue={initialData?.assigned_to || ''} className={selectClass} disabled={usersLoading}>
-              <option value="">{usersLoading ? 'Chargement des utilisateurs…' : 'Moi-même'}</option>
+            <label className={labelClass}>Responsable de la tâche</label>
+            <select name="assigned_to" value={selectedAssigneeId} onChange={(event) => setSelectedAssigneeId(event.target.value)} className={selectClass} disabled={usersLoading}>
+              <option value="">{usersLoading ? 'Chargement des utilisateurs…' : 'Automatique'}</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>{u.full_name ? `${u.full_name} — ${u.email}` : u.email}</option>
               ))}
@@ -180,24 +218,27 @@ export function TaskForm({
             )}
           </div>
           <div>
-            <label className={labelClass}>Équipe</label>
-            <select name="team" defaultValue={initialData?.team || ''} className={selectClass} disabled={teamsLoading}>
+            <label className={labelClass}>Équipe responsable</label>
+            <select name="team" value={selectedTeamId} onChange={(event) => handleTeamChange(event.target.value)} className={selectClass} disabled={teamsLoading} required={projectTeamIds.size > 1}>
               <option value="">{teamsLoading ? 'Chargement des équipes…' : 'Aucune équipe'}</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.member_count ?? t.members?.length ?? 0} membre(s))</option>
+              {availableTeams.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}{t.leader_name ? ` — Responsable : ${t.leader_name}` : ''} ({t.member_count ?? t.members?.length ?? 0} membre(s))</option>
               ))}
             </select>
             {!teamsLoading && teams.length === 0 && (
               <p className="mt-1.5 text-xs text-muted-foreground">Aucune équipe active n’est disponible.</p>
             )}
+            {!teamsLoading && selectedProject && projectTeamIds.size === 0 && (
+              <p className="mt-1.5 text-xs text-amber-700">Ce projet n'a encore aucune équipe rattachée.</p>
+            )}
           </div>
           <p className="text-xs text-muted-foreground sm:col-span-2">
-            Vous pouvez assigner la tâche à une personne, à une équipe, ou aux deux pour conserver un responsable individuel dans un contexte d’équipe.
+            Le responsable de l'équipe est présélectionné automatiquement. Vous pouvez le remplacer si la règle métier de la tâche l'exige.
+            {projectTeamIds.size > 0 && ' Seules les équipes rattachées au projet sont proposées.'}
           </p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary font-medium">
-          Cette tâche sera automatiquement enregistrée comme tâche personnelle.
+          {selectedTeam?.leader && selectedAssigneeId && String(selectedTeam.leader) !== selectedAssigneeId && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 sm:col-span-2">Le responsable choisi est différent du responsable de l'équipe.</p>
+          )}
         </div>
       )}
 
