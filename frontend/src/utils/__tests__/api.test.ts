@@ -41,4 +41,18 @@ describe('API error normalization', () => {
       })
     }
   })
+
+  it('translates legacy invalid credential errors', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      detail: 'Invalid credentials.',
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })))
+
+    await expect(api.post('/auth/login/', {})).rejects.toMatchObject({
+      status: 401,
+      message: 'Adresse e-mail ou mot de passe incorrect.',
+    })
+  })
 })

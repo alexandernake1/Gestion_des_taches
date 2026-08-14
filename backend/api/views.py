@@ -1,11 +1,44 @@
+import logging
+
+import redis
+from django.conf import settings
+from django.db import DatabaseError, connection
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiTypes
 from services.dashboard import DashboardService
 from common.permissions.permissions import IsManagerOrAdministrator
 from common.utils import get_requested_company
+
+
+logger = logging.getLogger(__name__)
+
+
+@extend_schema(
+    description="Check that the API, database and Redis broker are available.",
+    responses={200: OpenApiTypes.OBJECT, 503: OpenApiTypes.OBJECT},
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """Return a minimal readiness probe without exposing infrastructure details."""
+
+    try:
+        connection.ensure_connection()
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+        redis.Redis.from_url(
+            settings.CELERY_BROKER_URL,
+            socket_connect_timeout=1,
+            socket_timeout=1,
+        ).ping()
+    except (DatabaseError, redis.RedisError):
+        logger.exception('Health check dependency unavailable')
+        return Response({'status': 'unavailable'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    return Response({'status': 'ok'})
 
 
 @extend_schema(

@@ -232,6 +232,18 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = LoginSerializer
     throttle_classes = [LoginRateThrottle]
 
+    @staticmethod
+    def error_response(message, code, response_status):
+        return Response(
+            {
+                'detail': message,
+                'message': message,
+                'code': code,
+                'fields': {},
+            },
+            status=response_status,
+        )
+
     
     @extend_schema(
         description="Authenticate user and return JWT tokens",
@@ -258,17 +270,19 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         password = serializer.validated_data['password']
         
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(email__iexact=email)
             if user.check_password(password):
                 if not user.is_active:
-                    return Response(
-                        {"detail": "This account has been deactivated."},
-                        status=status.HTTP_403_FORBIDDEN
+                    return self.error_response(
+                        "Ce compte a été désactivé. Contactez votre administrateur.",
+                        'account_inactive',
+                        status.HTTP_403_FORBIDDEN,
                     )
                 if user.company and not user.company.is_active:
-                    return Response(
-                        {"detail": "Your enterprise has been deactivated."},
-                        status=status.HTTP_403_FORBIDDEN,
+                    return self.error_response(
+                        "L'espace de travail de votre entreprise a été désactivé. Contactez l'assistance.",
+                        'company_inactive',
+                        status.HTTP_403_FORBIDDEN,
                     )
                 
                 return authentication_response(
@@ -278,9 +292,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         except User.DoesNotExist:
             pass
         
-        return Response(
-            {"detail": "Invalid credentials."},
-            status=status.HTTP_401_UNAUTHORIZED
+        return self.error_response(
+            "Adresse e-mail ou mot de passe incorrect.",
+            'invalid_credentials',
+            status.HTTP_401_UNAUTHORIZED,
         )
 
 

@@ -1,7 +1,8 @@
 from io import StringIO
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
+import redis
 from django.conf import settings as django_settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -40,6 +41,30 @@ def test_readiness_returns_503_when_redis_is_unavailable(_redis_health):
     assert response.data['checks']['redis'] == 'unavailable'
 
 
+@pytest.mark.django_db
+@patch('api.views.redis.Redis.from_url')
+def test_legacy_health_check_reports_ready_dependencies(redis_from_url):
+    redis_from_url.return_value = Mock(ping=Mock(return_value=True))
+
+    response = APIClient().get('/api/health/')
+
+    assert response.status_code == 200
+    assert response.data == {'status': 'ok'}
+
+
+@pytest.mark.django_db
+@patch('api.views.redis.Redis.from_url')
+def test_legacy_health_check_returns_503_when_redis_is_unavailable(redis_from_url):
+    redis_from_url.return_value = Mock(
+        ping=Mock(side_effect=redis.RedisError('Redis unavailable')),
+    )
+
+    response = APIClient().get('/api/health/')
+
+    assert response.status_code == 503
+    assert response.data == {'status': 'unavailable'}
+
+
 @override_settings(JWT_COOKIE_NAME='access_token', WEBSOCKET_ALLOW_QUERY_TOKEN=False)
 def test_websocket_token_comes_from_http_only_cookie_scope():
     scope = {
@@ -55,6 +80,17 @@ def test_websocket_query_token_is_rejected_by_default():
     scope = {'headers': [], 'query_string': b'token=query-token'}
 
     assert get_scope_token(scope) is None
+
+
+def test_celery_discovers_scheduled_tasks():
+    from config.celery import app
+
+    app.loader.import_default_modules()
+
+    assert 'domain.companies.tasks.process_subscription_lifecycle' in app.tasks
+    assert 'domain.notifications.tasks.process_smart_notifications' in app.tasks
+    assert 'process-subscription-lifecycle-hourly' in app.conf.beat_schedule
+    assert 'process-smart-notifications-hourly' in app.conf.beat_schedule
 
 
 @override_settings(

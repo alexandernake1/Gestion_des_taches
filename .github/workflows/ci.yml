@@ -37,6 +37,7 @@ jobs:
       DB_NAME: activity_tracker
       DB_USER: postgres
       DB_PASSWORD: postgres
+      USE_SQLITE: "False"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -92,4 +93,6 @@ jobs:
       DB_PASSWORD: ci-compose-password
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare Compose environment
+        run: cp .env.example .env
       - run: docker compose config --quiet

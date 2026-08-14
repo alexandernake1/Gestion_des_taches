@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily backup timer for Gestion des Taches
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 UTC
+Persistent=true
+RandomizedDelaySec=15m
+Unit=gestion-des-taches-backup.service
+
+[Install]
+WantedBy=timers.target

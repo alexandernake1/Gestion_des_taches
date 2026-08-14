@@ -5,7 +5,7 @@ Branche : `stabilisation/preproduction`
 
 ## Résultat général
 
-Les parcours personnel et entreprise ont été exécutés sur les services Docker locaux. La suite automatisée est verte : 103 tests backend, 13 tests frontend, lint et compilation de production réussis. La contre-recette visuelle a ensuite été réalisée sur desktop et sur un viewport mobile émulé de 390 × 844 px.
+Les parcours personnel et entreprise ont été exécutés sur les services Docker locaux. La suite automatisée est verte : 109 tests backend, 16 tests frontend, lint et compilation de production réussis. La contre-recette visuelle a ensuite été réalisée sur desktop et sur un viewport mobile émulé de 390 × 844 px.
 
 ## Vérifications réalisées
 

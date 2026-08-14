@@ -1,6 +1,7 @@
 from django.urls import path, include
 from .views import (
     company_dashboard,
+    health_check,
     user_dashboard,
     recent_activity,
     performance_metrics
@@ -10,6 +11,7 @@ from .health import liveness, readiness
 urlpatterns = [
     path('health/live/', liveness, name='health_live'),
     path('health/ready/', readiness, name='health_ready'),
+    path('health/', health_check, name='health_check'),
     path('auth/', include('domain.users.urls')),
     path('companies/', include('domain.companies.urls')),
     path('teams/', include('domain.teams.urls')),

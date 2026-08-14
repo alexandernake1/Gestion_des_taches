@@ -9,6 +9,7 @@ import { CaptchaWidget } from '@/components/auth/CaptchaWidget'
 import { isCaptchaEnabled } from '@/components/auth/config'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { PasswordInput } from '@/components/auth/PasswordInput'
+import { ApiError } from '@/utils/api'
 
 export const Route = createFileRoute('/login')({
   beforeLoad: redirectAuthenticatedUser,
@@ -40,6 +41,7 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
+  const [credentialError, setCredentialError] = useState(false)
   const [loading, setLoading] = useState(false)
   const [captchaToken, setCaptchaToken] = useState<string>()
   const [captchaResetKey, setCaptchaResetKey] = useState(0)
@@ -54,6 +56,7 @@ function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setCredentialError(false)
     if (isCaptchaEnabled && !captchaToken) {
       setError("Confirmez que vous n'êtes pas un robot.")
       return
@@ -65,6 +68,7 @@ function LoginPage() {
       queryClient.clear() // Clear cache from any previous sessions
       redirectAfterLogin(response.user)
     } catch (err) {
+      setCredentialError(err instanceof ApiError && err.code === 'invalid_credentials')
       setError(err instanceof Error ? err.message : 'Connexion impossible. Vérifiez vos identifiants.')
       setCaptchaResetKey((key) => key + 1)
       setLoading(false)
@@ -224,7 +228,7 @@ function LoginPage() {
           {/* Form */}
           <form className="space-y-5" onSubmit={handleSubmit}>
             {error && (
-              <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3">
+              <div id="login-error" role="alert" aria-live="assertive" className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3">
                 <div className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
                 <p className="text-[13px] font-medium text-destructive">{error}</p>
               </div>
@@ -239,12 +243,18 @@ function LoginPage() {
                   id="login-email"
                   name="email"
                   type="email"
-                  autoComplete="email"
+                  autoComplete="username"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setError('')
+                    setCredentialError(false)
+                  }}
+                  aria-invalid={credentialError || undefined}
+                  aria-describedby={credentialError ? 'login-error' : undefined}
                   placeholder="vous@entreprise.com"
-                  className="h-11 w-full rounded-xl border border-border/80 bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/25 hover:border-border"
+                  className={`h-11 w-full rounded-xl border bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:outline-none focus:ring-2 ${credentialError ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/20' : 'border-border/80 focus:border-primary/60 focus:ring-primary/25 hover:border-border'}`}
                 />
               </div>
 
@@ -259,9 +269,15 @@ function LoginPage() {
                   autoComplete="current-password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setError('')
+                    setCredentialError(false)
+                  }}
+                  aria-invalid={credentialError || undefined}
+                  aria-describedby={credentialError ? 'login-error' : undefined}
                   placeholder="••••••••"
-                  className="h-11 w-full rounded-xl border border-border/80 bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/25 hover:border-border"
+                  className={`h-11 w-full rounded-xl border bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:outline-none focus:ring-2 ${credentialError ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/20' : 'border-border/80 focus:border-primary/60 focus:ring-primary/25 hover:border-border'}`}
                 />
               </div>
             </div>

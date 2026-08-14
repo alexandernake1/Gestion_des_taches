@@ -3,6 +3,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { playNotificationSound, sendDesktopNotification } from '@/utils/notifications'
+import { api } from '@/utils/api'
+
+type WebSocketLocation = Pick<Location, 'protocol' | 'host'>
+
+export function notificationWebSocketUrl(location: WebSocketLocation = window.location): string {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${location.host}/ws/notifications/`
+}
 
 export function useWebSocket() {
   const queryClient = useQueryClient()
@@ -10,16 +18,25 @@ export function useWebSocket() {
   const ws = useRef<WebSocket | null>(null)
 
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const url = `${protocol}//${window.location.host}/ws/notifications/`
-    let disposed = false
+    let stopped = false
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+    let attempt = 0
 
-    const connect = () => {
-      if (disposed) return
-      ws.current = new WebSocket(url)
+    const connect = async () => {
+      if (stopped) return
+
+      try {
+        // Confirm or refresh the HttpOnly session before opening the socket.
+        await api.get('/auth/me/')
+      } catch {
+        return
+      }
+
+      if (stopped) return
+      ws.current = new WebSocket(notificationWebSocketUrl())
 
       ws.current.onopen = () => {
+        attempt = 0
         console.log('WebSocket connected')
       }
 
@@ -77,18 +94,21 @@ export function useWebSocket() {
       }
 
       ws.current.onclose = () => {
-        if (disposed) return
-        reconnectTimer = setTimeout(connect, 3000)
+        if (stopped) return
+        const delay = Math.min(1000 * 2 ** attempt, 30000)
+        attempt += 1
+        console.log(`WebSocket disconnected, reconnecting in ${delay / 1000}s...`)
+        reconnectTimer = setTimeout(() => void connect(), delay)
       }
     }
 
-    connect()
+    void connect()
 
     return () => {
-      disposed = true
+      stopped = true
       if (reconnectTimer) clearTimeout(reconnectTimer)
       if (ws.current) {
-        ws.current.onclose = null;
+        ws.current.onclose = null
         ws.current.close()
       }
     }

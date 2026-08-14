@@ -1,0 +1,13 @@
+[Unit]
+Description=Backup PostgreSQL database for Gestion des Taches
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/Gestion_des_taches
+Environment=BACKUP_RETENTION_DAYS=14
+Environment=BACKUP_DIR=/home/ubuntu/backups/Gestion_des_taches
+ExecStart=/home/ubuntu/Gestion_des_taches/ops/backup-postgres.sh

@@ -25,7 +25,10 @@ services:
   redis:
     image: redis:7-alpine
     container_name: activity_tracker_redis
+    command: redis-server --appendonly yes --appendfsync everysec
     restart: unless-stopped
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -58,7 +61,7 @@ services:
       - static_data:/app/staticfiles
       - media_data:/app/media
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/ready/', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready/', timeout=3)"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -68,7 +71,7 @@ services:
     <<: *backend-image
     container_name: activity_tracker_celery_worker
     restart: unless-stopped
-    command: celery -A config worker --loglevel=INFO --concurrency=2 --uid=nobody --gid=nogroup
+    command: celery -A config worker --loglevel=INFO --concurrency=2 --hostname=worker@%h --uid=nobody --gid=nogroup
     depends_on:
       backend:
         condition: service_healthy
@@ -76,6 +79,12 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d worker@$$HOSTNAME --timeout=5 | grep -q pong"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   celery_beat:
     <<: *backend-image
@@ -117,5 +126,6 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   static_data:
   media_data:
