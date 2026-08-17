@@ -467,6 +467,13 @@ class TaskComment(models.Model):
         on_delete=models.SET_NULL,
         null=True
     )
+    parent_comment = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='replies',
+    )
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -477,6 +484,7 @@ class TaskComment(models.Model):
         indexes = [
             models.Index(fields=['task']),
             models.Index(fields=['author']),
+            models.Index(fields=['parent_comment'], name='task_comment_parent_idx'),
         ]
     
     def __str__(self):

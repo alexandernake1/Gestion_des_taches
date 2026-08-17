@@ -478,11 +478,18 @@ class TaskCommentSerializer(serializers.ModelSerializer):
     """Serializer for TaskComment."""
     
     author_name = serializers.CharField(source='author.full_name', read_only=True)
+    parent_comment_author_name = serializers.CharField(
+        source='parent_comment.author.full_name', read_only=True, allow_null=True
+    )
+    parent_comment_content = serializers.CharField(
+        source='parent_comment.content', read_only=True, allow_null=True
+    )
     
     class Meta:
         model = TaskComment
         fields = [
-            'id', 'task', 'author', 'author_name', 'content',
+            'id', 'task', 'author', 'author_name', 'parent_comment',
+            'parent_comment_author_name', 'parent_comment_content', 'content',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'author', 'created_at', 'updated_at']
@@ -490,10 +497,32 @@ class TaskCommentSerializer(serializers.ModelSerializer):
 
 class TaskCommentCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating a task comment."""
+
+    parent_comment = serializers.PrimaryKeyRelatedField(
+        queryset=TaskComment.objects.select_related('task').all(),
+        required=False,
+        allow_null=True,
+    )
     
     class Meta:
         model = TaskComment
-        fields = ['content']
+        fields = ['content', 'parent_comment']
+
+    def validate(self, attrs):
+        parent_comment = attrs.get('parent_comment')
+        task = self.context.get('task')
+
+        if parent_comment:
+            if not task or parent_comment.task_id != task.id:
+                raise serializers.ValidationError({
+                    'parent_comment': "Le commentaire d'origine doit appartenir à cette tâche."
+                })
+            if parent_comment.parent_comment_id:
+                raise serializers.ValidationError({
+                    'parent_comment': "Une réponse doit cibler le commentaire principal."
+                })
+
+        return attrs
 
 
 class TaskCommentUpdateSerializer(serializers.ModelSerializer):

@@ -28,6 +28,7 @@ from domain.tasks.models import (
     Project,
     Status,
     Task,
+    TaskComment,
     TaskHistory,
     TaskReport,
     TaskTemplate,
@@ -294,6 +295,83 @@ def test_cannot_comment_on_another_tenant_task(api_client, tenant_data):
     )
 
     assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_user_can_reply_to_a_task_comment_and_parent_author_is_notified(api_client, tenant_data):
+    task = tenant_data['task_a']
+    original_author = tenant_data['employee_a']
+    responder = tenant_data['manager_a']
+    original_comment = TaskComment.objects.create(
+        task=task,
+        author=original_author,
+        content='Peux-tu confirmer la date de livraison ?',
+    )
+
+    Notification.objects.all().delete()
+    api_client.force_authenticate(responder)
+    response = api_client.post(
+        f'/api/tasks/{task.id}/comments/',
+        {
+            'content': 'Oui, la livraison est prévue vendredi.',
+            'parent_comment': original_comment.id,
+        },
+        format='json',
+    )
+
+    assert response.status_code == 201
+    reply = TaskComment.objects.get(parent_comment=original_comment)
+    assert reply.author == responder
+
+    comments = api_client.get(f'/api/tasks/{task.id}/comments/')
+    serialized_reply = next(
+        item for item in comments.data['results'] if item['id'] == reply.id
+    )
+    assert serialized_reply['parent_comment'] == original_comment.id
+    assert serialized_reply['parent_comment_author_name'] == original_author.full_name
+    assert serialized_reply['parent_comment_content'] == original_comment.content
+
+    notification = Notification.objects.get(recipient=original_author, type=NotificationType.COMMENT)
+    assert notification.title == 'Réponse à votre commentaire'
+    assert 'vous a répondu' in notification.message
+
+
+@pytest.mark.django_db
+def test_reply_must_target_a_top_level_comment_from_the_same_task(api_client, tenant_data):
+    task = tenant_data['task_a']
+    original_comment = TaskComment.objects.create(
+        task=task,
+        author=tenant_data['employee_a'],
+        content='Commentaire initial',
+    )
+    reply = TaskComment.objects.create(
+        task=task,
+        author=tenant_data['manager_a'],
+        content='Première réponse',
+        parent_comment=original_comment,
+    )
+    foreign_comment = TaskComment.objects.create(
+        task=tenant_data['task_b'],
+        author=tenant_data['employee_b'],
+        content='Autre tâche',
+    )
+
+    api_client.force_authenticate(tenant_data['manager_a'])
+    nested_response = api_client.post(
+        f'/api/tasks/{task.id}/comments/',
+        {'content': 'Réponse imbriquée', 'parent_comment': reply.id},
+        format='json',
+    )
+    foreign_response = api_client.post(
+        f'/api/tasks/{task.id}/comments/',
+        {'content': 'Mauvais commentaire parent', 'parent_comment': foreign_comment.id},
+        format='json',
+    )
+
+    assert nested_response.status_code == 400
+    assert 'parent_comment' in nested_response.data
+    assert foreign_response.status_code == 400
+    assert 'parent_comment' in foreign_response.data
 
 
 @pytest.mark.django_db

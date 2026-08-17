@@ -136,12 +136,26 @@ def comment_post_save(sender, instance, created, **kwargs):
             recipients.add(task.assigned_to)
 
         author_name = instance.author.full_name if instance.author else "Un utilisateur"
+        reply_recipient = None
+        if (
+            instance.parent_comment
+            and instance.parent_comment.author
+            and instance.parent_comment.author != instance.author
+        ):
+            reply_recipient = instance.parent_comment.author
+            recipients.add(reply_recipient)
+
         for recipient in recipients:
+            is_direct_reply = recipient == reply_recipient
             create_smart_notification(
                 recipient=recipient,
                 notification_type=NotificationType.COMMENT,
-                title="Nouveau commentaire",
-                message=f"{author_name} a commenté la tâche '{task.title}'.",
+                title="Réponse à votre commentaire" if is_direct_reply else "Nouveau commentaire",
+                message=(
+                    f"{author_name} vous a répondu sur la tâche '{task.title}'."
+                    if is_direct_reply
+                    else f"{author_name} a commenté la tâche '{task.title}'."
+                ),
                 task=task,
                 dedupe_key=f'comment:{instance.id}:{recipient.id}',
             )

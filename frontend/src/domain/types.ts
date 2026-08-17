@@ -249,6 +249,9 @@ export interface TaskComment {
   task: number;
   author: number;
   author_name?: string;
+  parent_comment?: number | null;
+  parent_comment_author_name?: string | null;
+  parent_comment_content?: string | null;
   content: string;
   created_at: string;
   updated_at: string;
@@ -470,6 +473,7 @@ export interface TaskTemplate {
 
 export interface TaskCommentCreateRequest {
   content: string;
+  parent_comment?: number;
 }
 
 export interface TaskReportCreateRequest {

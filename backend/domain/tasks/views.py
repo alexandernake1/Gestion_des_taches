@@ -936,7 +936,15 @@ class TaskCommentListCreateView(generics.ListCreateAPIView):
             return TaskComment.objects.none()
         task_id = self.kwargs['task_id']
         task = get_accessible_task(self.request, task_id)
-        return TaskComment.objects.filter(task=task).select_related('author')
+        return TaskComment.objects.filter(task=task).select_related(
+            'author', 'parent_comment__author'
+        )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.method == 'POST' and not getattr(self, 'swagger_fake_view', False):
+            context['task'] = get_accessible_task(self.request, self.kwargs['task_id'])
+        return context
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -958,7 +966,9 @@ class TaskCommentDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         task = get_accessible_task(self.request, self.kwargs['task_id'])
-        return TaskComment.objects.filter(task=task)
+        return TaskComment.objects.filter(task=task).select_related(
+            'author', 'parent_comment__author'
+        )
     
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
