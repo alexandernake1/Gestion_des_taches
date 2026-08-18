@@ -1,30 +1,25 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, redirect } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Building2,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  CreditCard,
-  LogOut,
-  ShieldCheck,
-  UserRound,
-} from 'lucide-react'
 import { useState } from 'react'
-
+import { Building2, Check, ChevronLeft, ChevronRight, CreditCard, LogOut, ShieldCheck, UserRound } from 'lucide-react'
 import { authService } from '@/services/auth'
 import { subscriptionsService } from '@/services/subscriptions'
+import { ApiError } from '@/utils/api'
 import { requireAuthentication } from '@/router/auth'
 import type { CompanyOnboardingRequest, WorkspaceType } from '@/domain/types'
-import { ApiError } from '@/utils/api'
 
 export const Route = createFileRoute('/onboarding')({
   beforeLoad: async () => {
     const user = await requireAuthentication()
-    if (user.company && !user.is_personal_workspace) {
+    if (user.company && !user.is_personal_workspace && !user.is_superuser) {
       throw redirect({ to: '/dashboard' })
     }
-    return { onboardingUser: user }
+    return {
+      title: user.is_personal_workspace
+        ? 'Passer à une structure'
+        : 'Configuration de votre espace',
+      onboardingUser: user,
+    }
   },
   component: OnboardingPage,
 })
@@ -33,7 +28,6 @@ type OnboardingStep = 'usage' | 'plan' | 'company'
 
 const initialForm: CompanyOnboardingRequest = {
   company_name: '',
-  company_slug: '',
   website: '',
   contact_email: '',
   contact_phone: '',
@@ -68,13 +62,16 @@ function OnboardingPage() {
   const selectedPlan = plans.find((plan) => plan.code === form.plan_code)
 
   const mutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (usageType === 'personal') {
-        return authService.completePersonalOnboarding({ plan_code: form.plan_code })
+        return authService.onboardPersonal({
+          plan_code: form.plan_code,
+        })
       }
-      return authService.completeCompanyOnboarding({
+      return authService.onboardCompany({
         ...form,
         contact_email: form.contact_email || user.email,
+        contact_phone: form.contact_phone || user.phone || '',
       })
     },
     onSuccess: async (response) => {
@@ -144,7 +141,7 @@ function OnboardingPage() {
               <strong className="block text-slate-950">Bienvenue {user.first_name}</strong>
               <span className="text-xs text-slate-500">
                 {isConvertingPersonalSpace
-                  ? 'Transformez votre espace personnel en entreprise'
+                  ? 'Transformez votre espace personnel en structure'
                   : 'Votre compte est créé, choisissez maintenant votre usage'}
               </span>
             </span>
@@ -166,10 +163,10 @@ function OnboardingPage() {
             </h1>
             <p className="mt-4 text-sm leading-6 text-indigo-100">
               {isConvertingPersonalSpace
-                ? 'Vos tâches et vos projets seront conservés pendant la création de votre entreprise.'
+                ? 'Vos tâches et vos projets seront conservés pendant la création de votre structure.'
                 : usageType === 'company'
-                ? 'Configurez votre entreprise pour inviter des collaborateurs et organiser le travail en équipe.'
-                : 'Un compte personnel ne demande aucune information d’entreprise. Vous pourrez créer une organisation plus tard sans perdre vos tâches.'}
+                ? 'Configurez votre structure pour inviter des collaborateurs et organiser le travail en équipe.'
+                : 'Un compte personnel ne demande aucune information de structure. Vous pourrez créer une organisation plus tard sans perdre vos tâches.'}
             </p>
             <div className="mt-8 space-y-5">
               <Step active={false} done icon={UserRound} number={1} label="Compte utilisateur" />
@@ -178,7 +175,7 @@ function OnboardingPage() {
               )}
               <Step active={step === 'plan'} done={step === 'company'} icon={CreditCard} number={isConvertingPersonalSpace ? 2 : 3} label="Forfait adapté" />
               {usageType === 'company' && (
-                <Step active={step === 'company'} done={false} icon={Building2} number={isConvertingPersonalSpace ? 3 : 4} label="Entreprise" />
+                <Step active={step === 'company'} done={false} icon={Building2} number={isConvertingPersonalSpace ? 3 : 4} label="Structure" />
               )}
             </div>
           </aside>
@@ -195,12 +192,12 @@ function OnboardingPage() {
                     icon={UserRound}
                     title="Usage personnel"
                     description="Gérez vos propres tâches, projets et échéances dans un espace strictement privé."
-                    highlights={['Aucune entreprise requise', 'Organisation de vos tâches', 'Évolution possible plus tard']}
+                    highlights={['Aucune structure requise', 'Organisation de vos tâches', 'Évolution possible plus tard']}
                     onClick={() => selectUsage('personal')}
                   />
                   <UsageCard
                     icon={Building2}
-                    title="Usage en entreprise"
+                    title="Usage en structure"
                     description="Pilotez une organisation, ses équipes, ses collaborateurs et ses validations."
                     highlights={['Gestion des équipes', 'Invitations de collaborateurs', 'Validation et pilotage']}
                     onClick={() => selectUsage('company')}
@@ -212,7 +209,7 @@ function OnboardingPage() {
             {step === 'plan' && (
               <>
                 <h2 className="text-2xl font-black text-slate-950">
-                  Forfaits {usageType === 'personal' ? 'personnels' : 'entreprise'}
+                  Forfaits {usageType === 'personal' ? 'personnels' : 'structure'}
                 </h2>
                 <p className="mt-2 text-sm text-slate-500">
                   Seules les offres compatibles avec votre type d’utilisation sont affichées.
@@ -261,11 +258,10 @@ function OnboardingPage() {
 
             {step === 'company' && (
               <form onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
-                <h2 className="text-2xl font-black text-slate-950">Informations de l'entreprise</h2>
+                <h2 className="text-2xl font-black text-slate-950">Informations de la structure</h2>
                 <p className="mt-2 text-sm text-slate-500">Ces informations activent les fonctions collaboratives. Vos tâches existantes seront conservées.</p>
                 <div className="mt-7 grid gap-5 sm:grid-cols-2">
-                  <Field label="Nom de l'entreprise" required value={form.company_name} error={fieldErrors.company_name?.[0]} onChange={(value) => update('company_name', value)} />
-                  <Field label="Identifiant de l'espace" value={form.company_slug || ''} error={fieldErrors.company_slug?.[0]} placeholder="mon-entreprise" onChange={(value) => update('company_slug', value)} />
+                  <Field label="Nom de la structure" required value={form.company_name} error={fieldErrors.company_name?.[0]} onChange={(value) => update('company_name', value)} />
                   <Field label="Email de contact" type="email" required value={form.contact_email || user.email} error={fieldErrors.contact_email?.[0]} onChange={(value) => update('contact_email', value)} />
                   <Field label="Téléphone de contact" type="tel" required value={form.contact_phone} error={fieldErrors.contact_phone?.[0]} onChange={(value) => update('contact_phone', value)} />
                   <Field label="Adresse" value={form.address || ''} error={fieldErrors.address?.[0]} onChange={(value) => update('address', value)} />
@@ -273,7 +269,7 @@ function OnboardingPage() {
                 </div>
                 <footer className="mt-8 flex items-center justify-between border-t border-slate-100 pt-6">
                   <button type="button" onClick={() => setStep('plan')} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500"><ChevronLeft className="h-4 w-4" />Retour</button>
-                  <button type="submit" disabled={mutation.isPending} className="h-11 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50">{mutation.isPending ? 'Création…' : isConvertingPersonalSpace ? "Créer mon entreprise" : "Créer l'entreprise"}</button>
+                  <button type="submit" disabled={mutation.isPending} className="h-11 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50">{mutation.isPending ? 'Création…' : isConvertingPersonalSpace ? "Créer ma structure" : "Créer la structure"}</button>
                 </footer>
               </form>
             )}

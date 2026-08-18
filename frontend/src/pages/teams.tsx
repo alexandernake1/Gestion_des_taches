@@ -10,10 +10,11 @@ import { teamsService } from '@/services/teams'
 import { authService } from '@/services/auth'
 import { tasksService } from '@/services/tasks'
 import type { Team, User } from '@/domain/types'
-import { Archive, ArchiveRestore, CheckCircle2, Plus, Search, ShieldCheck, Trash2, UserRound, Users, X } from 'lucide-react'
-import { useState } from 'react'
+import { Archive, ArchiveRestore, CheckCircle2, Plus, Search, ShieldCheck, Trash2, UserRound, Users, X, AlertCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { requireManagement } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { ROLE_LABELS } from '@/constants/labels'
 
 export const Route = createFileRoute('/teams')({
   beforeLoad: requireManagement,
@@ -66,7 +67,7 @@ function TeamsPage() {
   const handleDelete = async (team: Team) => {
     const { confirmed } = await confirmAction({
       title: `Supprimer définitivement l’équipe « ${team.name} » ?`,
-      description: 'Cette action est réservée au propriétaire et ne peut pas être annulée.',
+      description: 'Cette action est réservée à l’administrateur de la structure et ne peut pas être annulée.',
       confirmLabel: 'Supprimer définitivement',
       tone: 'danger',
       impacts: [
@@ -271,6 +272,22 @@ function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | nul
     queryFn: () => teamsService.get(Number(team!.id)),
     enabled: team !== null,
   })
+
+  const [leaderId, setLeaderId] = useState<number | undefined>(undefined)
+  const [selectedMembers, setSelectedMembers] = useState<number[]>([])
+
+  useEffect(() => {
+    if (details) {
+      setLeaderId(details.leader || undefined)
+      setSelectedMembers(details.members || [])
+    }
+  }, [details])
+
+  const effectiveMembers = new Set([
+    ...selectedMembers,
+    ...(leaderId ? [leaderId] : []),
+  ])
+
   const mutation = useMutation({
     mutationFn: (data: { name: string; description?: string; leader?: number; is_active: boolean; member_ids: number[] }) =>
       teamsService.update(Number(team!.id), data),
@@ -282,16 +299,27 @@ function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | nul
     enabled: team !== null,
   })
 
+  const handleMemberToggle = (userId: number) => {
+    setSelectedMembers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    )
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
-    const leader = data.get('leader') as string
+    const isActive = data.get('is_active') === 'on'
+
+    if (isActive && effectiveMembers.size < 2) {
+      return
+    }
+
     const payload = {
       name: data.get('name') as string,
       description: data.get('description') as string || undefined,
-      leader: leader ? Number(leader) : undefined,
-      is_active: data.get('is_active') === 'on',
-      member_ids: data.getAll('member_ids').map((value) => Number(value)),
+      leader: leaderId,
+      is_active: isActive,
+      member_ids: Array.from(effectiveMembers),
     }
 
     if (details && details.is_active !== payload.is_active) {
@@ -324,24 +352,57 @@ function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | nul
             <textarea name="description" rows={3} defaultValue={details.description} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
           </label>
           <label className="block text-sm font-medium text-slate-700">Responsable
-            <select name="leader" defaultValue={details.leader || ''} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+            <select
+              name="leader"
+              value={leaderId || ''}
+              onChange={(e) => setLeaderId(e.target.value ? Number(e.target.value) : undefined)}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+            >
               <option value="">Aucun responsable</option>
-              {users.map((user) => <option key={user.id} value={user.id}>{user.full_name} — {user.role_display}</option>)}
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.full_name} — {ROLE_LABELS[user.role] || user.role_display}
+                </option>
+              ))}
             </select>
           </label>
           <fieldset>
-            <legend className="mb-2 text-sm font-medium text-slate-700">Membres</legend>
-            <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-slate-200 p-3">
-              {users.map((user) => (
-                <label key={user.id} className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
-                  <input name="member_ids" type="checkbox" value={user.id} defaultChecked={details.members?.map(String).includes(String(user.id))} />
-                  <span>{user.full_name}</span>
-                  <span className="ml-auto text-xs text-slate-400">{user.role_display}</span>
-                </label>
-              ))}
+            <div className="mb-2 flex items-center justify-between">
+              <legend className="text-sm font-medium text-slate-700">Membres</legend>
+              <span className={`text-xs font-semibold ${effectiveMembers.size >= 2 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {effectiveMembers.size} personne{effectiveMembers.size > 1 ? 's' : ''} (min. 2)
+              </span>
             </div>
+            <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-slate-200 p-3">
+              {users.map((user) => {
+                const isLeader = user.id === leaderId
+                const isChecked = isLeader || selectedMembers.includes(user.id)
+                return (
+                  <label key={user.id} className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      value={user.id}
+                      checked={isChecked}
+                      disabled={isLeader}
+                      onChange={() => handleMemberToggle(user.id)}
+                    />
+                    <span>{user.full_name}</span>
+                    {isLeader && <span className="text-xs font-bold text-indigo-600">(Responsable)</span>}
+                    <span className="ml-auto text-xs text-slate-400">{ROLE_LABELS[user.role] || user.role_display}</span>
+                  </label>
+                )
+              })}
+            </div>
+            {effectiveMembers.size < 2 && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                Sélectionnez au moins deux personnes, responsable compris.
+              </p>
+            )}
           </fieldset>
-          <label className="flex items-center gap-2 text-sm text-slate-700"><input name="is_active" type="checkbox" defaultChecked={details.is_active} /> Équipe active</label>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input name="is_active" type="checkbox" defaultChecked={details.is_active} /> Équipe active
+          </label>
           <div>
             <h3 className="mb-2 text-sm font-medium text-slate-700">Tâches de l’équipe ({teamTasks.length})</h3>
             <div className="max-h-44 space-y-2 overflow-auto rounded-xl bg-slate-50 p-3">
@@ -357,7 +418,9 @@ function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | nul
           {mutation.isError && <p className="text-sm text-rose-600">{mutation.error instanceof Error ? mutation.error.message : 'Modification impossible.'}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={onClose}>Annuler</Button>
-            <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Enregistrement…' : 'Enregistrer'}</Button>
+            <Button type="submit" disabled={mutation.isPending || effectiveMembers.size < 2}>
+              {mutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
+            </Button>
           </div>
         </form>
       )}
@@ -366,19 +429,38 @@ function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | nul
 }
 
 function CreateTeamModal({ isOpen, onClose, onSuccess, users }: { isOpen: boolean; onClose: () => void; onSuccess: () => void; users: User[] }) {
+  const [leaderId, setLeaderId] = useState<number | undefined>(undefined)
+  const [selectedMembers, setSelectedMembers] = useState<number[]>([])
+
+  const effectiveMembers = new Set([
+    ...selectedMembers,
+    ...(leaderId ? [leaderId] : []),
+  ])
+
   const mutation = useMutation({
     mutationFn: teamsService.create,
-    onSuccess
+    onSuccess: () => {
+      setLeaderId(undefined)
+      setSelectedMembers([])
+      onSuccess()
+    }
   })
+
+  const handleMemberToggle = (userId: number) => {
+    setSelectedMembers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    )
+  }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (effectiveMembers.size < 2) return
     const formData = new FormData(e.currentTarget)
     mutation.mutate({
       name: formData.get('name') as string,
       description: formData.get('description') as string || undefined,
-      leader: Number(formData.get('leader')),
-      member_ids: formData.getAll('member_ids').map((value) => Number(value)),
+      leader: leaderId ? Number(leaderId) : Number(formData.get('leader')),
+      member_ids: Array.from(effectiveMembers),
     })
   }
 
@@ -417,30 +499,64 @@ function CreateTeamModal({ isOpen, onClose, onSuccess, users }: { isOpen: boolea
           <select
             name="leader"
             required
+            value={leaderId || ''}
+            onChange={(e) => setLeaderId(e.target.value ? Number(e.target.value) : undefined)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Choisir un responsable</option>
-            {users.map((user) => <option key={user.id} value={user.id}>{user.full_name} — {user.role_display}</option>)}
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.full_name} — {ROLE_LABELS[user.role] || user.role_display}
+              </option>
+            ))}
           </select>
         </div>
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-gray-700">Membres</legend>
-          <div className="max-h-44 space-y-2 overflow-auto rounded-xl border border-slate-200 p-3">
-            {users.map((user) => (
-              <label key={user.id} className="flex items-center gap-3 text-sm text-slate-700">
-                <input name="member_ids" type="checkbox" value={user.id} />
-                {user.full_name}
-                <span className="ml-auto text-xs text-slate-400">{user.role_display}</span>
-              </label>
-            ))}
+          <div className="mb-2 flex items-center justify-between">
+            <legend className="text-sm font-medium text-gray-700">Membres</legend>
+            <span className={`text-xs font-semibold ${effectiveMembers.size >= 2 ? 'text-emerald-600' : 'text-amber-600'}`}>
+              {effectiveMembers.size} personne{effectiveMembers.size > 1 ? 's' : ''} (min. 2)
+            </span>
           </div>
+          <div className="max-h-44 space-y-2 overflow-auto rounded-xl border border-slate-200 p-3">
+            {users.map((user) => {
+              const isLeader = user.id === leaderId
+              const isChecked = isLeader || selectedMembers.includes(user.id)
+              return (
+                <label key={user.id} className="flex items-center gap-3 text-sm text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    value={user.id}
+                    checked={isChecked}
+                    disabled={isLeader}
+                    onChange={() => handleMemberToggle(user.id)}
+                  />
+                  <span>{user.full_name}</span>
+                  {isLeader && <span className="text-xs font-bold text-indigo-600">(Responsable)</span>}
+                  <span className="ml-auto text-xs text-slate-400">{ROLE_LABELS[user.role] || user.role_display}</span>
+                </label>
+              )
+            })}
+          </div>
+          {effectiveMembers.size < 2 && (
+            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              Sélectionnez au moins deux personnes, responsable compris.
+            </p>
+          )}
         </fieldset>
+
+        {mutation.isError && (
+          <p className="text-sm text-rose-600">
+            {mutation.error instanceof Error ? mutation.error.message : 'Création impossible.'}
+          </p>
+        )}
 
         <div className="flex justify-end gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button type="submit" disabled={mutation.isPending || effectiveMembers.size < 2}>
             {mutation.isPending ? 'Création...' : 'Créer'}
           </Button>
         </div>

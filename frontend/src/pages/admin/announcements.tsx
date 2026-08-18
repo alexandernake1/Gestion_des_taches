@@ -266,7 +266,7 @@ function AnnouncementModal({ isOpen, onClose, announcement }: { isOpen: boolean;
             className="mt-1 w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           >
             <option value="all">Tous les utilisateurs</option>
-            <option value="owners">Propriétaires d'entreprise uniquement</option>
+            <option value="owners">Administrateurs de structure uniquement</option>
           </select>
         </div>
 

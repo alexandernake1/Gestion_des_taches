@@ -3,7 +3,7 @@ from django.db import models
 
 
 class WorkspaceType(models.TextChoices):
-    COMPANY = 'company', 'Entreprise'
+    COMPANY = 'company', 'Structure'
     PERSONAL = 'personal', 'Personnel'
 
 

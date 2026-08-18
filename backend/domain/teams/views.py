@@ -43,7 +43,7 @@ class TeamListCreateView(generics.ListCreateAPIView):
         company = get_requested_company(self.request)
         if not company:
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Vous devez sélectionner une entreprise ou appartenir à une entreprise pour créer une équipe.")
+            raise PermissionDenied("Vous devez sélectionner une structure ou appartenir à une structure pour créer une équipe.")
         serializer.save(company=company)
     
     @extend_schema(
@@ -63,14 +63,14 @@ class TeamListCreateView(generics.ListCreateAPIView):
         company = get_requested_company(request)
         if company and company.is_personal:
             return Response(
-                {"detail": "Les équipes sont réservées aux espaces entreprise."},
+                {"detail": "Les équipes sont réservées aux structures."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         if not request.user.is_superuser and company and hasattr(company, 'subscription'):
             subscription = company.subscription
             if subscription.is_suspended():
                 return Response(
-                    {"detail": "Your company subscription is currently suspended."},
+                    {"detail": "L'abonnement de votre structure est actuellement suspendu."},
                     status=status.HTTP_403_FORBIDDEN
                 )
             max_teams = subscription.effective_max_teams
@@ -78,7 +78,7 @@ class TeamListCreateView(generics.ListCreateAPIView):
                 current_teams_count = Team.objects.filter(company=company, is_active=True).count()
                 if current_teams_count >= max_teams:
                     return Response(
-                        {"detail": f"Company team limit ({max_teams}) reached for your subscription plan. Upgrade your plan to create more teams."},
+                        {"detail": f"La limite d'équipes ({max_teams}) pour votre forfait a été atteinte. Mettez à niveau votre forfait pour créer plus d'équipes."},
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
@@ -187,7 +187,7 @@ def add_team_member(request, team_id, user_id):
         team = Team.objects.get(id=team_id, company=company)
     except Team.DoesNotExist:
         return Response(
-            {"detail": "Team not found."},
+            {"detail": "Équipe introuvable."},
             status=status.HTTP_404_NOT_FOUND
         )
     
@@ -196,20 +196,20 @@ def add_team_member(request, team_id, user_id):
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return Response(
-            {"detail": "User not found."},
+            {"detail": "Utilisateur introuvable."},
             status=status.HTTP_404_NOT_FOUND
         )
     
     # Check if user is in the same company
     if user.company != company or not user.is_active:
         return Response(
-            {"detail": "User must be an active member of the same enterprise."},
+            {"detail": "L'utilisateur doit être un membre actif de votre structure."},
             status=status.HTTP_400_BAD_REQUEST
         )
     
     team.members.add(user)
     return Response(
-        {"detail": "Member added successfully."},
+        {"detail": "Membre ajouté avec succès."},
         status=status.HTTP_200_OK
     )
 
@@ -234,7 +234,7 @@ def remove_team_member(request, team_id, user_id):
         team = Team.objects.get(id=team_id, company=company)
     except Team.DoesNotExist:
         return Response(
-            {"detail": "Team not found."},
+            {"detail": "Équipe introuvable."},
             status=status.HTTP_404_NOT_FOUND
         )
     
@@ -243,26 +243,39 @@ def remove_team_member(request, team_id, user_id):
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return Response(
-            {"detail": "User not found."},
+            {"detail": "Utilisateur introuvable."},
             status=status.HTTP_404_NOT_FOUND
         )
     
     if user.company != company:
         return Response(
-            {"detail": "User must be from the same enterprise."},
+            {"detail": "L'utilisateur doit appartenir à votre structure."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     # Prevent removing the team leader while they are still the leader.
     if team.leader == user:
         return Response(
-            {"detail": "Impossible de retirer le responsable de l'\u00e9quipe. Veuillez d'abord lui assigner un remplaçant."},
+            {"detail": "Impossible de retirer le responsable de l'équipe. Veuillez d'abord lui assigner un remplaçant."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    # If team is active, enforce minimum 2 distinct active members (including leader)
+    if team.is_active:
+        remaining_members = set(
+            team.members.filter(is_active=True).exclude(id=user.id).values_list('id', flat=True)
+        )
+        if team.leader_id:
+            remaining_members.add(team.leader_id)
+        if len(remaining_members) < 2:
+            return Response(
+                {"detail": "Une équipe active doit compter au moins deux personnes, responsable compris."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     team.members.remove(user)
 
     return Response(
-        {"detail": "Member removed successfully."},
+        {"detail": "Membre retiré avec succès."},
         status=status.HTTP_200_OK
     )

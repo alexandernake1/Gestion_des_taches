@@ -26,8 +26,8 @@ export const Route = createFileRoute('/tasks')({
 })
 
 const exportScopeTitles: Record<string, string> = {
-  assigned: 'Tâches assignées à moi',
-  mine: 'Tâches créées par moi',
+  assigned: 'Mes tâches',
+  mine: 'Tâches créées',
   team: "Tâches d'équipe",
   all: 'Toutes les tâches',
 }
@@ -69,26 +69,22 @@ function TasksPage() {
     queryFn: subscriptionsService.getMySubscription,
   })
 
-
-
   const isEmployee = currentUser?.role === 'employee'
   const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
 
-  // Employees only have personal + team scopes.
-  // Managers/admins/owners have personal + assigned + all.
   const scopes = isPersonalWorkspace
     ? [{ id: 'all', label: 'Mes tâches' }]
     : isEmployee
     ? [
-        { id: 'assigned', label: 'Assignées à moi' },
-        { id: 'mine', label: 'Créées par moi' },
-        { id: 'team', label: 'Uniquement les tâches de mon équipe' },
+        { id: 'assigned', label: 'Mes tâches' },
+        { id: 'mine', label: 'Tâches créées' },
+        { id: 'team', label: 'Tâches de mon équipe' },
         { id: 'all', label: 'Toutes mes tâches' },
       ]
     : [
-        { id: 'assigned', label: 'Assignées à moi' },
-        { id: 'mine', label: 'Créées par moi' },
-        { id: 'team', label: 'Uniquement les tâches d\'équipe' },
+        { id: 'assigned', label: 'Mes tâches' },
+        { id: 'mine', label: 'Tâches créées' },
+        { id: 'team', label: "Tâches d'équipe" },
         { id: 'all', label: 'Toutes les tâches' },
       ]
 
@@ -100,7 +96,7 @@ function TasksPage() {
   
   // Fonctionnalités autorisées par le forfait
   const featureFlags = subscription?.plan_details?.feature_flags || {}
-  const hasKanban = featureFlags['has_kanban_view'] !== false // Par défaut true
+  const hasKanban = featureFlags['has_kanban_view'] !== false
   const hasCalendar = featureFlags['has_calendar_view'] === true
   const hasTimeline = featureFlags['has_timeline_view'] === true
   const hasExports = featureFlags['has_exports'] === true
@@ -306,7 +302,7 @@ function TasksPage() {
                 {isPersonalWorkspace
                   ? 'Organisez vos tâches, vos échéances et votre progression dans une vue adaptée à votre quotidien.'
                   : isEmployee
-                  ? 'Retrouvez vos tâches assignées, vos échéances et votre progression dans une vue adaptée à votre quotidien.'
+                  ? 'Retrouvez vos tâches, vos échéances et votre progression dans une vue adaptée à votre quotidien.'
                   : 'Suivez la charge, repérez les retards et faites avancer le travail de l’équipe depuis un seul écran.'}
               </p>
             </div>
@@ -322,7 +318,7 @@ function TasksPage() {
               </Button>
               <Button size="lg" onClick={() => navigate({ to: '/tasks/create' })} className="col-span-2 min-w-0 sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
-                {isPersonalWorkspace ? 'Créer une tâche' : isEmployee ? 'Créer une tâche personnelle' : 'Créer et assigner une tâche'}
+                Créer une tâche
               </Button>
             </div>
           </div>
@@ -600,7 +596,6 @@ function SummaryMetric({
     <div
       className="relative flex items-center gap-4 overflow-hidden rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:shadow-card"
     >
-      {/* Accent stripe */}
       <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl" style={{ background: c.stripe }} />
       <div
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
@@ -616,7 +611,7 @@ function SummaryMetric({
   )
 }
 
-function TaskCard({ task, selected, onToggle, getStatusBadge, getPriorityBadge, showAssignee }: { task: Task; selected: boolean; onToggle: () => void; getStatusBadge: (s: Status) => React.ReactNode; getPriorityBadge: (p: Priority) => React.ReactNode; showAssignee: boolean }) {
+function TaskCard({ task, selected, onToggle, getStatusBadge, getPriorityBadge, showAssignee }: { task: Task; selected: boolean; onToggle: () => void; getStatusBadge: (t: Task) => React.ReactNode; getPriorityBadge: (p: Priority) => React.ReactNode; showAssignee: boolean }) {
   const navigate = useNavigate()
   const isOverdue = task.status !== 'completed'
     && !!task.due_date
@@ -627,7 +622,7 @@ function TaskCard({ task, selected, onToggle, getStatusBadge, getPriorityBadge, 
       className={`group relative cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-card ${
         isOverdue ? 'border-l-4 border-l-destructive' : ''
       } ${selected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
-  onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: String(task.id) } })}
+      onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: String(task.id) } })}
     >
       <CardContent className="p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

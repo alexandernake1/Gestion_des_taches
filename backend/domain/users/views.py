@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.conf import settings
+from django.contrib.auth.models import update_last_login
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -72,6 +73,7 @@ def authentication_response(
 ):
     """Return an authenticated response and store JWTs in HttpOnly cookies."""
 
+    update_last_login(None, user)
     refresh = RefreshToken.for_user(user)
     refresh['remember_me'] = bool(remember_me)
     data = {'user': UserSerializer(user).data}

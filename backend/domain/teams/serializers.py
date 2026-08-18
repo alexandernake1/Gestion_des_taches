@@ -55,31 +55,48 @@ class TeamCreateSerializer(serializers.ModelSerializer):
         member_ids = attrs.get('member_ids', [])
         if leader and (leader.company_id != company.id or not leader.is_active):
             raise serializers.ValidationError({
-                'leader': 'The team leader must be an active member of your enterprise.'
+                'leader': "Le responsable de l'équipe doit être un membre actif de votre structure."
             })
         valid_member_ids = set(
             User.objects.filter(company=company, id__in=member_ids, is_active=True)
             .values_list('id', flat=True)
         )
-        if valid_member_ids != set(member_ids):
+        if set(member_ids) and valid_member_ids != set(member_ids):
             raise serializers.ValidationError({
-                'member_ids': 'All team members must be active members of your enterprise.'
+                'member_ids': "Tous les membres de l'équipe doivent être des membres actifs de votre structure."
             })
+
+        effective_members = set(valid_member_ids)
+        if leader:
+            effective_members.add(leader.id)
+
+        if len(effective_members) < 2:
+            raise serializers.ValidationError({
+                'member_ids': "Une équipe doit compter au moins deux personnes actives et distinctes, responsable compris."
+            })
+
+        name = attrs.get('name', '').strip()
+        if not name:
+            raise serializers.ValidationError({'name': "Le nom de l'équipe ne peut pas être vide."})
         if Team.objects.filter(
             company=company,
-            name__iexact=attrs['name'].strip(),
+            name__iexact=name,
         ).exists():
             raise serializers.ValidationError({
-                'name': 'A team with this name already exists.'
+                'name': "Une équipe avec ce nom existe déjà."
             })
-        attrs['name'] = attrs['name'].strip()
+        attrs['name'] = name
         return attrs
     
     def create(self, validated_data):
         member_ids = validated_data.pop('member_ids', [])
+        leader = validated_data.get('leader')
         team = Team.objects.create(**validated_data)
-        if member_ids:
-            team.members.set(member_ids)
+        all_members = set(member_ids)
+        if leader:
+            all_members.add(leader.id)
+        if all_members:
+            team.members.set(all_members)
         return team
 
 
@@ -100,33 +117,57 @@ class TeamUpdateSerializer(serializers.ModelSerializer):
         company = get_requested_company(self.context['request'])
         leader = attrs.get('leader', self.instance.leader)
         member_ids = attrs.get('member_ids')
+        is_active = attrs.get('is_active', self.instance.is_active)
+
         if leader and (leader.company_id != company.id or not leader.is_active):
             raise serializers.ValidationError({
-                'leader': 'The team leader must be an active member of your enterprise.'
+                'leader': "Le responsable de l'équipe doit être un membre actif de votre structure."
             })
+
         if member_ids is not None:
             valid_member_ids = set(
                 User.objects.filter(company=company, id__in=member_ids, is_active=True)
                 .values_list('id', flat=True)
             )
-            if valid_member_ids != set(member_ids):
+            if set(member_ids) and valid_member_ids != set(member_ids):
                 raise serializers.ValidationError({
-                    'member_ids': 'All team members must be active members of your enterprise.'
+                    'member_ids': "Tous les membres de l'équipe doivent être des membres actifs de votre structure."
                 })
+
+            if is_active:
+                effective_members = set(valid_member_ids)
+                if leader:
+                    effective_members.add(leader.id if isinstance(leader, User) else leader)
+                if len(effective_members) < 2:
+                    raise serializers.ValidationError({
+                        'member_ids': "Une équipe active doit compter au moins deux personnes actives et distinctes, responsable compris."
+                    })
+        elif 'leader' in attrs and is_active:
+            existing_members = set(self.instance.members.filter(is_active=True).values_list('id', flat=True))
+            if leader:
+                existing_members.add(leader.id if isinstance(leader, User) else leader)
+            if len(existing_members) < 2:
+                raise serializers.ValidationError({
+                    'leader': "Une équipe active doit compter au moins deux personnes actives et distinctes, responsable compris."
+                })
+
         if 'name' in attrs:
             name = attrs['name'].strip()
+            if not name:
+                raise serializers.ValidationError({'name': "Le nom de l'équipe ne peut pas être vide."})
             if Team.objects.filter(
                 company=company,
                 name__iexact=name,
             ).exclude(pk=self.instance.pk).exists():
                 raise serializers.ValidationError({
-                    'name': 'A team with this name already exists.'
+                    'name': "Une équipe avec ce nom existe déjà."
                 })
             attrs['name'] = name
         return attrs
     
     def update(self, instance, validated_data):
         member_ids = validated_data.pop('member_ids', None)
+        leader = validated_data.get('leader', instance.leader)
         
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -134,7 +175,10 @@ class TeamUpdateSerializer(serializers.ModelSerializer):
         instance.save()
         
         if member_ids is not None:
-            instance.members.set(member_ids)
+            all_members = set(member_ids)
+            if leader:
+                all_members.add(leader.id if isinstance(leader, User) else leader)
+            instance.members.set(all_members)
         
         return instance
 

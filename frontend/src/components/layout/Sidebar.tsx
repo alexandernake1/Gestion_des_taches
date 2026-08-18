@@ -4,6 +4,7 @@ import { authService } from '@/services/auth'
 import { subscriptionsService } from '@/services/subscriptions'
 import { tasksService } from '@/services/tasks'
 import { useQuery } from '@tanstack/react-query'
+import { ROLE_LABELS } from '@/constants/labels'
 
 interface NavigationItem {
   name: string
@@ -22,13 +23,13 @@ const navigation: NavigationItem[] = [
   { name: 'Équipes', href: '/teams', icon: Users, roles: ['owner', 'manager'], companyOnly: true },
   { name: 'Utilisateurs', href: '/users', icon: UserRound, roles: ['owner', 'manager'], companyOnly: true },
   { name: 'Abonnement', href: '/subscription', icon: CreditCard, roles: ['owner'] },
-  { name: 'Créer une entreprise', href: '/onboarding', icon: Building2, roles: ['owner'], personalOnly: true },
+  { name: 'Créer une structure', href: '/onboarding', icon: Building2, roles: ['owner'], personalOnly: true },
   { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['owner', 'manager', 'employee'] },
 ]
 
 const platformNavigation = [
   { name: "Journal d'audit", href: '/admin/audit', icon: ScrollText },
-  { name: 'Entreprises Clients', href: '/admin/companies', icon: Globe },
+  { name: 'Structures clientes', href: '/admin/companies', icon: Globe },
   { name: 'Abonnements SaaS', href: '/admin/subscriptions', icon: CreditCard },
   { name: 'Forfaits SaaS', href: '/admin/plans', icon: Package },
   { name: 'Annonces Systèmes', href: '/admin/announcements', icon: Megaphone },
@@ -106,10 +107,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const displayName = currentUser?.full_name || currentUser?.email || 'Utilisateur'
   const roleLabel = currentUser?.is_superuser
-    ? 'Super Administrateur'
+    ? 'Super-administrateur de la plateforme'
     : isPersonalWorkspace
       ? 'Compte personnel'
-      : ({ owner: 'Propriétaire', manager: 'Manager', employee: 'Employé' }[currentUser?.role || ''] || currentUser?.role_display || '')
+      : (ROLE_LABELS[currentUser?.role || ''] || currentUser?.role_display || '')
 
   return (
     <>
@@ -154,19 +155,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
               }}
             >
-              {isPersonalWorkspace
-                ? <UserRound className="h-4.5 w-4.5 text-white" strokeWidth={2} />
-                : <Building2 className="h-4.5 w-4.5 text-white" strokeWidth={2} />}
+              <CheckSquare2 className="h-5 w-5 text-white" />
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-[14px] font-bold leading-tight text-white tracking-tight">
-                {currentUser?.is_superuser ? 'Activity' : (isPersonalWorkspace ? 'Mon espace personnel' : currentUser?.company_name || 'Activity')}
-              </p>
+
+            <div>
+              <span className="text-[15px] font-black tracking-tight text-white">
+                Activity<span style={{ color: 'hsl(var(--primary))' }}>Control</span>
+              </span>
               <p
-                className="text-[10px] font-semibold uppercase tracking-[0.15em]"
+                className="text-[10px] font-semibold tracking-wider uppercase"
                 style={{ color: 'hsl(var(--sidebar-text-muted))' }}
               >
-                Control Center
+                Pilotage d'activité
               </p>
             </div>
           </div>
@@ -175,28 +175,24 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             type="button"
             onClick={onClose}
             aria-label="Fermer le menu"
-            className="lg:hidden rounded-lg p-1.5 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg lg:hidden transition-colors"
             style={{ color: 'hsl(var(--sidebar-text-muted))' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'hsl(var(--sidebar-hover-bg))')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
-            <X className="h-4.5 w-4.5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* ── Navigation ─────────────────────────────── */}
-        <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
-
-          {/* Super Admin section */}
+        {/* ── Navigation Lists ────────────────────────── */}
+        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4 scrollbar-thin">
+          {/* Admin Platform section */}
           {currentUser?.is_superuser && (
-            <div className="animate-slide-up" style={{ animationDelay: '0ms' }}>
-              <p
-                className="mb-2 flex items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.18em]"
-                style={{ color: 'hsl(38 92% 52%)' }}
-              >
-                <Shield className="h-3 w-3" />
-                Administration SaaS
-              </p>
+            <div className="animate-slide-up">
+              <div className="mb-2 flex items-center gap-1.5 px-3">
+                <Shield className="h-3.5 w-3.5 text-amber-500" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-500">
+                  Administration Plateforme
+                </p>
+              </div>
               <ul className="space-y-0.5">
                 {platformNavigation.map((item, i) => {
                   const isActive = location.pathname === item.href

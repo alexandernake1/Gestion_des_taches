@@ -16,12 +16,6 @@ export const Route = createFileRoute('/planning')({
   component: PlanningPage,
 })
 
-const memberRoleLabels: Record<string, string> = {
-  owner: 'Propriétaire',
-  manager: 'Manager',
-  employee: 'Employé',
-}
-
 function Metric({ icon: Icon, label, value, alert }: { icon: React.ElementType; label: string; value: string | number; alert?: boolean }) {
   return (
     <div className={`flex flex-col rounded-2xl p-4 transition-all duration-200 hover:shadow-card ${

@@ -174,8 +174,24 @@ class RegistrationSerializer(serializers.ModelSerializer):
         return user
 
 
+def generate_unique_company_slug(name: str, exclude_company_id=None) -> str:
+    """Generate a unique slug for a company/structure, handling collisions."""
+    base_slug = slugify(name).strip('-')
+    if not base_slug:
+        base_slug = 'structure'
+    slug = base_slug
+    counter = 1
+    qs = Company.objects.all()
+    if exclude_company_id:
+        qs = qs.exclude(pk=exclude_company_id)
+    while qs.filter(slug=slug).exists():
+        counter += 1
+        slug = f"{base_slug}-{counter}"
+    return slug
+
+
 class CompanyRegistrationSerializer(serializers.Serializer):
-    """Atomic public onboarding for a company and its first owner."""
+    """Register a new company workspace along with its first administrator."""
 
     company_name = serializers.CharField(max_length=255)
     company_slug = serializers.SlugField(max_length=255, required=False, allow_blank=True)
@@ -201,7 +217,7 @@ class CompanyRegistrationSerializer(serializers.Serializer):
     def validate_contact_email(self, value):
         normalized_email = value.lower()
         if Company.objects.filter(contact_email__iexact=normalized_email).exists():
-            raise serializers.ValidationError("Cet email d'entreprise est déjà utilisé.")
+            raise serializers.ValidationError("Cet email de structure est déjà utilisé.")
         return normalized_email
 
     def validate_plan_code(self, value):
@@ -223,13 +239,18 @@ class CompanyRegistrationSerializer(serializers.Serializer):
             raise serializers.ValidationError({
                 'accept_terms': "Vous devez accepter les conditions d'utilisation.",
             })
-        candidate = attrs.get('company_slug') or slugify(attrs['company_name'])
-        if not candidate:
-            raise serializers.ValidationError({'company_name': "Nom d'entreprise invalide."})
-        if Company.objects.filter(slug=candidate).exists():
-            raise serializers.ValidationError({
-                'company_slug': "Cet identifiant d'espace est déjà utilisé.",
-            })
+        company_name = attrs.get('company_name', '').strip()
+        if not company_name:
+            raise serializers.ValidationError({'company_name': "Nom de structure invalide."})
+        attrs['company_name'] = company_name
+
+        candidate = attrs.get('company_slug')
+        if candidate:
+            candidate = slugify(candidate).strip('-')
+            if Company.objects.filter(slug=candidate).exists():
+                candidate = generate_unique_company_slug(candidate)
+        else:
+            candidate = generate_unique_company_slug(company_name)
         attrs['company_slug'] = candidate
         return attrs
 
@@ -285,7 +306,7 @@ class CompanyOnboardingSerializer(serializers.Serializer):
         if Company.objects.filter(contact_email__iexact=normalized_email).exclude(
             pk=user.company_id,
         ).exists():
-            raise serializers.ValidationError("Cet email d'entreprise est déjà utilisé.")
+            raise serializers.ValidationError("Cet email de structure est déjà utilisé.")
         return normalized_email
 
     def validate_plan_code(self, value):
@@ -302,15 +323,21 @@ class CompanyOnboardingSerializer(serializers.Serializer):
         user = self.context['request'].user
         if user.company_id and not user.company.is_personal:
             raise serializers.ValidationError({
-                'company_name': "Votre compte appartient déjà à une entreprise."
+                'company_name': "Votre compte appartient déjà à une structure."
             })
-        candidate = attrs.get('company_slug') or slugify(attrs['company_name'])
-        if not candidate:
-            raise serializers.ValidationError({'company_name': "Nom d'entreprise invalide."})
-        if Company.objects.filter(slug=candidate).exclude(pk=user.company_id).exists():
-            raise serializers.ValidationError({
-                'company_slug': "Cet identifiant d'espace est déjà utilisé."
-            })
+        company_name = attrs.get('company_name', '').strip()
+        if not company_name:
+            raise serializers.ValidationError({'company_name': "Nom de structure invalide."})
+        attrs['company_name'] = company_name
+
+        candidate = attrs.get('company_slug')
+        exclude_id = user.company_id if (user.company_id and user.company.is_personal) else None
+        if candidate:
+            candidate = slugify(candidate).strip('-')
+            if Company.objects.filter(slug=candidate).exclude(pk=exclude_id).exists():
+                candidate = generate_unique_company_slug(candidate, exclude_company_id=exclude_id)
+        else:
+            candidate = generate_unique_company_slug(company_name, exclude_company_id=exclude_id)
         attrs['company_slug'] = candidate
         return attrs
 

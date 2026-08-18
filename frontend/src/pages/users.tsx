@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { Modal } from '@/components/ui/Modal'
 import { useConfirmation } from '@/components/ui/confirmation'
 import { useState } from 'react'
+import { ROLE_LABELS, ROLE_PLURAL_LABELS } from '@/constants/labels'
 
 export const Route = createFileRoute('/users')({
   beforeLoad: requireManagement,
@@ -19,6 +20,15 @@ export const Route = createFileRoute('/users')({
 })
 
 const USERS_PER_PAGE = 12
+
+function formatLastLogin(isoString?: string | null): string {
+  if (!isoString) return 'Jamais'
+  const d = new Date(isoString)
+  if (isNaN(d.getTime())) return 'Jamais'
+  const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  return `${dateStr} à ${timeStr}`
+}
 
 function UsersPage() {
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -84,7 +94,7 @@ function UsersPage() {
   const handleDeleteAccount = async (user: User) => {
     const { confirmed } = await confirmAction({
       title: `Supprimer définitivement le compte de ${user.full_name} ?`,
-      description: 'Cette action est irréversible et réservée au propriétaire.',
+      description: 'Cette action est irréversible et réservée à l’administrateur de la structure.',
       confirmLabel: 'Supprimer définitivement',
       tone: 'danger',
       impacts: [
@@ -115,12 +125,7 @@ function UsersPage() {
       manager: 'warning',
       employee: 'info'
     } as const
-    const labels = {
-      owner: 'Propriétaire',
-      manager: 'Manager',
-      employee: 'Employé'
-    }
-    return <Badge variant={variants[role as keyof typeof variants] || 'info'}>{labels[role as keyof typeof labels] || role}</Badge>
+    return <Badge variant={variants[role as keyof typeof variants] || 'info'}>{ROLE_LABELS[role] || role}</Badge>
   }
 
   return (
@@ -132,7 +137,7 @@ function UsersPage() {
               <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">
                 <ShieldCheck className="h-4 w-4" />Accès et responsabilités
               </div>
-              <h2 className="text-2xl font-black tracking-tight text-foreground">{canManageAccounts ? 'Pilotez les accès de votre organisation' : 'Consultez vos collaborateurs'}</h2>
+              <h2 className="text-2xl font-black tracking-tight text-foreground">{canManageAccounts ? 'Pilotez les accès de votre structure' : 'Consultez vos collaborateurs'}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{canManageAccounts ? 'Invitez les bonnes personnes, attribuez des rôles cohérents et gardez une trace des opérations sensibles.' : 'Retrouvez rapidement les membres actifs, leurs rôles et leurs coordonnées professionnelles.'}</p>
             </div>
             {canManageAccounts && <div className="flex flex-col gap-2 sm:flex-row">
@@ -143,8 +148,8 @@ function UsersPage() {
           <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <UserMetric icon={Users} label="Résultats" value={users?.length || 0} />
             <UserMetric icon={CheckCircle2} label="Comptes actifs" value={activeUsers} />
-            <UserMetric icon={UserRound} label="Managers" value={managers} />
-            <UserMetric icon={ShieldCheck} label="Propriétaire" value={administrators} />
+            <UserMetric icon={UserRound} label="Responsables" value={managers} />
+            <UserMetric icon={ShieldCheck} label="Administrateur de la structure" value={administrators} />
           </div>
         </section>
         <div className="mb-5 grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">
@@ -154,9 +159,9 @@ function UsersPage() {
           </div>
             <select value={roleFilter} onChange={(event) => { setRoleFilter(event.target.value); setUserPage(1) }} aria-label="Filtrer par rôle" className="h-10 w-full appearance-none rounded-xl border border-border bg-background pl-3 pr-10 text-sm text-foreground">
               <option value="">Tous les rôles</option>
-              <option value="owner">Propriétaires</option>
-              <option value="manager">Managers</option>
-              <option value="employee">Employés</option>
+              <option value="owner">{ROLE_PLURAL_LABELS.owner}</option>
+              <option value="manager">{ROLE_PLURAL_LABELS.manager}</option>
+              <option value="employee">{ROLE_PLURAL_LABELS.employee}</option>
             </select>
           {activeFilterCount > 0 && (
             <div className="flex items-center justify-between text-xs text-slate-500 sm:col-span-3">
@@ -198,23 +203,11 @@ function UsersPage() {
                 <XCircle className="mx-auto h-9 w-9 text-slate-400" />
                 <h3 className="mt-4 font-bold text-slate-900">Aucun utilisateur trouvé</h3>
                 <p className="mt-2 text-sm text-slate-500">Modifiez les filtres pour élargir les résultats.</p>
-                <Button className="mt-5" variant="secondary" onClick={clearFilters}>Effacer les filtres</Button>
               </div>
-            )}
-            {(users?.length || 0) > USERS_PER_PAGE && (
-              <nav className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 sm:flex-row" aria-label="Pagination des utilisateurs">
-                <p className="text-sm text-muted-foreground">
-                  {((currentPage - 1) * USERS_PER_PAGE) + 1}–{Math.min(currentPage * USERS_PER_PAGE, users?.length || 0)} sur {users?.length || 0}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" size="sm" disabled={currentPage === 1} onClick={() => setUserPage((page) => Math.max(1, page - 1))}>Précédent</Button>
-                  <span className="min-w-20 text-center text-sm font-semibold text-foreground">Page {currentPage} / {totalPages}</span>
-                  <Button variant="secondary" size="sm" disabled={currentPage === totalPages} onClick={() => setUserPage((page) => Math.min(totalPages, page + 1))}>Suivant</Button>
-                </div>
-              </nav>
             )}
           </div>
         )}
+
         <UserModal
           isOpen={inviteOpen}
           onClose={() => setInviteOpen(false)}
@@ -279,7 +272,7 @@ function UserCard({ user, getRoleBadge, onEdit, onToggleStatus, isToggling, onDe
                 )}
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" />
-                  Connexion : {user.last_login ? new Date(user.last_login).toLocaleDateString('fr-FR') : 'Jamais'}
+                  Connexion : {formatLastLogin(user.last_login)}
                 </div>
               </div>
             </div>
@@ -354,9 +347,9 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
       const roleChanged = payload.role !== user.role
       if (deactivating || reactivating || roleChanged) {
         const impacts = [
-          ...(deactivating ? ["L’utilisateur ne pourra plus se connecter à l’espace de l’entreprise."] : []),
+          ...(deactivating ? ["L’utilisateur ne pourra plus se connecter à l’espace de la structure."] : []),
           ...(reactivating ? ["L’utilisateur retrouvera l’accès avec ses permissions actuelles."] : []),
-          ...(roleChanged ? [`Son rôle passera de « ${user.role_display || user.role} » à « ${payload.role === 'manager' ? 'Manager' : 'Employé'} ».`] : []),
+          ...(roleChanged ? [`Son rôle passera de « ${user.role_display || ROLE_LABELS[user.role] || user.role} » à « ${ROLE_LABELS[payload.role] || payload.role} ».`] : []),
         ]
         const { confirmed } = await confirmAction({
           title: deactivating
@@ -470,7 +463,7 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
               <div className="flex items-center gap-3 rounded-xl border-2 border-purple-200 bg-purple-50 p-3">
                 <ShieldCheck className="h-5 w-5 text-purple-600" />
                 <div>
-                  <p className="font-semibold text-purple-900">Propriétaire (Owner)</p>
+                  <p className="font-semibold text-purple-900">Administrateur de la structure</p>
                   <p className="text-xs text-purple-700">Accès total. Impossible de modifier ce rôle.</p>
                 </div>
                 <input type="hidden" name="role" value="owner" />
@@ -479,8 +472,8 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
               <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <UserRound className="h-5 w-5 text-slate-400" />
                 <div>
-                  <p className="font-semibold text-slate-900">{user?.role === 'manager' ? 'Manager' : 'Employé'}</p>
-                  <p className="text-xs text-slate-500">Seul un propriétaire peut modifier le rôle.</p>
+                  <p className="font-semibold text-slate-900">{ROLE_LABELS[user?.role || ''] || user?.role_display || 'Collaborateur'}</p>
+                  <p className="text-xs text-slate-500">Seul un administrateur de la structure peut modifier le rôle.</p>
                 </div>
                 <input type="hidden" name="role" value={user?.role || 'employee'} />
               </div>
@@ -490,8 +483,8 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
                   <input type="radio" name="role" value="employee" defaultChecked={!user || user.role === 'employee'} className="peer sr-only" />
                   <UserRound className="h-5 w-5 text-slate-400 group-has-[:checked]:text-indigo-600" />
                   <div className="ml-3 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 group-has-[:checked]:text-indigo-900">Employé</p>
-                    <p className="text-xs text-slate-500 group-has-[:checked]:text-indigo-700">Accès standard. Voit ses propres tâches.</p>
+                    <p className="text-sm font-semibold text-slate-900 group-has-[:checked]:text-indigo-900">Collaborateur</p>
+                    <p className="text-xs text-slate-500 group-has-[:checked]:text-indigo-700">Accès standard. Voit ses propres tâches et projets.</p>
                   </div>
                 </label>
                 
@@ -499,8 +492,8 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
                   <input type="radio" name="role" value="manager" defaultChecked={user?.role === 'manager'} className="peer sr-only" />
                   <Briefcase className="h-5 w-5 text-slate-400 group-has-[:checked]:text-indigo-600" />
                   <div className="ml-3 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 group-has-[:checked]:text-indigo-900">Manager</p>
-                    <p className="text-xs text-slate-500 group-has-[:checked]:text-indigo-700">Peut créer et assigner des tâches.</p>
+                    <p className="text-sm font-semibold text-slate-900 group-has-[:checked]:text-indigo-900">Responsable</p>
+                    <p className="text-xs text-slate-500 group-has-[:checked]:text-indigo-700">Peut créer et assigner des tâches, et piloter les équipes.</p>
                   </div>
                 </label>
               </div>
@@ -530,7 +523,7 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
           <div className="flex gap-3">
             <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Enregistrement…' : user ? 'Enregistrer les modifications' : 'Inviter l’utilisateur'}
+              {mutation.isPending ? 'Enregistrement…' : user ? 'Enregistrer les modifications' : 'Inviter le collaborateur'}
             </Button>
           </div>
         </div>

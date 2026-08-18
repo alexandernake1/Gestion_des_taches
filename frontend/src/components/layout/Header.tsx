@@ -5,6 +5,7 @@ import { authService } from '@/services/auth'
 import { companiesService } from '@/services/companies'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationDropdown } from './NotificationDropdown'
+import { ROLE_LABELS } from '@/constants/labels'
 
 interface HeaderProps {
   title: string
@@ -18,12 +19,6 @@ function getInitials(name: string): string {
     .join('')
     .substring(0, 2)
     .toUpperCase()
-}
-
-const roleLabels: Record<string, string> = {
-  owner: 'Propriétaire',
-  manager: 'Manager',
-  employee: 'Employé',
 }
 
 export function Header({ title, onMenuClick }: HeaderProps) {
@@ -91,10 +86,10 @@ export function Header({ title, onMenuClick }: HeaderProps) {
             <select
               value={impersonatedCompanyId}
               onChange={handleCompanyChange}
-              aria-label="Entreprise consultée"
+              aria-label="Structure consultée"
               className="h-9 w-32 appearance-none rounded-xl border border-border bg-muted/50 px-3 text-xs font-semibold text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all sm:w-48 sm:pl-9 sm:pr-8 cursor-pointer"
             >
-              <option value="">Toutes les entreprises</option>
+              <option value="">Toutes les structures</option>
               {companies.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
@@ -144,7 +139,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
               )}
             </div>
             <p className="text-[11px] text-muted-foreground truncate max-w-[160px]">
-              {currentUser?.is_superuser ? 'Plateforme SaaS' : currentUser?.is_personal_workspace ? 'Compte personnel' : (roleLabels[currentUser?.role || ''] || currentUser?.role_display || '')}
+              {currentUser?.is_superuser ? 'Plateforme SaaS' : currentUser?.is_personal_workspace ? 'Compte personnel' : (ROLE_LABELS[currentUser?.role || ''] || currentUser?.role_display || '')}
             </p>
           </div>
         </button>
