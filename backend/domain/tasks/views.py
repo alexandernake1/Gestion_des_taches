@@ -2,7 +2,7 @@ from datetime import timedelta
 import re
 import unicodedata
 
-from rest_framework import generics, status, filters
+from rest_framework import generics, permissions, status, filters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.http import FileResponse, HttpResponse
 import openpyxl
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
-from common.permissions.permissions import IsTaskCreatorOrAssigneeOrManager, IsOwnerOrCompanyManager, IsCompanyOperational, IsManagerOrAdministrator
+from common.permissions.permissions import IsCompanyMember, IsTaskCreatorOrAssigneeOrManager, IsOwnerOrCompanyManager, IsCompanyOperational, IsManagerOrAdministrator
 from common.utils import get_requested_company
 from domain.users.models import Role, User
 from .models import (
@@ -1499,7 +1499,16 @@ def export_tasks_excel(request):
 
 class ProjectListCreateView(generics.ListCreateAPIView):
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated, IsCompanyOperational, IsManagerOrAdministrator]
+    permission_classes = [IsAuthenticated, IsCompanyOperational]
+
+    def get_permissions(self):
+        """Employees can consult projects, while management retains write access."""
+        permission_classes = [
+            IsAuthenticated,
+            IsCompanyOperational,
+            IsCompanyMember if self.request.method in permissions.SAFE_METHODS else IsManagerOrAdministrator,
+        ]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         company = get_requested_company(self.request)
@@ -1530,7 +1539,16 @@ class ProjectListCreateView(generics.ListCreateAPIView):
 
 class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated, IsCompanyOperational, IsManagerOrAdministrator]
+    permission_classes = [IsAuthenticated, IsCompanyOperational]
+
+    def get_permissions(self):
+        """Project information is shared with company members; only managers edit it."""
+        permission_classes = [
+            IsAuthenticated,
+            IsCompanyOperational,
+            IsCompanyMember if self.request.method in permissions.SAFE_METHODS else IsManagerOrAdministrator,
+        ]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         company = get_requested_company(self.request)

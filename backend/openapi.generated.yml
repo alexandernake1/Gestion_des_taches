@@ -23,6 +23,7 @@ paths:
               $ref: '#/components/schemas/ChangePassword'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -30,6 +31,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChangePasswordResponse'
+          description: ''
+  /api/auth/google/:
+    post:
+      operationId: api_auth_google_create
+      description: Authenticate or create a personal account using Google Identity
+        Services
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLogin'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GoogleLogin'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GoogleLogin'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
           description: ''
   /api/auth/login/:
     post:
@@ -61,19 +92,8 @@ paths:
       operationId: api_auth_logout_create
       tags:
       - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LogoutRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/LogoutRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/LogoutRequest'
-        required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '204':
@@ -85,6 +105,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -93,6 +114,110 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
+  /api/auth/onboarding/company/:
+    post:
+      operationId: api_auth_onboarding_company_create
+      description: Create the optional company and subscription for a personal account
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyOnboarding'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompanyOnboarding'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompanyOnboarding'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/auth/onboarding/personal/:
+    post:
+      operationId: api_auth_onboarding_personal_create
+      description: Create a private personal workspace and select a personal plan
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonalOnboarding'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PersonalOnboarding'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PersonalOnboarding'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/auth/password-reset/:
+    post:
+      operationId: api_auth_password_reset_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/password-reset/confirm/:
+    post:
+      operationId: api_auth_password_reset_confirm_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
   /api/auth/profile/:
     get:
       operationId: api_auth_profile_retrieve
@@ -100,6 +225,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -126,6 +252,7 @@ paths:
               $ref: '#/components/schemas/UpdateProfile'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -151,6 +278,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedUpdateProfile'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -186,6 +314,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
           description: ''
+  /api/auth/register/:
+    post:
+      operationId: api_auth_register_create
+      description: Create an independent personal account; company setup is optional.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Registration'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Registration'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Registration'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+          description: ''
   /api/auth/register/company/:
     post:
       operationId: api_auth_register_company_create
@@ -205,6 +362,7 @@ paths:
               $ref: '#/components/schemas/CompanyRegistration'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       - {}
       responses:
@@ -213,6 +371,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+          description: ''
+  /api/auth/register/company/email-availability/:
+    get:
+      operationId: api_auth_register_company_email_availability_retrieve
+      description: Check whether a company email can be used during onboarding
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyEmailAvailability'
           description: ''
   /api/auth/users/:
     get:
@@ -240,13 +415,11 @@ paths:
         schema:
           type: string
           enum:
-          - administrator
           - employee
           - manager
           - owner
         description: |-
           * `owner` - Owner
-          * `administrator` - Administrator
           * `manager` - Manager
           * `employee` - Employee
       - name: search
@@ -258,6 +431,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -279,6 +453,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -311,6 +486,7 @@ paths:
               $ref: '#/components/schemas/UserManagement'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -342,6 +518,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedUserManagement'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -350,6 +527,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserManagement'
           description: ''
+    delete:
+      operationId: api_auth_users_destroy
+      description: Retrieve and update user details (managers and admins only).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/auth/users/{user_id}/activate/:
     post:
       operationId: api_auth_users_activate_create
@@ -362,6 +556,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -383,6 +578,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -404,6 +600,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -439,6 +636,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -466,6 +664,7 @@ paths:
               $ref: '#/components/schemas/InviteUser'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -500,6 +699,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -526,6 +726,7 @@ paths:
               $ref: '#/components/schemas/CompanyCreate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -547,6 +748,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -579,6 +781,7 @@ paths:
               $ref: '#/components/schemas/CompanyUpdate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -610,6 +813,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedCompanyUpdate'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -617,6 +821,202 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Company'
+          description: ''
+  /api/companies/admin/announcements/:
+    get:
+      operationId: api_companies_admin_announcements_list
+      description: Platform super-admin endpoint to manage announcements.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSystemAnnouncementList'
+          description: ''
+    post:
+      operationId: api_companies_admin_announcements_create
+      description: Platform super-admin endpoint to manage announcements.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemAnnouncement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SystemAnnouncement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SystemAnnouncement'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemAnnouncement'
+          description: ''
+  /api/companies/admin/announcements/{id}/:
+    get:
+      operationId: api_companies_admin_announcements_retrieve
+      description: Platform super-admin endpoint to manage announcements.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemAnnouncement'
+          description: ''
+    put:
+      operationId: api_companies_admin_announcements_update
+      description: Platform super-admin endpoint to manage announcements.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemAnnouncement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SystemAnnouncement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SystemAnnouncement'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemAnnouncement'
+          description: ''
+    patch:
+      operationId: api_companies_admin_announcements_partial_update
+      description: Platform super-admin endpoint to manage announcements.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemAnnouncement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemAnnouncement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemAnnouncement'
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemAnnouncement'
+          description: ''
+    delete:
+      operationId: api_companies_admin_announcements_destroy
+      description: Platform super-admin endpoint to manage announcements.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/companies/admin/audit-log/:
+    get:
+      operationId: api_companies_admin_audit_log_list
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+      - in: query
+        name: company
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlatformAuditLogList'
           description: ''
   /api/companies/admin/plans/:
     get:
@@ -644,6 +1044,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -670,6 +1071,7 @@ paths:
               $ref: '#/components/schemas/SubscriptionPlan'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -678,6 +1080,114 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubscriptionPlan'
           description: ''
+  /api/companies/admin/plans/{id}/:
+    get:
+      operationId: api_companies_admin_plans_retrieve
+      description: Platform super-admin endpoint to manage a specific subscription
+        plan.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlan'
+          description: ''
+    put:
+      operationId: api_companies_admin_plans_update
+      description: Platform super-admin endpoint to manage a specific subscription
+        plan.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPlan'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPlan'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPlan'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlan'
+          description: ''
+    patch:
+      operationId: api_companies_admin_plans_partial_update
+      description: Platform super-admin endpoint to manage a specific subscription
+        plan.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriptionPlan'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriptionPlan'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSubscriptionPlan'
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlan'
+          description: ''
+    delete:
+      operationId: api_companies_admin_plans_destroy
+      description: Platform super-admin endpoint to manage a specific subscription
+        plan.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/companies/admin/subscriptions/:
     get:
       operationId: api_companies_admin_subscriptions_list
@@ -704,6 +1214,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -715,7 +1226,8 @@ paths:
   /api/companies/admin/subscriptions/{id}/:
     get:
       operationId: api_companies_admin_subscriptions_retrieve
-      description: Platform super-admin endpoint to inspect an automated subscription.
+      description: Platform super-admin endpoint to inspect or update an automated
+        subscription.
       parameters:
       - in: path
         name: id
@@ -725,6 +1237,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -733,6 +1246,107 @@ paths:
               schema:
                 $ref: '#/components/schemas/CompanySubscription'
           description: ''
+    put:
+      operationId: api_companies_admin_subscriptions_update
+      description: Platform super-admin endpoint to inspect or update an automated
+        subscription.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCompanySubscriptionUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminCompanySubscriptionUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminCompanySubscriptionUpdate'
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCompanySubscriptionUpdate'
+          description: ''
+    patch:
+      operationId: api_companies_admin_subscriptions_partial_update
+      description: Platform super-admin endpoint to inspect or update an automated
+        subscription.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminCompanySubscriptionUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminCompanySubscriptionUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminCompanySubscriptionUpdate'
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCompanySubscriptionUpdate'
+          description: ''
+  /api/companies/announcements/active/:
+    get:
+      operationId: api_companies_announcements_active_list
+      description: Public endpoint to fetch active system announcements.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSystemAnnouncementList'
+          description: ''
   /api/companies/my/:
     get:
       operationId: api_companies_my_retrieve
@@ -740,6 +1354,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -768,6 +1383,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       - {}
       responses:
@@ -786,6 +1402,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -813,6 +1430,7 @@ paths:
               $ref: '#/components/schemas/ChangePlan'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -829,6 +1447,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -863,6 +1482,7 @@ paths:
               $ref: '#/components/schemas/CompleteTestPayment'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -889,6 +1509,7 @@ paths:
               $ref: '#/components/schemas/StartTestPayment'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -904,6 +1525,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -920,6 +1542,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -936,6 +1559,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -952,9 +1576,35 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/health/:
+    get:
+      operationId: api_health_retrieve
+      description: Check that the API, database and Redis broker are available.
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '503':
           content:
             application/json:
               schema:
@@ -981,6 +1631,9 @@ paths:
         schema:
           type: string
           enum:
+          - approval_approved
+          - approval_rejected
+          - approval_requested
           - comment
           - daily_digest
           - new_assignment
@@ -1008,9 +1661,13 @@ paths:
           * `task_due_soon` - Échéance proche
           * `task_overdue` - Tâche en retard
           * `daily_digest` - Résumé quotidien
+          * `approval_requested` - Validation demandée
+          * `approval_approved` - Validation approuvée
+          * `approval_rejected` - Validation refusée
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1032,6 +1689,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1063,6 +1721,7 @@ paths:
             schema:
               $ref: '#/components/schemas/NotificationUpdate'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1094,6 +1753,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedNotificationUpdate'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1109,6 +1769,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1123,6 +1784,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1147,6 +1809,7 @@ paths:
             schema:
               $ref: '#/components/schemas/NotificationPreference'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1171,6 +1834,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedNotificationPreference'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1186,6 +1850,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1194,6 +1859,166 @@ paths:
               schema:
                 $ref: '#/components/schemas/UnreadNotificationCountResponse'
           description: ''
+  /api/projects/:
+    get:
+      operationId: api_projects_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjectList'
+          description: ''
+    post:
+      operationId: api_projects_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Project'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Project'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/projects/{id}/:
+    get:
+      operationId: api_projects_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+    put:
+      operationId: api_projects_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Project'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Project'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+    patch:
+      operationId: api_projects_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProject'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProject'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProject'
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+    delete:
+      operationId: api_projects_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/tasks/:
     get:
       operationId: api_tasks_list
@@ -1227,6 +2052,10 @@ paths:
           * `normal` - Normale
           * `high` - Haute
           * `urgent` - Urgente
+      - in: query
+        name: project
+        schema:
+          type: integer
       - name: search
         required: false
         in: query
@@ -1246,7 +2075,7 @@ paths:
         description: |-
           * `todo` - À faire
           * `in_progress` - En cours
-          * `on_hold` - En attente
+          * `on_hold` - En pause
           * `deferred` - Reportée
           * `completed` - Terminée
       - in: query
@@ -1256,6 +2085,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1282,6 +2112,7 @@ paths:
               $ref: '#/components/schemas/TaskCreate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -1303,6 +2134,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1335,6 +2167,7 @@ paths:
               $ref: '#/components/schemas/TaskUpdate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1366,6 +2199,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedTaskUpdate'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1386,10 +2220,84 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '204':
           description: Task archived
+  /api/tasks/{task_id}/approvals/:
+    get:
+      operationId: api_tasks_approvals_list_2
+      description: List a task's approvals or request validation of a sensitive action.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApprovalRequestList'
+          description: ''
+    post:
+      operationId: api_tasks_approvals_create
+      description: List a task's approvals or request validation of a sensitive action.
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequestCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequestCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequestCreate'
+        required: true
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestCreate'
+          description: ''
   /api/tasks/{task_id}/attachments/:
     get:
       operationId: api_tasks_attachments_list
@@ -1421,6 +2329,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1450,6 +2359,7 @@ paths:
               $ref: '#/components/schemas/TaskAttachmentCreate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -1475,6 +2385,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1502,6 +2413,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1527,6 +2439,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '204':
@@ -1562,6 +2475,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1594,6 +2508,7 @@ paths:
               $ref: '#/components/schemas/TaskCommentCreate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -1620,6 +2535,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1657,6 +2573,7 @@ paths:
               $ref: '#/components/schemas/TaskCommentUpdate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1693,6 +2610,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedTaskCommentUpdate'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1718,6 +2636,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '204':
@@ -1735,6 +2654,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -1774,6 +2694,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1813,6 +2734,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1845,6 +2767,7 @@ paths:
               $ref: '#/components/schemas/TaskReportCreate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -1871,6 +2794,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1907,6 +2831,7 @@ paths:
             schema:
               $ref: '#/components/schemas/TaskReportReview'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1943,6 +2868,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedTaskReportReview'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1964,6 +2890,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1996,6 +2923,7 @@ paths:
               $ref: '#/components/schemas/TaskTemplate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -2004,6 +2932,95 @@ paths:
               schema:
                 $ref: '#/components/schemas/TaskTemplate'
           description: ''
+  /api/tasks/approvals/:
+    get:
+      operationId: api_tasks_approvals_list
+      description: List approval requests visible to the current company member.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApprovalRequestList'
+          description: ''
+  /api/tasks/approvals/{id}/:
+    get:
+      operationId: api_tasks_approvals_retrieve
+      description: Retrieve or review one approval request.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+          description: ''
+    patch:
+      operationId: api_tasks_approvals_partial_update
+      description: Retrieve or review one approval request.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedApprovalRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedApprovalRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedApprovalRequest'
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+          description: ''
   /api/tasks/assigned/:
     get:
       operationId: api_tasks_assigned_list
@@ -2011,6 +3028,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2039,6 +3057,7 @@ paths:
               $ref: '#/components/schemas/TaskBulkAction'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2056,6 +3075,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2065,6 +3085,23 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/tasks/export/:
+    get:
+      operationId: api_tasks_export_retrieve
+      description: Export filtered tasks to Excel
+      tags:
+      - api
+      security:
+      - cookieJwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: Excel File
   /api/tasks/my/:
     get:
       operationId: api_tasks_my_list
@@ -2072,6 +3109,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2089,6 +3127,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2106,6 +3145,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2135,6 +3175,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2162,6 +3203,7 @@ paths:
               $ref: '#/components/schemas/TaskTemplate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -2182,6 +3224,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2213,6 +3256,7 @@ paths:
               $ref: '#/components/schemas/TaskTemplate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2243,6 +3287,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedTaskTemplate'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2262,6 +3307,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '204':
@@ -2289,6 +3335,7 @@ paths:
             schema:
               $ref: '#/components/schemas/TaskTemplateInstantiate'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -2304,6 +3351,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2343,6 +3391,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2369,6 +3418,7 @@ paths:
               $ref: '#/components/schemas/TeamCreate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -2390,6 +3440,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2422,6 +3473,7 @@ paths:
               $ref: '#/components/schemas/TeamUpdate'
         required: true
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2453,6 +3505,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedTeamUpdate'
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2473,6 +3526,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '204':
@@ -2495,6 +3549,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2521,6 +3576,7 @@ paths:
       tags:
       - api
       security:
+      - cookieJwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -2531,18 +3587,11 @@ paths:
           description: ''
 components:
   schemas:
-    ActionEnum:
+    Action1efEnum:
       enum:
-      - status
-      - archive
-      - restore
-      - assign
+      - task_completion
       type: string
-      description: |-
-        * `status` - status
-        * `archive` - archive
-        * `restore` - restore
-        * `assign` - assign
+      description: '* `task_completion` - Clôture de tâche'
     ActivateUserResponse:
       type: object
       properties:
@@ -2557,6 +3606,119 @@ components:
           type: string
       required:
       - detail
+    AdminCompanySubscriptionUpdate:
+      type: object
+      description: Serializer used by super-admin to update subscription limits (overrides).
+      properties:
+        seats_override:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          description: Accorde une limite personnalisée de comptes si spécifié.
+    ApprovalRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        company:
+          type: integer
+          readOnly: true
+        task:
+          type: integer
+          readOnly: true
+        task_title:
+          type: string
+          readOnly: true
+        requested_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        requested_by_name:
+          type: string
+          readOnly: true
+        reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          readOnly: true
+        action:
+          allOf:
+          - $ref: '#/components/schemas/Action1efEnum'
+          readOnly: true
+          default: task_completion
+        action_display:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalRequestStatusEnum'
+          readOnly: true
+        status_display:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        review_comment:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - action
+      - action_display
+      - company
+      - created_at
+      - id
+      - reason
+      - requested_by
+      - requested_by_name
+      - review_comment
+      - reviewed_at
+      - reviewed_by
+      - reviewed_by_name
+      - status
+      - status_display
+      - task
+      - task_title
+    ApprovalRequestCreate:
+      type: object
+      properties:
+        action:
+          $ref: '#/components/schemas/Action1efEnum'
+        reason:
+          type: string
+      required:
+      - reason
+    ApprovalRequestStatusEnum:
+      enum:
+      - pending
+      - approved
+      - rejected
+      type: string
+      description: |-
+        * `pending` - En attente
+        * `approved` - Approuvée
+        * `rejected` - Refusée
+    AudienceEnum:
+      enum:
+      - company
+      - personal
+      type: string
+      description: |-
+        * `company` - Entreprise
+        * `personal` - Personnel
     BillingPeriodEnum:
       enum:
       - monthly
@@ -2638,6 +3800,14 @@ components:
         language:
           type: string
           maxLength: 10
+        workspace_type:
+          $ref: '#/components/schemas/WorkspaceTypeEnum'
+        workspace_type_display:
+          type: string
+          readOnly: true
+        is_personal:
+          type: boolean
+          readOnly: true
         is_active:
           type: boolean
         created_at:
@@ -2651,9 +3821,11 @@ components:
       required:
       - created_at
       - id
+      - is_personal
       - name
       - slug
       - updated_at
+      - workspace_type_display
     CompanyCreate:
       type: object
       description: Serializer for creating a company.
@@ -2693,9 +3865,51 @@ components:
         language:
           type: string
           maxLength: 10
+        workspace_type:
+          $ref: '#/components/schemas/WorkspaceTypeEnum'
       required:
       - name
       - slug
+    CompanyEmailAvailability:
+      type: object
+      properties:
+        available:
+          type: boolean
+        message:
+          type: string
+      required:
+      - available
+    CompanyOnboarding:
+      type: object
+      description: Create the optional company and subscription for a personal account.
+      properties:
+        company_name:
+          type: string
+          maxLength: 255
+        company_slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        website:
+          type: string
+          format: uri
+        contact_email:
+          type: string
+          format: email
+        contact_phone:
+          type: string
+          maxLength: 30
+        address:
+          type: string
+          maxLength: 255
+        plan_code:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - company_name
+      - contact_email
+      - contact_phone
+      - plan_code
     CompanyRegistration:
       type: object
       description: Atomic public onboarding for a company and its first owner.
@@ -2742,6 +3956,10 @@ components:
           writeOnly: true
         accept_terms:
           type: boolean
+        captcha_token:
+          type: string
+          writeOnly: true
+          maxLength: 2048
       required:
       - accept_terms
       - company_name
@@ -2905,6 +4123,32 @@ components:
           type: string
       required:
       - detail
+    GoogleLogin:
+      type: object
+      properties:
+        credential:
+          type: string
+        captcha_token:
+          type: string
+          maxLength: 2048
+        remember_me:
+          type: boolean
+          default: false
+        accept_terms:
+          type: boolean
+          default: false
+      required:
+      - credential
+    HealthEnum:
+      enum:
+      - on_track
+      - at_risk
+      - off_track
+      type: string
+      description: |-
+        * `on_track` - Sur les rails 🟢
+        * `at_risk` - En risque 🟠
+        * `off_track` - En retard 🔴
     InviteUser:
       type: object
       description: Serializer for inviting a user to a company.
@@ -2922,6 +4166,11 @@ components:
           default: employee
         phone:
           type: string
+        weekly_capacity_hours:
+          type: integer
+          maximum: 168
+          minimum: 1
+          default: 40
       required:
       - email
       - first_name
@@ -2935,6 +4184,12 @@ components:
           format: email
         password:
           type: string
+        captcha_token:
+          type: string
+          maxLength: 2048
+        remember_me:
+          type: boolean
+          default: false
       required:
       - email
       - password
@@ -2951,13 +4206,6 @@ components:
       - access
       - refresh
       - user
-    LogoutRequest:
-      type: object
-      properties:
-        refresh:
-          type: string
-      required:
-      - refresh
     MarkAllNotificationsReadResponse:
       type: object
       properties:
@@ -2976,7 +4224,7 @@ components:
           type: integer
           readOnly: true
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          $ref: '#/components/schemas/NotificationTypeEnum'
         type_display:
           type: string
           readOnly: true
@@ -3036,6 +4284,42 @@ components:
           readOnly: true
       required:
       - updated_at
+    NotificationTypeEnum:
+      enum:
+      - new_task
+      - comment
+      - report_approved
+      - report_rejected
+      - new_assignment
+      - task_completed
+      - subscription_reminder
+      - payment_succeeded
+      - payment_failed
+      - subscription_suspended
+      - task_due_soon
+      - task_overdue
+      - daily_digest
+      - approval_requested
+      - approval_approved
+      - approval_rejected
+      type: string
+      description: |-
+        * `new_task` - Nouvelle tâche
+        * `comment` - Commentaire
+        * `report_approved` - Report accepté
+        * `report_rejected` - Report refusé
+        * `new_assignment` - Nouvelle assignation
+        * `task_completed` - Tâche terminée
+        * `subscription_reminder` - Rappel d’abonnement
+        * `payment_succeeded` - Paiement réussi
+        * `payment_failed` - Paiement échoué
+        * `subscription_suspended` - Abonnement suspendu
+        * `task_due_soon` - Échéance proche
+        * `task_overdue` - Tâche en retard
+        * `daily_digest` - Résumé quotidien
+        * `approval_requested` - Validation demandée
+        * `approval_approved` - Validation approuvée
+        * `approval_rejected` - Validation refusée
     NotificationUpdate:
       type: object
       description: Serializer for updating notification (mark as read).
@@ -3054,6 +4338,29 @@ components:
         * `failed` - failed
         * `cancelled` - cancelled
         * `pending` - pending
+    PaginatedApprovalRequestList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApprovalRequest'
     PaginatedCompanyList:
       type: object
       required:
@@ -3123,6 +4430,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Notification'
+    PaginatedPlatformAuditLogList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlatformAuditLog'
+    PaginatedProjectList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
     PaginatedSubscriptionPlanList:
       type: object
       required:
@@ -3146,6 +4499,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SubscriptionPlan'
+    PaginatedSystemAnnouncementList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemAnnouncement'
     PaginatedTaskAttachmentList:
       type: object
       required:
@@ -3330,6 +4706,104 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserList'
+    PasswordResetConfirm:
+      type: object
+      properties:
+        uid:
+          type: string
+        token:
+          type: string
+        new_password:
+          type: string
+          writeOnly: true
+        new_password_confirm:
+          type: string
+          writeOnly: true
+      required:
+      - new_password
+      - new_password_confirm
+      - token
+      - uid
+    PasswordResetRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        captcha_token:
+          type: string
+          maxLength: 2048
+      required:
+      - email
+    PatchedAdminCompanySubscriptionUpdate:
+      type: object
+      description: Serializer used by super-admin to update subscription limits (overrides).
+      properties:
+        seats_override:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          description: Accorde une limite personnalisée de comptes si spécifié.
+    PatchedApprovalRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        company:
+          type: integer
+          readOnly: true
+        task:
+          type: integer
+          readOnly: true
+        task_title:
+          type: string
+          readOnly: true
+        requested_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        requested_by_name:
+          type: string
+          readOnly: true
+        reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reviewed_by_name:
+          type: string
+          readOnly: true
+        action:
+          allOf:
+          - $ref: '#/components/schemas/Action1efEnum'
+          readOnly: true
+          default: task_completion
+        action_display:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalRequestStatusEnum'
+          readOnly: true
+        status_display:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        review_comment:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
     PatchedCompanyUpdate:
       type: object
       description: Serializer for updating a company.
@@ -3400,6 +4874,166 @@ components:
       properties:
         is_read:
           type: boolean
+    PatchedProject:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        company:
+          type: integer
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/ProjectStatusEnum'
+        status_display:
+          type: string
+          readOnly: true
+        health:
+          $ref: '#/components/schemas/HealthEnum'
+        health_display:
+          type: string
+          readOnly: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        manager:
+          type: integer
+          nullable: true
+        manager_name:
+          type: string
+          readOnly: true
+        members:
+          type: array
+          items:
+            type: integer
+        member_details:
+          type: string
+          readOnly: true
+        teams:
+          type: array
+          items:
+            type: integer
+        team_details:
+          type: string
+          readOnly: true
+        budget_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Volume d'heures estimé
+        progress_percent:
+          type: integer
+          readOnly: true
+        total_tasks_count:
+          type: integer
+          readOnly: true
+        completed_tasks_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedSubscriptionPlan:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        code:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        billing_period:
+          $ref: '#/components/schemas/BillingPeriodEnum'
+        billing_period_display:
+          type: string
+          readOnly: true
+        audience:
+          $ref: '#/components/schemas/AudienceEnum'
+        audience_display:
+          type: string
+          readOnly: true
+        max_users:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 0 pour illimité
+        max_teams:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 0 pour illimité
+        storage_limit_mb:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 0 pour illimité
+        feature_flags: {}
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedSystemAnnouncement:
+      type: object
+      description: Serializer for SystemAnnouncement model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        message:
+          type: string
+        type:
+          $ref: '#/components/schemas/SystemAnnouncementTypeEnum'
+        type_display:
+          type: string
+          readOnly: true
+        target_audience:
+          $ref: '#/components/schemas/TargetAudienceEnum'
+        target_audience_display:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     PatchedTaskCommentUpdate:
       type: object
       description: Serializer for updating a task comment.
@@ -3438,6 +5072,9 @@ components:
           nullable: true
         is_active:
           type: boolean
+        is_shared:
+          type: boolean
+          description: True if shared with company, False if personal to creator
         created_at:
           type: string
           format: date-time
@@ -3464,6 +5101,9 @@ components:
           type: integer
           nullable: true
         team:
+          type: integer
+          nullable: true
+        project:
           type: integer
           nullable: true
         priority:
@@ -3503,6 +5143,10 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        requires_completion_approval:
+          type: boolean
+          description: Exige la validation d'un responsable avant la clôture par un
+            collaborateur.
     PatchedTeamUpdate:
       type: object
       description: Serializer for updating a team.
@@ -3658,6 +5302,61 @@ components:
         * `succeeded` - Réussi
         * `failed` - Échoué
         * `cancelled` - Annulé
+    PersonalOnboarding:
+      type: object
+      description: Provision a private single-user workspace and a personal plan.
+      properties:
+        plan_code:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - plan_code
+    PlatformAuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        actor:
+          type: integer
+          readOnly: true
+          nullable: true
+        actor_name:
+          type: string
+          readOnly: true
+        company:
+          type: integer
+          readOnly: true
+          nullable: true
+        company_name:
+          type: string
+          readOnly: true
+        category:
+          type: string
+          readOnly: true
+        action:
+          type: string
+          readOnly: true
+        entity_label:
+          type: string
+          readOnly: true
+        details:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - actor
+      - actor_name
+      - category
+      - company
+      - company_name
+      - created_at
+      - details
+      - entity_label
+      - id
     PriorityEnum:
       enum:
       - low
@@ -3670,6 +5369,107 @@ components:
         * `normal` - Normale
         * `high` - Haute
         * `urgent` - Urgente
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        company:
+          type: integer
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/ProjectStatusEnum'
+        status_display:
+          type: string
+          readOnly: true
+        health:
+          $ref: '#/components/schemas/HealthEnum'
+        health_display:
+          type: string
+          readOnly: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        manager:
+          type: integer
+          nullable: true
+        manager_name:
+          type: string
+          readOnly: true
+        members:
+          type: array
+          items:
+            type: integer
+        member_details:
+          type: string
+          readOnly: true
+        teams:
+          type: array
+          items:
+            type: integer
+        team_details:
+          type: string
+          readOnly: true
+        budget_hours:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Volume d'heures estimé
+        progress_percent:
+          type: integer
+          readOnly: true
+        total_tasks_count:
+          type: integer
+          readOnly: true
+        completed_tasks_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - company
+      - completed_tasks_count
+      - created_at
+      - health_display
+      - id
+      - manager_name
+      - member_details
+      - name
+      - progress_percent
+      - status_display
+      - team_details
+      - total_tasks_count
+      - updated_at
+    ProjectStatusEnum:
+      enum:
+      - in_progress
+      - on_hold
+      - completed
+      - cancelled
+      type: string
+      description: |-
+        * `in_progress` - En cours
+        * `on_hold` - En pause
+        * `completed` - Terminé
+        * `cancelled` - Annulé
     RecurrenceFrequencyEnum:
       enum:
       - daily
@@ -3680,6 +5480,44 @@ components:
         * `daily` - Quotidienne
         * `weekly` - Hebdomadaire
         * `monthly` - Mensuelle
+    Registration:
+      type: object
+      description: Create a personal account before an optional company onboarding.
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        password:
+          type: string
+          writeOnly: true
+        password_confirm:
+          type: string
+          writeOnly: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        accept_terms:
+          type: boolean
+          writeOnly: true
+        captcha_token:
+          type: string
+          writeOnly: true
+          maxLength: 2048
+      required:
+      - accept_terms
+      - email
+      - first_name
+      - last_name
+      - password
+      - password_confirm
     RemoveTeamMemberResponse:
       type: object
       properties:
@@ -3690,13 +5528,11 @@ components:
     RoleEnum:
       enum:
       - owner
-      - administrator
       - manager
       - employee
       type: string
       description: |-
         * `owner` - Owner
-        * `administrator` - Administrator
         * `manager` - Manager
         * `employee` - Employee
     StartTestPayment:
@@ -3732,6 +5568,11 @@ components:
         billing_period_display:
           type: string
           readOnly: true
+        audience:
+          $ref: '#/components/schemas/AudienceEnum'
+        audience_display:
+          type: string
+          readOnly: true
         max_users:
           type: integer
           maximum: 2147483647
@@ -3759,12 +5600,67 @@ components:
           format: date-time
           readOnly: true
       required:
+      - audience_display
       - billing_period_display
       - code
       - created_at
       - id
       - name
       - updated_at
+    SystemAnnouncement:
+      type: object
+      description: Serializer for SystemAnnouncement model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        message:
+          type: string
+        type:
+          $ref: '#/components/schemas/SystemAnnouncementTypeEnum'
+        type_display:
+          type: string
+          readOnly: true
+        target_audience:
+          $ref: '#/components/schemas/TargetAudienceEnum'
+        target_audience_display:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - message
+      - target_audience_display
+      - type_display
+      - updated_at
+    SystemAnnouncementTypeEnum:
+      enum:
+      - info
+      - warning
+      - danger
+      type: string
+      description: |-
+        * `info` - Information
+        * `warning` - Avertissement
+        * `danger` - Maintenance / Urgent
+    TargetAudienceEnum:
+      enum:
+      - all
+      - owners
+      type: string
+      description: |-
+        * `all` - Tous les utilisateurs
+        * `owners` - Propriétaires uniquement
     Task:
       type: object
       description: Serializer for Task model.
@@ -3780,6 +5676,12 @@ components:
           nullable: true
         company:
           type: integer
+          readOnly: true
+        project:
+          type: integer
+          nullable: true
+        project_name:
+          type: string
           readOnly: true
         creator:
           type: integer
@@ -3799,6 +5701,9 @@ components:
           nullable: true
         team_name:
           type: string
+          readOnly: true
+        team_leader_id:
+          type: integer
           readOnly: true
         priority:
           $ref: '#/components/schemas/PriorityEnum'
@@ -3831,6 +5736,16 @@ components:
           readOnly: true
         progress_percent:
           type: integer
+          readOnly: true
+          nullable: true
+        approval_pending:
+          type: boolean
+          readOnly: true
+        deadline_status:
+          type: string
+          readOnly: true
+        deadline_status_display:
+          type: string
           readOnly: true
         parent:
           type: integer
@@ -3883,7 +5798,12 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        requires_completion_approval:
+          type: boolean
+          description: Exige la validation d'un responsable avant la clôture par un
+            collaborateur.
       required:
+      - approval_pending
       - archived_at
       - assigned_to_name
       - company
@@ -3891,6 +5811,8 @@ components:
       - created_at
       - creator
       - creator_name
+      - deadline_status
+      - deadline_status_display
       - dependency_details
       - id
       - is_blocked
@@ -3898,8 +5820,10 @@ components:
       - next_occurrence
       - priority_display
       - progress_percent
+      - project_name
       - status_display
       - subtask_count
+      - team_leader_id
       - team_name
       - title
       - updated_at
@@ -3970,7 +5894,7 @@ components:
           maxItems: 100
           minItems: 1
         action:
-          $ref: '#/components/schemas/ActionEnum'
+          $ref: '#/components/schemas/TaskBulkActionActionEnum'
         status:
           $ref: '#/components/schemas/TaskStatusEnum'
         assigned_to:
@@ -3979,6 +5903,18 @@ components:
       required:
       - action
       - task_ids
+    TaskBulkActionActionEnum:
+      enum:
+      - status
+      - archive
+      - restore
+      - assign
+      type: string
+      description: |-
+        * `status` - status
+        * `archive` - archive
+        * `restore` - restore
+        * `assign` - assign
     TaskComment:
       type: object
       description: Serializer for TaskComment.
@@ -3995,6 +5931,17 @@ components:
         author_name:
           type: string
           readOnly: true
+        parent_comment:
+          type: integer
+          nullable: true
+        parent_comment_author_name:
+          type: string
+          readOnly: true
+          nullable: true
+        parent_comment_content:
+          type: string
+          readOnly: true
+          nullable: true
         content:
           type: string
         created_at:
@@ -4011,6 +5958,8 @@ components:
       - content
       - created_at
       - id
+      - parent_comment_author_name
+      - parent_comment_content
       - task
       - updated_at
     TaskCommentCreate:
@@ -4019,6 +5968,9 @@ components:
       properties:
         content:
           type: string
+        parent_comment:
+          type: integer
+          nullable: true
       required:
       - content
     TaskCommentUpdate:
@@ -4043,6 +5995,9 @@ components:
           type: integer
           nullable: true
         team:
+          type: integer
+          nullable: true
+        project:
           type: integer
           nullable: true
         priority:
@@ -4080,6 +6035,10 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        requires_completion_approval:
+          type: boolean
+          description: Exige la validation d'un responsable avant la clôture par un
+            collaborateur.
       required:
       - title
     TaskHistory:
@@ -4147,6 +6106,9 @@ components:
         team_name:
           type: string
           readOnly: true
+        team_leader_id:
+          type: integer
+          readOnly: true
         status:
           $ref: '#/components/schemas/TaskStatusEnum'
         status_display:
@@ -4174,6 +6136,16 @@ components:
         progress_percent:
           type: integer
           readOnly: true
+          nullable: true
+        approval_pending:
+          type: boolean
+          readOnly: true
+        deadline_status:
+          type: string
+          readOnly: true
+        deadline_status_display:
+          type: string
+          readOnly: true
         parent:
           type: integer
           nullable: true
@@ -4189,16 +6161,24 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        requires_completion_approval:
+          type: boolean
+          description: Exige la validation d'un responsable avant la clôture par un
+            collaborateur.
       required:
+      - approval_pending
       - assigned_to_name
       - created_at
       - creator_name
+      - deadline_status
+      - deadline_status_display
       - id
       - is_blocked
       - is_overdue
       - priority_display
       - progress_percent
       - status_display
+      - team_leader_id
       - team_name
       - title
     TaskReport:
@@ -4309,7 +6289,7 @@ components:
       description: |-
         * `todo` - À faire
         * `in_progress` - En cours
-        * `on_hold` - En attente
+        * `on_hold` - En pause
         * `deferred` - Reportée
         * `completed` - Terminée
     TaskTemplate:
@@ -4335,6 +6315,9 @@ components:
           nullable: true
         is_active:
           type: boolean
+        is_shared:
+          type: boolean
+          description: True if shared with company, False if personal to creator
         created_at:
           type: string
           format: date-time
@@ -4381,6 +6364,9 @@ components:
         team:
           type: integer
           nullable: true
+        project:
+          type: integer
+          nullable: true
         priority:
           $ref: '#/components/schemas/PriorityEnum'
         status:
@@ -4418,6 +6404,10 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        requires_completion_approval:
+          type: boolean
+          description: Exige la validation d'un responsable avant la clôture par un
+            collaborateur.
       required:
       - title
     Team:
@@ -4504,6 +6494,9 @@ components:
         name:
           type: string
           maxLength: 255
+        leader:
+          type: integer
+          nullable: true
         leader_name:
           type: string
           readOnly: true
@@ -4561,36 +6554,6 @@ components:
       required:
       - access
       - refresh
-    TypeEnum:
-      enum:
-      - new_task
-      - comment
-      - report_approved
-      - report_rejected
-      - new_assignment
-      - task_completed
-      - subscription_reminder
-      - payment_succeeded
-      - payment_failed
-      - subscription_suspended
-      - task_due_soon
-      - task_overdue
-      - daily_digest
-      type: string
-      description: |-
-        * `new_task` - Nouvelle tâche
-        * `comment` - Commentaire
-        * `report_approved` - Report accepté
-        * `report_rejected` - Report refusé
-        * `new_assignment` - Nouvelle assignation
-        * `task_completed` - Tâche terminée
-        * `subscription_reminder` - Rappel d’abonnement
-        * `payment_succeeded` - Paiement réussi
-        * `payment_failed` - Paiement échoué
-        * `subscription_suspended` - Abonnement suspendu
-        * `task_due_soon` - Échéance proche
-        * `task_overdue` - Tâche en retard
-        * `daily_digest` - Résumé quotidien
     UnreadNotificationCountResponse:
       type: object
       properties:
@@ -4659,14 +6622,20 @@ components:
         role_display:
           type: string
           readOnly: true
+        workspace_type:
+          type: string
+          readOnly: true
+        is_personal_workspace:
+          type: string
+          readOnly: true
         is_active:
           type: boolean
         is_superuser:
           type: boolean
           readOnly: true
-          title: Superuser status
-          description: Designates that this user has all permissions without explicitly
-            assigning them.
+          title: Statut super-utilisateur
+          description: Précise que l’utilisateur possède toutes les permissions sans
+            les assigner explicitement.
         must_change_password:
           type: boolean
           readOnly: true
@@ -4674,6 +6643,7 @@ components:
           type: string
           format: date-time
           nullable: true
+          title: Dernière connexion
         created_at:
           type: string
           format: date-time
@@ -4694,11 +6664,13 @@ components:
       - first_name
       - full_name
       - id
+      - is_personal_workspace
       - is_superuser
       - last_name
       - must_change_password
       - role_display
       - updated_at
+      - workspace_type
     UserAuditLog:
       type: object
       properties:
@@ -4713,6 +6685,7 @@ components:
           readOnly: true
         target:
           type: integer
+          nullable: true
         target_name:
           type: string
           readOnly: true
@@ -4729,7 +6702,6 @@ components:
       - actor_name
       - created_at
       - id
-      - target
       - target_name
     UserList:
       type: object
@@ -4768,6 +6740,7 @@ components:
           type: string
           format: date-time
           nullable: true
+          title: Dernière connexion
         created_at:
           type: string
           format: date-time
@@ -4830,7 +6803,19 @@ components:
       - id
       - last_name
       - role_display
+    WorkspaceTypeEnum:
+      enum:
+      - company
+      - personal
+      type: string
+      description: |-
+        * `company` - Entreprise
+        * `personal` - Personnel
   securitySchemes:
+    cookieJwtAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
     jwtAuth:
       type: http
       scheme: bearer

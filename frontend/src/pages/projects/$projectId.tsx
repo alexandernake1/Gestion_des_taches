@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -9,14 +9,15 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { TaskForm } from '@/components/tasks/TaskForm'
-import { requireManagement } from '@/router/auth'
+import { requireCollaborativeWorkspace } from '@/router/auth'
 import { projectsService } from '@/services/projects'
 import { tasksService } from '@/services/tasks'
 import { authService } from '@/services/auth'
 import type { Status, TaskCreateRequest } from '@/domain/types'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/projects/$projectId')({
-  beforeLoad: requireManagement,
+  beforeLoad: requireCollaborativeWorkspace,
   component: ProjectDetailPage,
 })
 
@@ -35,11 +36,41 @@ export function ProjectDetailPage() {
   const numericId = Number(projectId)
   const [activeTab, setActiveTab] = useState<'kanban' | 'timeline'>('kanban')
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  const draggedTaskId = useRef<number | null>(null)
+  const [draggingOver, setDraggingOver] = useState<Status | null>(null)
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: authService.getCurrentUser,
   })
   const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
+  const queryClient = useQueryClient()
+
+  const updateTaskStatusMutation = useMutation({
+    mutationFn: ({ taskId, status }: { taskId: number; status: Status }) => tasksService.update(taskId, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'project', numericId] })
+      queryClient.invalidateQueries({ queryKey: ['project', numericId] })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Changement de statut impossible.')
+    },
+  })
+
+  const startTaskDrag = (event: React.DragEvent<HTMLDivElement>, taskId: number) => {
+    draggedTaskId.current = taskId
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(taskId))
+  }
+
+  const dropTask = (event: React.DragEvent<HTMLDivElement>, status: Status | 'pending_approval') => {
+    event.preventDefault()
+    if (status === 'pending_approval') return
+    const taskId = draggedTaskId.current ?? Number(event.dataTransfer.getData('text/plain'))
+    if (taskId) updateTaskStatusMutation.mutate({ taskId, status })
+    draggedTaskId.current = null
+    setDraggingOver(null)
+  }
 
   const { data: project, isLoading: isProjectLoading } = useQuery({
     queryKey: ['project', numericId],
@@ -205,8 +236,21 @@ export function ProjectDetailPage() {
                   ? task.approval_pending
                   : !task.approval_pending && task.status === col.id
               ))
+              const isDropTarget = col.id !== 'pending_approval'
+              const isOver = draggingOver === col.id
               return (
-                <div key={col.id} className="flex flex-col rounded-2xl border border-border bg-card/60 p-4 space-y-4">
+                <div
+                  key={col.id}
+                  className={`flex flex-col rounded-2xl border border-border bg-card/60 p-4 space-y-4 transition-colors ${isOver ? 'border-primary/50 bg-primary/5 shadow-inner' : ''}`}
+                  onDragOver={(event) => {
+                    if (!isDropTarget) return
+                    event.preventDefault()
+                    event.dataTransfer.dropEffect = 'move'
+                    setDraggingOver(col.id)
+                  }}
+                  onDragLeave={() => setDraggingOver(null)}
+                  onDrop={(event) => dropTask(event, col.id)}
+                >
                   <div className="flex items-center justify-between">
                     <span className={`inline-flex items-center rounded-xl border px-3 py-1 text-xs font-bold ${col.color}`}>
                       {col.label}
@@ -217,14 +261,21 @@ export function ProjectDetailPage() {
                   <div className="space-y-3 flex-1 min-h-[300px]">
                     {colTasks.length === 0 ? (
                       <div className="h-24 rounded-xl border border-dashed border-border/60 flex items-center justify-center text-xs text-muted-foreground/60">
-                        Aucune tâche
+                        {isOver ? 'Déposer ici' : 'Aucune tâche'}
                       </div>
                     ) : (
                       colTasks.map((task) => (
                         <div
                           key={task.id}
+                          draggable={!task.approval_pending && !task.is_blocked}
+                          onDragStart={(event) => startTaskDrag(event, task.id)}
+                          onDragEnd={() => {
+                            draggedTaskId.current = null
+                            setDraggingOver(null)
+                          }}
                           onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: String(task.id) } })}
-                          className="group cursor-pointer rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md space-y-3"
+                          title={task.approval_pending ? 'Cette tâche attend une validation : ouvrez-la pour la traiter.' : task.is_blocked ? 'Cette tâche est bloquée par une dépendance.' : 'Glissez la tâche vers un autre statut.'}
+                          className={`group rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md space-y-3 ${task.approval_pending || task.is_blocked ? 'cursor-not-allowed opacity-75' : 'cursor-grab active:cursor-grabbing'}`}
                         >
                           <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                             {task.title}

@@ -11,7 +11,7 @@ import { DateInput } from '@/components/ui/DateInput'
 import { Modal } from '@/components/ui/Modal'
 import { useConfirmation } from '@/components/ui/confirmation'
 import { Badge } from '@/components/ui/Badge'
-import { requireManagement } from '@/router/auth'
+import { requireCollaborativeWorkspace } from '@/router/auth'
 import { projectsService, type CreateProjectPayload } from '@/services/projects'
 import { subscriptionsService } from '@/services/subscriptions'
 import { authService } from '@/services/auth'
@@ -19,7 +19,7 @@ import { teamsService } from '@/services/teams'
 import type { Project, ProjectHealth, ProjectStatus, Team } from '@/domain/types'
 
 export const Route = createFileRoute('/projects')({
-  beforeLoad: requireManagement,
+  beforeLoad: requireCollaborativeWorkspace,
   component: ProjectsPage,
 })
 
@@ -51,6 +51,9 @@ export function ProjectsPage() {
     queryFn: authService.getCurrentUser,
   })
   const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
+  const canManageProjects = Boolean(
+    currentUser && (isPersonalWorkspace || currentUser.is_superuser || currentUser.role !== 'employee'),
+  )
 
   const { data: subscription } = useQuery({
     queryKey: ['mySubscription'],
@@ -65,14 +68,14 @@ export function ProjectsPage() {
   const { data: usersData } = useQuery({
     queryKey: ['companyUsers'],
     queryFn: () => authService.list({ is_active: true }),
-    enabled: Boolean(currentUser && !isPersonalWorkspace),
+    enabled: Boolean(currentUser && !isPersonalWorkspace && canManageProjects),
   })
   const users = usersData || []
 
   const { data: teams = [] } = useQuery({
     queryKey: ['teams'],
     queryFn: teamsService.list,
-    enabled: Boolean(currentUser && !isPersonalWorkspace),
+    enabled: Boolean(currentUser && !isPersonalWorkspace && canManageProjects),
   })
 
   // Check tiering: free/starter plans can be restricted or prompt upgrade
@@ -110,7 +113,7 @@ export function ProjectsPage() {
                 : "Pilotez les grands chantiers stratégiques de votre organisation et suivez l'avancement en temps réel."}
             </p>
           </div>
-          <Button
+          {canManageProjects && <Button
             onClick={() => {
               setEditingProject(null)
               setIsModalOpen(true)
@@ -119,7 +122,7 @@ export function ProjectsPage() {
             className="shadow-lg shadow-primary/20"
           >
             <Plus className="h-5 w-5 mr-2" /> Nouveau Projet
-          </Button>
+          </Button>}
         </div>
 
         {/* Plan Upgrade Banner if on free plan */}
@@ -208,9 +211,11 @@ export function ProjectsPage() {
             <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
               {isPersonalWorkspace
                 ? 'Créez votre premier projet pour organiser vos tâches autour d’un objectif.'
-                : "Créez votre premier projet pour organiser vos tâches en grands objectifs d'équipe."}
+                : canManageProjects
+                ? "Créez votre premier projet pour organiser vos tâches en grands objectifs d'équipe."
+                : "Les projets auxquels votre entreprise vous associe apparaîtront ici."}
             </p>
-            <Button
+            {canManageProjects && <Button
               onClick={() => {
                 setEditingProject(null)
                 setIsModalOpen(true)
@@ -218,7 +223,7 @@ export function ProjectsPage() {
               className="mt-6"
             >
               <Plus className="h-4 w-4 mr-2" /> Créer un projet
-            </Button>
+            </Button>}
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -246,6 +251,7 @@ export function ProjectsPage() {
                   })
                   if (confirmed) deleteMutation.mutate(project.id)
                 }}
+                canManageProjects={canManageProjects}
               />
             ))}
           </div>
@@ -285,12 +291,14 @@ function ProjectCard({
   onEdit,
   onDelete,
   showCollaboration,
+  canManageProjects,
 }: {
   project: Project
   onOpen: () => void
   onEdit: () => void
   onDelete: () => void
   showCollaboration: boolean
+  canManageProjects: boolean
 }) {
   const healthInfo = healthBadges[project.health] || healthBadges.on_track
   const statusInfo = statusBadges[project.status] || statusBadges.in_progress
@@ -388,20 +396,20 @@ function ProjectCard({
           </div>}
 
           <div className="flex items-center gap-1">
-            <button
+            {canManageProjects && <button
               onClick={onEdit}
               className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               title="Modifier"
             >
               <Edit3 className="h-4 w-4" />
-            </button>
-            <button
+            </button>}
+            {canManageProjects && <button
               onClick={onDelete}
               className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
               title="Supprimer"
             >
               <Trash2 className="h-4 w-4" />
-            </button>
+            </button>}
             <Button onClick={onOpen} size="sm" className="ml-1 text-xs">
               Ouvrir
             </Button>

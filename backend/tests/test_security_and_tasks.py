@@ -968,7 +968,7 @@ def test_project_rejects_team_from_another_company(api_client, tenant_data):
 
 
 @pytest.mark.django_db
-def test_employee_cannot_access_project_api(api_client, tenant_data):
+def test_employee_can_view_project_api_but_cannot_manage_projects(api_client, tenant_data):
     project = Project.objects.create(
         name='Projet réservé au pilotage',
         company=tenant_data['company_a'],
@@ -979,8 +979,29 @@ def test_employee_cannot_access_project_api(api_client, tenant_data):
     list_response = api_client.get('/api/projects/')
     detail_response = api_client.get(f'/api/projects/{project.id}/')
 
-    assert list_response.status_code == 403
-    assert detail_response.status_code == 403
+    assert list_response.status_code == 200
+    assert detail_response.status_code == 200
+    project_list = (
+        list_response.data['results']
+        if isinstance(list_response.data, dict)
+        else list_response.data
+    )
+    assert [item['id'] for item in project_list] == [project.id]
+    assert detail_response.data['id'] == project.id
+
+    create_response = api_client.post(
+        '/api/projects/',
+        {'name': 'Projet non autorisé', 'status': 'in_progress', 'health': 'on_track'},
+        format='json',
+    )
+    update_response = api_client.patch(
+        f'/api/projects/{project.id}/',
+        {'name': 'Modification non autorisée'},
+        format='json',
+    )
+
+    assert create_response.status_code == 403
+    assert update_response.status_code == 403
 
 
 @pytest.mark.django_db

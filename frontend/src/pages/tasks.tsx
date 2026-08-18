@@ -706,14 +706,18 @@ function KanbanView({
   const draggedId = useRef<number | null>(null)
   const [draggingOver, setDraggingOver] = useState<KanbanColumnStatus | null>(null)
 
-  const handleDragStart = (taskId: number) => {
+  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, taskId: number) => {
     draggedId.current = taskId
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(taskId))
   }
 
-  const handleDrop = (newStatus: KanbanColumnStatus) => {
+  const handleDrop = (event: React.DragEvent<HTMLElement>, newStatus: KanbanColumnStatus) => {
+    event.preventDefault()
     if (newStatus === 'pending_approval') return
-    if (draggedId.current) {
-      onStatusChange(draggedId.current, newStatus)
+    const taskId = draggedId.current ?? Number(event.dataTransfer.getData('text/plain'))
+    if (taskId) {
+      onStatusChange(taskId, newStatus)
       draggedId.current = null
     }
     setDraggingOver(null)
@@ -732,9 +736,15 @@ function KanbanView({
           <section
             key={column.status}
             className={`w-[85vw] max-w-[320px] shrink-0 snap-center sm:w-[320px] lg:w-full lg:max-w-none lg:shrink rounded-3xl border p-4 transition-all duration-300 flex-1 ${isOver ? 'bg-primary/5 shadow-inner border-primary/30' : 'bg-muted/40 backdrop-blur-sm border-border/50'} ${column.color.replace('border-', 'border-t-[3px] border-t-').replace('300', '400')}`}
-            onDragOver={(e) => { if (column.status !== 'pending_approval') { e.preventDefault(); setDraggingOver(column.status) } }}
+            onDragOver={(e) => {
+              if (column.status !== 'pending_approval') {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+                setDraggingOver(column.status)
+              }
+            }}
             onDragLeave={() => setDraggingOver(null)}
-            onDrop={() => handleDrop(column.status)}
+            onDrop={(event) => handleDrop(event, column.status)}
           >
             <div className="mb-4 flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
@@ -747,9 +757,14 @@ function KanbanView({
               {columnTasks.map((task) => (
                 <div
                   key={task.id}
-                  draggable={!task.approval_pending}
-                  onDragStart={() => handleDragStart(task.id)}
-                  className="group cursor-grab rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-card hover:border-primary/40 hover:shadow-md active:cursor-grabbing active:scale-[0.98]"
+                  draggable={!task.approval_pending && !task.is_blocked}
+                  onDragStart={(event) => handleDragStart(event, task.id)}
+                  onDragEnd={() => {
+                    draggedId.current = null
+                    setDraggingOver(null)
+                  }}
+                  title={task.approval_pending ? 'Cette tâche attend une validation : ouvrez-la pour la traiter.' : task.is_blocked ? 'Cette tâche est bloquée par une dépendance.' : 'Glissez la tâche vers un autre statut.'}
+                  className={`group rounded-2xl border border-border/60 bg-card/95 backdrop-blur-md p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-card hover:border-primary/40 hover:shadow-md active:scale-[0.98] ${task.approval_pending || task.is_blocked ? 'cursor-not-allowed opacity-75' : 'cursor-grab active:cursor-grabbing'}`}
                 >
                   <button
                     type="button"
