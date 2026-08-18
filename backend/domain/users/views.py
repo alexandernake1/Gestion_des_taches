@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.conf import settings
+from django.db import models
 from django.contrib.auth.models import update_last_login
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
@@ -653,6 +654,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         }
         if changes:
             UserAuditLog.objects.create(
+                company=updated.company or self.request.user.company,
                 actor=self.request.user,
                 target=updated,
                 action='account_updated',
@@ -665,6 +667,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         if instance.role == Role.OWNER:
             raise ValidationError({'detail': "Le compte propriétaire doit être transféré avant toute suppression."})
         UserAuditLog.objects.create(
+            company=instance.company or self.request.user.company,
             actor=self.request.user,
             target=instance,
             action='account_deleted',
@@ -789,6 +792,7 @@ def invite_user(request):
     user_data['temporary_password'] = temp_password
     user_data['email_sent'] = email_sent
     UserAuditLog.objects.create(
+        company=user.company or request.user.company,
         actor=request.user,
         target=user,
         action='account_created',
@@ -847,6 +851,7 @@ def reset_user_password(request, user_id):
     email_sent = send_password_reset_email(user, temporary_password)
 
     UserAuditLog.objects.create(
+        company=user.company or request.user.company,
         actor=request.user,
         target=user,
         action='password_reset',
@@ -907,6 +912,7 @@ def deactivate_user(request, user_id):
     user.is_active = False
     user.save(update_fields=['is_active', 'updated_at'])
     UserAuditLog.objects.create(
+        company=user.company or request.user.company,
         actor=request.user,
         target=user,
         action='account_deactivated',
@@ -950,6 +956,7 @@ def activate_user(request, user_id):
     user.is_active = True
     user.save(update_fields=['is_active', 'updated_at'])
     UserAuditLog.objects.create(
+        company=user.company or request.user.company,
         actor=request.user,
         target=user,
         action='account_activated',
@@ -968,8 +975,12 @@ class UserAuditLogListView(generics.ListAPIView):
         if getattr(self, 'swagger_fake_view', False):
             return UserAuditLog.objects.none()
         user = self.request.user
-        qs = UserAuditLog.objects.select_related('actor', 'target')
+        qs = UserAuditLog.objects.select_related('actor', 'target', 'company')
         # Super-admins can audit all companies; company admins see only their own.
         if user.is_superuser:
             return qs
-        return qs.filter(target__company=user.company)
+        return qs.filter(
+            models.Q(company=user.company)
+            | models.Q(target__company=user.company)
+            | models.Q(actor__company=user.company)
+        )

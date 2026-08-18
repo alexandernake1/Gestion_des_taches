@@ -89,8 +89,10 @@ def test_celery_discovers_scheduled_tasks():
 
     assert 'domain.companies.tasks.process_subscription_lifecycle' in app.tasks
     assert 'domain.notifications.tasks.process_smart_notifications' in app.tasks
+    assert 'domain.users.tasks.purge_audit_logs_task' in app.tasks
     assert 'process-subscription-lifecycle-hourly' in app.conf.beat_schedule
     assert 'process-smart-notifications-hourly' in app.conf.beat_schedule
+    assert 'purge-audit-logs-daily' in app.conf.beat_schedule
 
 
 @override_settings(

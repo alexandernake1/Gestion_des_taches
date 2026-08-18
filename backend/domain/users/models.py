@@ -118,6 +118,13 @@ class User(AbstractUser):
 
 
 class UserAuditLog(models.Model):
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='user_audit_logs',
+    )
     actor = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

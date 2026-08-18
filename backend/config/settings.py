@@ -271,6 +271,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'domain.notifications.tasks.process_smart_notifications',
         'schedule': 3600.0,
     },
+    'purge-audit-logs-daily': {
+        'task': 'domain.users.tasks.purge_audit_logs_task',
+        'schedule': 86400.0,
+    },
 }
 
 # S3 Configuration
