@@ -4,8 +4,10 @@ from django.utils import timezone
 
 import uuid
 
+from decimal import Decimal
 from .models import (
     BillingPeriod,
+    Company,
     CompanySubscription,
     PaymentStatus,
     PaymentTransaction,
@@ -39,7 +41,96 @@ def _period_end(plan, start):
     )
 
 
-def start_test_payment(company, plan: SubscriptionPlan) -> PaymentTransaction:
+def calculate_subscription_quote(
+    company: Company,
+    target_plan: SubscriptionPlan,
+    now=None,
+) -> dict:
+    """Calculate the remaining prorata credit and generate a formal quote preview before plan switch."""
+    if now is None:
+        now = timezone.now()
+
+    subscription = CompanySubscription.objects.filter(company=company).select_related('plan').first()
+    current_plan = subscription.plan if subscription else None
+    current_status = subscription.status if subscription else None
+    current_price = current_plan.price if (current_plan and current_status in [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL]) else Decimal('0.00')
+
+    ends_at = subscription.ends_at if subscription else None
+    starts_at = subscription.starts_at if subscription else None
+
+    credit = Decimal('0.00')
+    remaining_days = 0
+    total_days = 0
+    consumed_days = 0
+
+    if (
+        current_plan
+        and current_status == SubscriptionStatus.ACTIVE
+        and current_price > Decimal('0.00')
+        and ends_at
+        and ends_at > now
+    ):
+        nominal_days = 365 if current_plan.billing_period == BillingPeriod.YEARLY else 30
+        remaining_seconds = max(0.0, (ends_at - now).total_seconds())
+        remaining_days = max(0, int(round(remaining_seconds / 86400)))
+
+        if starts_at and starts_at < ends_at and (ends_at - starts_at).total_seconds() >= nominal_days * 86400 * 0.9:
+            total_days = max(remaining_days, int(round((ends_at - starts_at).total_seconds() / 86400)))
+        else:
+            total_days = max(remaining_days, nominal_days)
+
+        remaining_ratio = min(Decimal('1.00'), max(Decimal('0.00'), Decimal(str(remaining_days)) / Decimal(str(total_days))))
+        credit = round(remaining_ratio * current_price, 2)
+        consumed_days = max(0, total_days - remaining_days)
+
+    gross_amount = target_plan.price
+    credit_applied = min(credit, gross_amount)
+    net_amount_due = max(Decimal('0.00'), gross_amount - credit)
+    unused_credit = max(Decimal('0.00'), credit - gross_amount)
+
+    return {
+        'company_id': company.id,
+        'company_name': company.name,
+        'workspace_type': company.workspace_type,
+        'current_plan': {
+            'id': current_plan.id if current_plan else None,
+            'name': current_plan.name if current_plan else 'Aucun',
+            'code': current_plan.code if current_plan else None,
+            'price': float(current_plan.price) if current_plan else 0.0,
+            'billing_period': current_plan.billing_period if current_plan else None,
+            'status': current_status or 'none',
+            'ends_at': ends_at.isoformat() if ends_at else None,
+        },
+        'target_plan': {
+            'id': target_plan.id,
+            'name': target_plan.name,
+            'code': target_plan.code,
+            'price': float(target_plan.price),
+            'billing_period': target_plan.billing_period,
+            'audience': target_plan.audience,
+            'max_users': target_plan.max_users,
+            'max_teams': target_plan.max_teams,
+        },
+        'prorata_details': {
+            'remaining_days': remaining_days,
+            'total_days': total_days,
+            'consumed_days': consumed_days,
+            'credit_amount': float(credit),
+        },
+        'gross_amount': float(gross_amount),
+        'credit_applied': float(credit_applied),
+        'net_amount_due': float(net_amount_due),
+        'unused_credit': float(unused_credit),
+        'currency': 'XOF',
+        'quote_date': now.isoformat(),
+        'is_free_upgrade': net_amount_due == Decimal('0.00'),
+    }
+
+
+def start_test_payment(company, plan: SubscriptionPlan, custom_amount: Decimal = None) -> PaymentTransaction:
+    quote = calculate_subscription_quote(company, plan)
+    amount = Decimal(str(quote['net_amount_due'])) if custom_amount is None else custom_amount
+
     subscription, _ = CompanySubscription.objects.get_or_create(
         company=company,
         defaults={'plan': plan, 'status': SubscriptionStatus.PENDING_VERIFICATION},
@@ -50,6 +141,13 @@ def start_test_payment(company, plan: SubscriptionPlan) -> PaymentTransaction:
         status=PaymentStatus.PENDING,
     ).first()
     if pending:
+        if pending.amount != amount:
+            pending.amount = amount
+            pending.provider_payload = {
+                **pending.provider_payload,
+                'quote': quote,
+            }
+            pending.save(update_fields=['amount', 'provider_payload', 'updated_at'])
         return pending
 
     subscription.plan = plan
@@ -60,9 +158,9 @@ def start_test_payment(company, plan: SubscriptionPlan) -> PaymentTransaction:
         subscription=subscription,
         plan=plan,
         reference=f"TEST-{uuid.uuid4().hex[:20].upper()}",
-        amount=plan.price,
+        amount=amount,
         status=PaymentStatus.PENDING,
-        provider_payload={'mode': 'simulation'},
+        provider_payload={'mode': 'simulation', 'quote': quote},
     )
 
 

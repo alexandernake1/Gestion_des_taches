@@ -121,6 +121,10 @@ class ChangePlanSerializer(serializers.Serializer):
     plan_code = serializers.CharField(required=True)
 
 
+class SubscriptionQuoteRequestSerializer(serializers.Serializer):
+    plan_code = serializers.CharField(required=True)
+
+
 class PaymentTransactionSerializer(serializers.ModelSerializer):
     plan_name = serializers.CharField(source='plan.name', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)

@@ -172,6 +172,44 @@ export interface PaymentTransaction {
   created_at: string;
 }
 
+export interface SubscriptionQuote {
+  company_id: number;
+  company_name: string;
+  workspace_type: WorkspaceType;
+  current_plan: {
+    id?: number | string | null;
+    name: string;
+    code?: string | null;
+    price: number;
+    billing_period?: BillingPeriod | null;
+    status: string;
+    ends_at?: string | null;
+  };
+  target_plan: {
+    id: number | string;
+    name: string;
+    code: string;
+    price: number;
+    billing_period: BillingPeriod;
+    audience: WorkspaceType;
+    max_users: number;
+    max_teams: number;
+  };
+  prorata_details: {
+    remaining_days: number;
+    total_days: number;
+    consumed_days: number;
+    credit_amount: number;
+  };
+  gross_amount: number;
+  credit_applied: number;
+  net_amount_due: number;
+  unused_credit: number;
+  currency: string;
+  quote_date: string;
+  is_free_upgrade: boolean;
+}
+
 export interface Team {
   id: string;
   name: string;

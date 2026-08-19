@@ -10,8 +10,8 @@ import { subscriptionsService } from '@/services/subscriptions'
 import { authService } from '@/services/auth'
 import { requireOwner } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Check, ShieldAlert, Sparkles, Users, Layers, HardDrive, ReceiptText, XCircle, Clock3, ArrowLeft } from 'lucide-react'
-import type { PaymentTransaction } from '@/domain/types'
+import { Check, ShieldAlert, Sparkles, Users, Layers, HardDrive, ReceiptText, XCircle, Clock3, ArrowLeft, FileText, ArrowRight } from 'lucide-react'
+import type { PaymentTransaction, SubscriptionQuote } from '@/domain/types'
 import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/subscription')({
@@ -59,8 +59,6 @@ function SubscriptionPage() {
     queryFn: authService.getCurrentUser,
   })
 
-
-
   const isOwner = currentUser?.role === 'owner'
   const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
   const workspaceType = currentUser?.workspace_type || (isPersonalWorkspace ? 'personal' : 'company')
@@ -81,6 +79,9 @@ function SubscriptionPage() {
 
   const [planChangeSuccess, setPlanChangeSuccess] = useState<string | null>(null)
   const [pendingPayment, setPendingPayment] = useState<PaymentTransaction | null>(null)
+  const [pendingQuote, setPendingQuote] = useState<SubscriptionQuote | null>(null)
+  const [loadingQuotePlanCode, setLoadingQuotePlanCode] = useState<string | null>(null)
+
   const { data: payments = [] } = useQuery({
     queryKey: ['payment-history'],
     queryFn: subscriptionsService.paymentHistory,
@@ -92,14 +93,20 @@ function SubscriptionPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['subscription-page'] })
       queryClient.invalidateQueries({ queryKey: ['my-subscription'] })
-      setPlanChangeSuccess(`Forfait "${data?.plan_details?.name || 'nouveau'}" sélectionné — en attente de vérification.`)
+      setPendingQuote(null)
+      setPlanChangeSuccess(`Forfait "${data?.plan_details?.name || 'nouveau'}" activé avec succès.`)
       setTimeout(() => setPlanChangeSuccess(null), 6000)
     },
   })
+
   const startPaymentMutation = useMutation({
     mutationFn: subscriptionsService.startTestPayment,
-    onSuccess: setPendingPayment,
+    onSuccess: (payment) => {
+      setPendingQuote(null)
+      setPendingPayment(payment)
+    },
   })
+
   const simulatePaymentMutation = useMutation({
     mutationFn: (outcome: PaymentTransaction['status'] | 'pending') =>
       subscriptionsService.simulatePayment(pendingPayment!.reference, outcome),
@@ -117,9 +124,27 @@ function SubscriptionPage() {
       }
     },
   })
-  const choosePlan = (planCode: string, price: number) => {
-    if (price === 0) changePlanMutation.mutate(planCode)
-    else startPaymentMutation.mutate(planCode)
+
+  const handleRequestQuote = async (planCode: string) => {
+    try {
+      setLoadingQuotePlanCode(planCode)
+      const quote = await subscriptionsService.getQuote(planCode)
+      setPendingQuote(quote)
+    } catch {
+      // Fallback direct
+      startPaymentMutation.mutate(planCode)
+    } finally {
+      setLoadingQuotePlanCode(null)
+    }
+  }
+
+  const handleConfirmQuote = () => {
+    if (!pendingQuote) return
+    if (pendingQuote.net_amount_due === 0) {
+      changePlanMutation.mutate(pendingQuote.target_plan.code)
+    } else {
+      startPaymentMutation.mutate(pendingQuote.target_plan.code)
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -289,6 +314,7 @@ function SubscriptionPage() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {(Array.isArray(plans) ? plans : []).map((plan) => {
               const isCurrentPlan = subscription.plan_details.id === plan.id
+              const isLoadingThisQuote = loadingQuotePlanCode === plan.code
               return (
                 <div
                   key={plan.id}
@@ -345,11 +371,11 @@ function SubscriptionPage() {
                       </Button>
                     ) : (
                       <Button
-                        disabled={!isOwner || changePlanMutation.isPending || startPaymentMutation.isPending}
-                        onClick={() => choosePlan(plan.code, Number(plan.price))}
+                        disabled={!isOwner || isLoadingThisQuote || changePlanMutation.isPending || startPaymentMutation.isPending}
+                        onClick={() => handleRequestQuote(plan.code)}
                         className="w-full"
                       >
-                        {changePlanMutation.isPending || startPaymentMutation.isPending ? 'Préparation…' : Number(plan.price) > 0 ? 'Continuer vers le paiement' : 'Choisir cette offre'}
+                        {isLoadingThisQuote ? 'Calcul du devis…' : Number(plan.price) > 0 ? 'Obtenir un devis & Payer' : 'Choisir cette offre'}
                       </Button>
                     )}
                   </div>
@@ -387,6 +413,70 @@ function SubscriptionPage() {
           </Card>
         </section>
 
+        {/* Modal Devis & Prorata */}
+        <Modal isOpen={pendingQuote !== null} onClose={() => setPendingQuote(null)} title="Devis préalable de changement de forfait">
+          {pendingQuote && (
+            <div className="space-y-5">
+              <div className="flex items-center justify-between rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 text-indigo-950">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-6 w-6 text-indigo-600" />
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">Transition de forfait</p>
+                    <div className="flex items-center gap-2 text-sm font-bold">
+                      <span>{pendingQuote.current_plan?.name || 'Aucun'}</span>
+                      <ArrowRight className="h-4 w-4 text-indigo-400" />
+                      <span className="text-indigo-700">{pendingQuote.target_plan.name}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-3">
+                <div className="flex justify-between text-sm text-slate-600">
+                  <span>Prix brut du nouveau forfait</span>
+                  <span className="font-semibold text-slate-900">{Number(pendingQuote.gross_amount).toLocaleString('fr-FR')} {pendingQuote.currency}</span>
+                </div>
+
+                {pendingQuote.credit_applied > 0 && (
+                  <div className="flex justify-between text-sm text-emerald-700 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <Check className="h-4 w-4 text-emerald-600" />
+                      Crédit prorata déduit ({pendingQuote.prorata_details.remaining_days} j. restants)
+                    </span>
+                    <span>- {Number(pendingQuote.credit_applied).toLocaleString('fr-FR')} {pendingQuote.currency}</span>
+                  </div>
+                )}
+
+                <div className="border-t border-slate-200 pt-3 flex justify-between items-baseline">
+                  <span className="text-sm font-bold text-slate-900">Total net à régler</span>
+                  <span className="text-2xl font-extrabold text-indigo-700">
+                    {Number(pendingQuote.net_amount_due).toLocaleString('fr-FR')} {pendingQuote.currency}
+                  </span>
+                </div>
+              </div>
+
+              {pendingQuote.unused_credit > 0 && (
+                <p className="text-xs text-slate-500 bg-slate-100 p-3 rounded-xl">
+                  Un excédent de crédit de {Number(pendingQuote.unused_credit).toLocaleString('fr-FR')} {pendingQuote.currency} sera conservé sur votre compte.
+                </p>
+              )}
+
+              <div className="flex gap-3 justify-end pt-2">
+                <Button variant="secondary" onClick={() => setPendingQuote(null)}>
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleConfirmQuote}
+                  disabled={changePlanMutation.isPending || startPaymentMutation.isPending}
+                >
+                  {pendingQuote.net_amount_due === 0 ? 'Activer immédiatement' : 'Confirmer et procéder au paiement'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Modal Simulateur de paiement */}
         <Modal isOpen={pendingPayment !== null} onClose={() => setPendingPayment(null)} title="Simulateur de paiement">
           {pendingPayment && (
             <div className="space-y-5">

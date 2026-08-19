@@ -1,9 +1,15 @@
 import { api } from '@/utils/api';
-import type { CompanySubscription, PaymentTransaction, SubscriptionPlan, WorkspaceType } from '@/domain/types';
+import type { CompanySubscription, PaymentTransaction, SubscriptionPlan, SubscriptionQuote, WorkspaceType } from '@/domain/types';
 
 export const subscriptionsService = {
   async getMySubscription(): Promise<CompanySubscription> {
     return api.get<CompanySubscription>('/companies/subscription/');
+  },
+
+  async getQuote(planCode: string): Promise<SubscriptionQuote> {
+    return api.get<SubscriptionQuote>('/companies/subscription/quote/', {
+      params: { plan_code: planCode },
+    });
   },
 
   async listPlans(audience?: WorkspaceType): Promise<SubscriptionPlan[]> {

@@ -1,4 +1,7 @@
-from rest_framework import generics, status
+from decimal import Decimal
+import uuid
+from django.utils import timezone
+from rest_framework import generics, serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -10,9 +13,11 @@ from common.utils import get_requested_company
 from .models import (
     Company,
     CompanySubscription,
+    PaymentStatus,
     PaymentTransaction,
     PlatformAuditLog,
     SubscriptionPlan,
+    SubscriptionStatus,
     SystemAnnouncement,
     WorkspaceType,
 )
@@ -24,13 +29,14 @@ from .serializers import (
     CompanySubscriptionSerializer,
     AdminCompanySubscriptionUpdateSerializer,
     ChangePlanSerializer,
+    SubscriptionQuoteRequestSerializer,
     CompleteTestPaymentSerializer,
     PaymentTransactionSerializer,
     StartTestPaymentSerializer,
     SystemAnnouncementSerializer,
     PlatformAuditLogSerializer,
 )
-from .services import complete_test_payment, start_test_payment
+from .services import calculate_subscription_quote, complete_test_payment, start_test_payment, _period_end
 
 
 def log_platform_audit(request, *, category, action, entity_label='', company=None, details=None):
@@ -224,6 +230,57 @@ def my_subscription(request):
 
 
 @extend_schema(
+    description="Calculate subscription quote and prorata credit for plan switch",
+    request=SubscriptionQuoteRequestSerializer,
+    responses={200: serializers.DictField()}
+)
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def subscription_quote_view(request):
+    """Estimate remaining prorata credit and calculate a formal quote before upgrading/switching plans."""
+    user = request.user
+    if user.is_superuser:
+        company_id = request.query_params.get('company_id') or (request.data.get('company_id') if hasattr(request, 'data') else None)
+        if company_id:
+            try:
+                company = Company.objects.get(id=company_id)
+            except Company.DoesNotExist:
+                return Response({"detail": f"Company {company_id} not found."}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            company = user.company
+    else:
+        company = user.company
+
+    if not company:
+        return Response(
+            {"detail": "You are not associated with any company or none selected."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    plan_code = request.query_params.get('plan_code') or (request.data.get('plan_code') if hasattr(request, 'data') else None)
+    if not plan_code:
+        return Response(
+            {"detail": "Le paramètre 'plan_code' est obligatoire."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        target_plan = SubscriptionPlan.objects.get(
+            code=plan_code,
+            audience=company.workspace_type,
+            is_active=True,
+        )
+    except SubscriptionPlan.DoesNotExist:
+        return Response(
+            {"detail": f"Subscription plan '{plan_code}' not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    quote = calculate_subscription_quote(company, target_plan)
+    return Response(quote)
+
+
+@extend_schema(
     description="Change company subscription plan (Owner or Super-admin)",
     request=ChangePlanSerializer,
     responses={200: CompanySubscriptionSerializer}
@@ -283,14 +340,38 @@ def change_subscription_plan(request):
             status=status.HTTP_404_NOT_FOUND,
         )
 
+    now = timezone.now()
+    quote = calculate_subscription_quote(company, new_plan, now=now)
+
     subscription, _ = CompanySubscription.objects.get_or_create(
         company=company,
-        defaults={'plan': new_plan, 'status': 'pending_verification'}
+        defaults={'plan': new_plan, 'status': SubscriptionStatus.ACTIVE if new_plan.price == 0 else SubscriptionStatus.PENDING_VERIFICATION}
     )
-    if subscription.plan != new_plan:
+
+    if new_plan.price == 0 or quote['net_amount_due'] == 0:
         subscription.plan = new_plan
-        subscription.status = 'pending_verification'
-        subscription.save(update_fields=['plan', 'status', 'updated_at'])
+        subscription.status = SubscriptionStatus.ACTIVE
+        subscription.ends_at = _period_end(new_plan, now) if new_plan.price > 0 else None
+        subscription.grace_ends_at = None
+        subscription.renewal_reminder_sent_at = None
+        subscription.save(update_fields=['plan', 'status', 'ends_at', 'grace_ends_at', 'renewal_reminder_sent_at', 'updated_at'])
+
+        if quote['credit_applied'] > 0:
+            PaymentTransaction.objects.create(
+                company=company,
+                subscription=subscription,
+                plan=new_plan,
+                reference=f"CREDIT-{uuid.uuid4().hex[:20].upper()}",
+                amount=Decimal('0.00'),
+                status=PaymentStatus.SUCCEEDED,
+                paid_at=now,
+                provider_payload={'mode': 'prorata_credit', 'quote': quote},
+            )
+    else:
+        if subscription.plan != new_plan:
+            subscription.plan = new_plan
+            subscription.status = SubscriptionStatus.PENDING_VERIFICATION
+            subscription.save(update_fields=['plan', 'status', 'updated_at'])
 
     return Response(CompanySubscriptionSerializer(subscription).data)
 
