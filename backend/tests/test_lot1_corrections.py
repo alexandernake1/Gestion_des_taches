@@ -171,7 +171,7 @@ class TestLot1Corrections:
     def test_role_and_workspace_choices_labels(self):
         role_choices_dict = dict(Role.choices)
         assert role_choices_dict[Role.OWNER] == "Administrateur de la structure"
-        assert role_choices_dict[Role.MANAGER] == "Responsable"
+        assert role_choices_dict[Role.MANAGER] == "Manager"
         assert role_choices_dict[Role.EMPLOYEE] == "Collaborateur"
 
         workspace_choices_dict = dict(WorkspaceType.choices)

@@ -12,8 +12,9 @@ import { tasksService } from '@/services/tasks'
 import { authService } from '@/services/auth'
 import { teamsService } from '@/services/teams'
 import type { Task, TaskAttachment, TaskCreateRequest, TaskReport, Priority } from '@/domain/types'
-import { ArrowLeft, Calendar, CalendarClock, Clock, Copy, Edit, FileText, GitBranch, LayoutTemplate, ListChecks, MessageSquare, Paperclip, Plus, ShieldCheck, Trash2, User } from 'lucide-react'
+import { ArrowLeft, Calendar, CalendarClock, Clock, Copy, Edit, FileText, LayoutTemplate, ListChecks, MessageSquare, Paperclip, Play, Plus, ShieldCheck, Trash2, User } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { requireCompanyMember } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { TaskActivityFeed } from '@/components/tasks/TaskActivityFeed'
@@ -86,13 +87,12 @@ function TaskDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       navigate({ to: '/tasks' })
-    }
+    },
   })
   const attachmentMutation = useMutation({
     mutationFn: (file: File) => tasksService.uploadAttachment(Number(taskId), file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['task-attachments', taskId] }),
   })
-
   const downloadAttachmentMutation = useMutation({
     mutationFn: async (attachment: TaskAttachment) => {
       const blob = await tasksService.downloadAttachment(
@@ -109,7 +109,13 @@ function TaskDetailPage() {
   })
   const reportMutation = useMutation({
     mutationFn: (data: { new_due_date: string; reason: string }) => tasksService.createReport(Number(taskId), data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['task-reports', taskId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-reports', taskId] })
+      queryClient.invalidateQueries({ queryKey: ['approval-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar-pending-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['company-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['user-dashboard'] })
+    },
   })
   const reviewReportMutation = useMutation({
     mutationFn: ({ report, status, comment }: {
@@ -123,6 +129,10 @@ function TaskDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-reports', taskId] })
       queryClient.invalidateQueries({ queryKey: ['approval-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar-pending-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar-pending-approvals'] })
+      queryClient.invalidateQueries({ queryKey: ['company-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['user-dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['task', taskId] })
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
     },
@@ -156,6 +166,20 @@ function TaskDetailPage() {
   const saveTemplateMutation = useMutation({
     mutationFn: ({ name, is_shared }: { name: string; is_shared?: boolean }) => tasksService.saveAsTemplate(Number(taskId), name, is_shared),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['task-templates'] }),
+  })
+  const startTaskMutation = useMutation({
+    mutationFn: () => tasksService.update(Number(taskId), { status: 'in_progress' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task', taskId] })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['task-history', taskId] })
+      queryClient.invalidateQueries({ queryKey: ['company-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['user-dashboard'] })
+      toast.success('Tâche démarrée ! Statut passé à « En cours ».')
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Impossible de démarrer la tâche.')
+    },
   })
 
   const getStatusBadge = (item: Pick<Task, 'status' | 'approval_pending' | 'deadline_status'>) => {
@@ -293,76 +317,74 @@ function TaskDetailPage() {
                   <p className="max-w-4xl text-sm leading-relaxed text-slate-600">{task.description}</p>
                 )}
               </div>
-              
-              {canManageTask && (
-                <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-end lg:gap-3 shrink-0">
-                  <Button className="w-full lg:w-auto shadow-md hover:shadow-lg transition-shadow bg-indigo-600 hover:bg-indigo-700" onClick={() => setIsEditModalOpen(true)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Modifier la tâche
-                  </Button>
-                  <div className="flex gap-2">
-                    <Button variant="secondary" className="bg-white" onClick={async () => {
-                      const name = window.prompt('Nom du modèle réutilisable :', task.title)
-                      if (name?.trim()) {
-                        let isShared = false
-                        if (!isPersonalWorkspace && currentUser?.role !== 'employee') {
-                          const result = await confirmAction({
-                            title: 'Visibilité du modèle',
-                            description: 'Choisissez si ce modèle doit être accessible à toute l’entreprise ou uniquement à vous.',
-                            confirmLabel: 'Partager avec l’entreprise',
-                            cancelLabel: 'Modèle personnel',
-                            tone: 'warning',
-                            impacts: ['Un modèle partagé pourra être utilisé par tous les membres autorisés de votre entreprise.'],
-                          })
-                          isShared = result.confirmed
-                        }
-                        saveTemplateMutation.mutate({ name: name.trim(), is_shared: isShared })
-                      }
-                    }} disabled={saveTemplateMutation.isPending}>
-                      <LayoutTemplate className="mr-2 h-4 w-4 text-indigo-500" />Modèle
-                    </Button>
-                    <Button variant="secondary" className="bg-white" onClick={() => duplicateMutation.mutate()} disabled={duplicateMutation.isPending}>
-                      <Copy className="mr-2 h-4 w-4 text-indigo-500" />Dupliquer
-                    </Button>
-                  </div>
-                  <Button variant="ghost" className="text-rose-500 hover:bg-rose-50 hover:text-rose-600" onClick={async () => {
-                    const { confirmed } = await confirmAction({
-                      title: 'Archiver cette tâche ?',
-                      description: `La tâche « ${task.title} » ne figurera plus dans les listes actives.`,
-                      confirmLabel: 'Archiver la tâche',
-                      tone: 'danger',
-                      impacts: ['Son historique, ses commentaires et ses pièces jointes seront conservés.'],
-                    })
-                    if (confirmed) deleteMutation.mutate()
-                  }} disabled={deleteMutation.isPending}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Archiver
-                  </Button>
-                </div>
-              )}
-              {!isPersonalWorkspace && !canManageTask && task.requires_completion_approval && task.status !== 'completed' && (
-                <Button onClick={() => setActiveTab('approvals')} className="shrink-0">
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  {approvals.some((approval) => approval.status === 'pending') ? 'Suivre la validation' : 'Demander la validation'}
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <div className="p-6 sm:p-8">
-            {task.is_blocked && (
-              <div className="mb-8 flex items-start gap-4 rounded-2xl border-2 border-rose-100 bg-rose-50/50 p-5 shadow-inner">
-                <div className="rounded-full bg-rose-100 p-2">
-                  <GitBranch className="h-6 w-6 text-rose-600" />
-                </div>
-                <div>
-                  <strong className="text-rose-900 text-lg">Tâche bloquée</strong>
-                  <p className="mt-1 text-sm text-rose-700">Terminez les dépendances et toutes les sous-tâches avant de clôturer cette tâche.</p>
-                </div>
-              </div>
-            )}
 
-            <div className={`grid gap-6 sm:grid-cols-2 ${isPersonalWorkspace ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
+              <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-end lg:gap-3 shrink-0">
+                {task.status !== 'in_progress' && task.status !== 'completed' && (
+                  <Button
+                    className="w-full lg:w-auto shadow-md hover:shadow-lg transition-all bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                    onClick={() => startTaskMutation.mutate()}
+                    disabled={startTaskMutation.isPending}
+                  >
+                    <Play className="h-4 w-4 mr-2 fill-current" />
+                    Commencer la tâche
+                  </Button>
+                )}
+                {canManageTask && (
+                  <>
+                    <Button className="w-full lg:w-auto shadow-md hover:shadow-lg transition-shadow bg-indigo-600 hover:bg-indigo-700" onClick={() => setIsEditModalOpen(true)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Modifier la tâche
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="secondary" className="bg-white" onClick={async () => {
+                        const name = window.prompt('Nom du modèle réutilisable :', task.title)
+                        if (name?.trim()) {
+                          let isShared = false
+                          if (!isPersonalWorkspace && currentUser?.role !== 'employee') {
+                            const result = await confirmAction({
+                              title: 'Visibilité du modèle',
+                              description: 'Choisissez si ce modèle doit être accessible à toute l’entreprise ou uniquement à vous.',
+                              confirmLabel: 'Partager avec l’entreprise',
+                              cancelLabel: 'Modèle personnel',
+                              tone: 'warning',
+                              impacts: ['Un modèle partagé pourra être utilisé par tous les membres autorisés de votre entreprise.'],
+                            })
+                            isShared = result.confirmed
+                          }
+                          saveTemplateMutation.mutate({ name: name.trim(), is_shared: isShared })
+                        }
+                      }} disabled={saveTemplateMutation.isPending}>
+                        <LayoutTemplate className="mr-2 h-4 w-4 text-indigo-500" />Modèle
+                      </Button>
+                      <Button variant="secondary" className="bg-white" onClick={() => duplicateMutation.mutate()} disabled={duplicateMutation.isPending}>
+                        <Copy className="mr-2 h-4 w-4 text-indigo-500" />Dupliquer
+                      </Button>
+                    </div>
+                    <Button variant="ghost" className="text-rose-500 hover:bg-rose-50 hover:text-rose-600" onClick={async () => {
+                      const { confirmed } = await confirmAction({
+                        title: 'Archiver cette tâche ?',
+                        description: `La tâche « ${task.title} » ne figurera plus dans les listes actives.`,
+                        confirmLabel: 'Archiver la tâche',
+                        tone: 'danger',
+                        impacts: ['Son historique, ses commentaires et ses pièces jointes seront conservés.'],
+                      })
+                      if (confirmed) deleteMutation.mutate()
+                    }} disabled={deleteMutation.isPending}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Archiver
+                    </Button>
+                  </>
+                )}
+                {!isPersonalWorkspace && !canManageTask && task.requires_completion_approval && task.status !== 'completed' && (
+                  <Button onClick={() => setActiveTab('approvals')} className="shrink-0">
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    {approvals.some((approval) => approval.status === 'pending') ? 'Suivre la validation' : 'Demander la validation'}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className={`grid gap-6 sm:grid-cols-2 mt-8 ${isPersonalWorkspace ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
               {!isPersonalWorkspace && (
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
                   <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">

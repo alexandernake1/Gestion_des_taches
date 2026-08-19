@@ -35,6 +35,7 @@ import { companiesService } from '@/services/companies'
 import { subscriptionsService } from '@/services/subscriptions'
 import { teamsService } from '@/services/teams'
 import { projectsService } from '@/services/projects'
+import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist'
 
 export const Route = createFileRoute('/dashboard')({
   beforeLoad: requireCompanyMember,
@@ -342,6 +343,9 @@ function DashboardPage() {
           setSelectedAssigneeId={setSelectedAssigneeId}
         />
 
+        {/* Onboarding Checklist for easy start */}
+        <OnboardingChecklist isPersonalWorkspace={isPersonalWorkspace} />
+
         {hasError && (
           <div className="mb-6">
             <ErrorState
@@ -643,92 +647,144 @@ function ManagementDashboardView({
         <div className="space-y-8 lg:col-span-8">
           {/* Trend Chart (Created vs Completed) */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-indigo-50 p-1.5 text-indigo-600">
-                  <TrendingUp className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-foreground">Flux des tâches sur la période</h3>
-                  <p className="text-xs text-muted-foreground">Créations (bleu) vs Achèvements (vert)</p>
+            <CardHeader className="pb-3 border-b border-border/40">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/60 p-2 text-indigo-600 dark:text-indigo-400">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">Flux des tâches sur la période</h3>
+                    <p className="text-xs text-muted-foreground">Créations (bleu) vs Achèvements (vert) au fil du temps</p>
+                  </div>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               {loading ? (
-                <div className="h-48 skeleton rounded-xl" />
+                <div className="h-56 skeleton rounded-2xl" />
               ) : stats?.trends && stats.trends.length > 0 ? (
                 <TrendChart trends={stats.trends} />
               ) : (
-                <p className="py-8 text-center text-sm text-muted-foreground italic">
+                <div className="py-12 text-center text-sm text-muted-foreground italic">
                   Aucune tendance disponible sur cette période.
-                </p>
+                </div>
               )}
             </CardContent>
           </Card>
 
           {/* Teams and Members Workload */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-stretch">
             {/* Team Workload */}
-            <Card>
-              <CardHeader>
-                <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-                  <Users className="h-4 w-4 text-indigo-600" />
-                  Charge par équipe
-                </h3>
+            <Card className="flex flex-col h-full">
+              <CardHeader className="pb-3 border-b border-border/40">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <Users className="h-4 w-4 text-indigo-600" />
+                    Charge par équipe
+                  </h3>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                    {stats?.team_workload?.length || 0} équipe{(stats?.team_workload?.length || 0) > 1 ? 's' : ''}
+                  </span>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-4 flex-1 space-y-3 overflow-y-auto max-h-[460px] pr-1.5">
                 {stats?.team_workload && stats.team_workload.length > 0 ? (
-                  stats.team_workload.map((team) => (
-                    <div key={team.team_id} className="rounded-xl border border-border bg-muted/20 p-3">
-                      <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-foreground">{team.team_name}</span>
-                        <span className="text-muted-foreground">{team.total_tasks} tâche{team.total_tasks > 1 ? 's' : ''}</span>
+                  stats.team_workload.map((team) => {
+                    const progress = team.total_tasks > 0 ? Math.round((team.completed_tasks / team.total_tasks) * 100) : 0
+                    return (
+                      <div key={team.team_id} className="rounded-xl border border-border bg-card/60 hover:bg-muted/30 transition-all p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-foreground text-sm">{team.team_name}</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[11px]">
+                            {team.total_tasks} tâche{team.total_tasks > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="w-full bg-muted/60 h-2 rounded-full overflow-hidden flex">
+                          <div className="bg-emerald-500 h-full transition-all duration-500" style={{ width: `${progress}%` }} />
+                          {team.overdue_tasks > 0 && (
+                            <div className="bg-rose-500 h-full transition-all duration-500" style={{ width: `${Math.min(100 - progress, Math.round((team.overdue_tasks / team.total_tasks) * 100))}%` }} />
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-emerald-600 font-medium">{team.completed_tasks} terminée{team.completed_tasks > 1 ? 's' : ''} ({progress}%)</span>
+                          {team.overdue_tasks > 0 && (
+                            <span className="text-rose-600 font-bold bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md text-[11px] border border-rose-200 dark:border-rose-900">
+                              {team.overdue_tasks} en retard
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-xs">
-                        <span className="text-emerald-600 font-medium">{team.completed_tasks} terminées</span>
-                        {team.overdue_tasks > 0 && (
-                          <span className="text-rose-600 font-bold">{team.overdue_tasks} en retard</span>
-                        )}
-                      </div>
-                    </div>
-                  ))
+                    )
+                  })
                 ) : (
-                  <p className="text-xs text-muted-foreground italic py-3">Aucune équipe active.</p>
+                  <div className="py-12 text-center text-xs text-muted-foreground italic">Aucune équipe active ou tâche assignée sur la période.</div>
                 )}
               </CardContent>
             </Card>
 
             {/* Member Workload */}
-            <Card>
-              <CardHeader>
-                <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-                  <UserCheck className="h-4 w-4 text-indigo-600" />
-                  Charge par collaborateur
-                </h3>
+            <Card className="flex flex-col h-full">
+              <CardHeader className="pb-3 border-b border-border/40">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <UserCheck className="h-4 w-4 text-indigo-600" />
+                    Charge par collaborateur
+                  </h3>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                    {stats?.member_workload?.length || 0} collaborateur{(stats?.member_workload?.length || 0) > 1 ? 's' : ''}
+                  </span>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3 max-h-64 overflow-y-auto pr-1">
+              <CardContent className="p-4 flex-1 space-y-3 overflow-y-auto max-h-[460px] pr-1.5">
                 {stats?.member_workload && stats.member_workload.length > 0 ? (
-                  stats.member_workload.map((member) => (
-                    <div key={member.user_id} className="rounded-xl border border-border bg-muted/20 p-3">
-                      <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-foreground">{member.user_name}</span>
-                        <span className="text-muted-foreground">{member.total_tasks} tâche{member.total_tasks > 1 ? 's' : ''}</span>
+                  stats.member_workload.map((member) => {
+                    const progress = member.total_tasks > 0 ? Math.round((member.completed_tasks / member.total_tasks) * 100) : 0
+                    const inProgress = Math.max(0, member.total_tasks - member.completed_tasks - member.overdue_tasks)
+                    return (
+                      <div key={member.user_id} className="rounded-xl border border-border bg-card/60 hover:bg-muted/30 transition-all p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="h-6 w-6 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-[10px]">
+                              {member.user_name.slice(0, 2).toUpperCase()}
+                            </span>
+                            <span className="font-bold text-foreground text-sm">{member.user_name}</span>
+                          </div>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[11px]">
+                            {member.total_tasks} tâche{member.total_tasks > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="w-full bg-muted/60 h-2 rounded-full overflow-hidden flex">
+                          <div className="bg-emerald-500 h-full transition-all duration-500" style={{ width: `${progress}%` }} />
+                          {member.overdue_tasks > 0 && (
+                            <div className="bg-rose-500 h-full transition-all duration-500" style={{ width: `${Math.min(100 - progress, Math.round((member.overdue_tasks / member.total_tasks) * 100))}%` }} />
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-emerald-600 font-medium">{member.completed_tasks} terminée{member.completed_tasks > 1 ? 's' : ''} ({progress}%)</span>
+                          <div className="flex items-center gap-2">
+                            {inProgress > 0 && (
+                              <span className="text-amber-600 font-semibold text-[11px]">{inProgress} en cours</span>
+                            )}
+                            {member.overdue_tasks > 0 && (
+                              <span className="text-rose-600 font-bold bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md text-[11px] border border-rose-200 dark:border-rose-900">
+                                {member.overdue_tasks} en retard
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-xs">
-                        <span className="text-emerald-600 font-medium">{member.completed_tasks} terminées</span>
-                        {member.overdue_tasks > 0 && (
-                          <span className="text-rose-600 font-bold">{member.overdue_tasks} en retard</span>
-                        )}
-                      </div>
-                    </div>
-                  ))
+                    )
+                  })
                 ) : (
-                  <p className="text-xs text-muted-foreground italic py-3">Aucun collaborateur assigné.</p>
+                  <div className="py-12 text-center text-xs text-muted-foreground italic">Aucun collaborateur assigné sur la période.</div>
                 )}
               </CardContent>
             </Card>
           </div>
+
 
           {/* At Risk Projects */}
           {stats?.at_risk_projects && stats.at_risk_projects.length > 0 && (
@@ -795,40 +851,58 @@ function ManagementDashboardView({
           {/* Completion Speeds & Durations */}
           {hasReports && (
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3 border-b border-border/40">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-                  <Clock className="h-4 w-4 text-indigo-600" />
-                  Délais moyens d'exécution
+                  <Clock className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  Délais de résolution des tâches
                 </h3>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Durée moyenne</span>
-                  <p className="mt-1 text-2xl font-black text-foreground">
-                    {stats?.avg_completion_time_hours ? `${stats.avg_completion_time_hours} h` : '—'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Entre la création et la clôture</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Durée médiane</span>
-                  <p className="mt-1 text-2xl font-black text-foreground">
-                    {stats?.median_completion_time_hours ? `${stats.median_completion_time_hours} h` : '—'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Valeur pivot d'exécution</p>
-                </div>
+              <CardContent className="p-4 space-y-3">
+                {stats?.avg_completion_time_hours && stats.avg_completion_time_hours > 0 ? (
+                  <>
+                    <div className="rounded-xl border border-border bg-card/60 dark:bg-slate-900/60 p-3.5 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Temps moyen</span>
+                        <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
+                          {stats.avg_completion_time_hours < 24
+                            ? `${stats.avg_completion_time_hours} h`
+                            : `${(stats.avg_completion_time_hours / 24).toFixed(1)} j (${stats.avg_completion_time_hours} h)`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Temps moyen écoulé entre la création et la clôture d’une tâche.</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card/60 dark:bg-slate-900/60 p-3.5 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Délai médian (50%)</span>
+                        <span className="text-xl font-black text-foreground">
+                          {stats.median_completion_time_hours != null && stats.median_completion_time_hours < 24
+                            ? `${stats.median_completion_time_hours} h`
+                            : stats.median_completion_time_hours != null
+                            ? `${(stats.median_completion_time_hours / 24).toFixed(1)} j (${stats.median_completion_time_hours} h)`
+                            : `${stats.avg_completion_time_hours} h`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">50 % des tâches sont terminées en moins de ce délai (indicateur représentatif sans valeurs extrêmes).</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-6 text-center text-xs text-muted-foreground italic">
+                    Aucune tâche achevée sur la période sélectionnée pour calculer les délais.
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
 
           {/* Status Breakdown */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 border-b border-border/40">
               <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-                <Layers className="h-4 w-4 text-indigo-600" />
+                <Layers className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 Répartition par statut
               </h3>
             </CardHeader>
-            <CardContent className="space-y-2.5">
+            <CardContent className="p-4 space-y-2">
               {[
                 { label: 'À faire', count: stats?.status_breakdown.todo || 0, color: 'bg-slate-500' },
                 { label: 'En cours', count: stats?.status_breakdown.in_progress || 0, color: 'bg-amber-500' },
@@ -836,7 +910,7 @@ function ManagementDashboardView({
                 { label: 'Reportée', count: stats?.status_breakdown.deferred || 0, color: 'bg-orange-500' },
                 { label: 'Terminée', count: stats?.status_breakdown.completed || 0, color: 'bg-emerald-500' },
               ].map((s) => (
-                <div key={s.label} className="flex items-center justify-between text-xs font-semibold p-2 rounded-lg bg-muted/30">
+                <div key={s.label} className="flex items-center justify-between text-xs font-semibold p-2.5 rounded-xl bg-card dark:bg-slate-900/60 border border-border">
                   <div className="flex items-center gap-2">
                     <span className={`h-2.5 w-2.5 rounded-full ${s.color}`} />
                     <span className="text-foreground">{s.label}</span>
@@ -849,18 +923,18 @@ function ManagementDashboardView({
 
           {/* Priority Breakdown */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 border-b border-border/40">
               <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-                <Target className="h-4 w-4 text-indigo-600" />
+                <Target className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 Répartition par priorité
               </h3>
             </CardHeader>
-            <CardContent className="space-y-2.5">
+            <CardContent className="p-4 space-y-2">
               {[
-                { label: 'Urgent', count: stats?.priority_breakdown.urgent || 0, color: 'text-rose-600 bg-rose-50 border-rose-200' },
-                { label: 'Haute', count: stats?.priority_breakdown.high || 0, color: 'text-amber-600 bg-amber-50 border-amber-200' },
-                { label: 'Normale', count: stats?.priority_breakdown.normal || 0, color: 'text-blue-600 bg-blue-50 border-blue-200' },
-                { label: 'Faible', count: stats?.priority_breakdown.low || 0, color: 'text-slate-600 bg-slate-50 border-slate-200' },
+                { label: 'Urgent', count: stats?.priority_breakdown.urgent || 0, color: 'text-rose-700 dark:text-rose-300 bg-rose-50/80 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60' },
+                { label: 'Haute', count: stats?.priority_breakdown.high || 0, color: 'text-amber-700 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60' },
+                { label: 'Normale', count: stats?.priority_breakdown.normal || 0, color: 'text-blue-700 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/60' },
+                { label: 'Faible', count: stats?.priority_breakdown.low || 0, color: 'text-slate-700 dark:text-slate-300 bg-slate-100/80 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700' },
               ].map((p) => (
                 <div key={p.label} className={`flex items-center justify-between text-xs font-semibold p-2.5 rounded-xl border ${p.color}`}>
                   <span>{p.label}</span>
@@ -873,24 +947,29 @@ function ManagementDashboardView({
           {/* Approvals Summary */}
           {stats?.approvals && (
             <Card>
-              <CardHeader>
-                <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-                  <CheckCircle2 className="h-4 w-4 text-indigo-600" />
-                  Demandes de validation
-                </h3>
+              <CardHeader className="pb-3 border-b border-border/40">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    Demandes de validation
+                  </h3>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                    Reports & Livrables
+                  </span>
+                </div>
               </CardHeader>
-              <CardContent className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-2.5">
-                  <p className="text-xs font-semibold text-amber-700">En attente</p>
-                  <p className="text-xl font-black text-amber-900 mt-1">{stats.approvals.pending}</p>
+              <CardContent className="p-4 grid grid-cols-3 gap-2.5 text-center">
+                <div className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/40 p-3">
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300">En attente</p>
+                  <p className="text-2xl font-black text-amber-950 dark:text-amber-200 mt-1">{stats.approvals.pending}</p>
                 </div>
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-2.5">
-                  <p className="text-xs font-semibold text-emerald-700">Validées</p>
-                  <p className="text-xl font-black text-emerald-900 mt-1">{stats.approvals.approved}</p>
+                <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/70 dark:bg-emerald-950/40 p-3">
+                  <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Validées</p>
+                  <p className="text-2xl font-black text-emerald-950 dark:text-emerald-200 mt-1">{stats.approvals.approved}</p>
                 </div>
-                <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-2.5">
-                  <p className="text-xs font-semibold text-rose-700">Refusées</p>
-                  <p className="text-xl font-black text-rose-900 mt-1">{stats.approvals.rejected}</p>
+                <div className="rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/40 p-3">
+                  <p className="text-xs font-bold text-rose-800 dark:text-rose-300">Refusées</p>
+                  <p className="text-2xl font-black text-rose-950 dark:text-rose-200 mt-1">{stats.approvals.rejected}</p>
                 </div>
               </CardContent>
             </Card>
@@ -1099,47 +1178,166 @@ function CollaboratorDashboardView({
 }
 
 function TrendChart({ trends }: { trends: TrendPoint[] }) {
-  const maxVal = Math.max(...trends.flatMap((t) => [t.created, t.completed]), 1)
+  const totalCreated = trends.reduce((acc, t) => acc + (t.created || 0), 0)
+  const totalCompleted = trends.reduce((acc, t) => acc + (t.completed || 0), 0)
+  const netBalance = totalCreated - totalCompleted
+
+  const maxVal = Math.max(...trends.flatMap((t) => [t.created || 0, t.completed || 0]), 0)
+  const yMax = maxVal === 0 ? 5 : Math.max(Math.ceil(maxVal * 1.15), maxVal + 1)
+  const yMid = Math.ceil(yMax / 2)
+
+  // Smart X-axis label decimation
+  const count = trends.length
+  const labelIndices = useMemo(() => {
+    if (count <= 10) return new Set(trends.map((_, i) => i))
+    if (count <= 18) return new Set(trends.map((_, i) => i).filter((i) => i % 2 === 0 || i === count - 1))
+    // 5 to 6 evenly spaced labels
+    const step = Math.floor(count / 5)
+    const indices = [0, step, step * 2, step * 3, step * 4, count - 1]
+    return new Set(indices)
+  }, [count, trends])
+
+  const formatShortDate = (dateStr: string) => {
+    try {
+      const parts = dateStr.split('-')
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]))
+        return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+      }
+    } catch {
+      // fallback
+    }
+    return dateStr.slice(5)
+  }
+
+  const formatFullDate = (dateStr: string) => {
+    try {
+      const parts = dateStr.split('-')
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]))
+        return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+      }
+    } catch {
+      // fallback
+    }
+    return dateStr
+  }
 
   return (
-    <div className="pt-2">
-      <div className="flex items-end gap-1.5 h-36 w-full overflow-x-auto pb-6">
-        {trends.map((pt, idx) => {
-          const cHeight = Math.max(4, (pt.created / maxVal) * 100)
-          const compHeight = Math.max(4, (pt.completed / maxVal) * 100)
-          const dateLabel = pt.date.slice(5) // MM-DD
-
-          return (
-            <div key={idx} className="flex-1 min-w-[20px] flex flex-col items-center gap-1 group relative">
-              {/* Tooltip on hover */}
-              <div className="pointer-events-none absolute -top-12 z-20 hidden group-hover:flex flex-col items-center rounded-lg bg-slate-900 px-2 py-1 text-[10px] text-white shadow-lg whitespace-nowrap">
-                <span>{pt.date}</span>
-                <span>Créées : {pt.created} | Terminées : {pt.completed}</span>
-              </div>
-
-              <div className="flex items-end gap-0.5 h-28 w-full justify-center">
-                <div
-                  className="w-2.5 rounded-t bg-indigo-500 transition-all group-hover:bg-indigo-600"
-                  style={{ height: `${cHeight}%` }}
-                />
-                <div
-                  className="w-2.5 rounded-t bg-emerald-500 transition-all group-hover:bg-emerald-600"
-                  style={{ height: `${compHeight}%` }}
-                />
-              </div>
-              <span className="text-[9px] text-muted-foreground whitespace-nowrap">{dateLabel}</span>
-            </div>
-          )
-        })}
-      </div>
-      <div className="flex items-center justify-center gap-6 pt-2 border-t border-border text-xs text-muted-foreground">
+    <div className="space-y-4">
+      {/* Top summary capsules */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border/40 text-xs">
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded bg-indigo-500" />
-          <span>Tâches créées</span>
+          <span className="text-muted-foreground font-medium">Bilan période :</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-bold">
+            <span className="h-2 w-2 rounded-full bg-indigo-600" />
+            {totalCreated} créée{totalCreated > 1 ? 's' : ''}
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-bold">
+            <span className="h-2 w-2 rounded-full bg-emerald-600" />
+            {totalCompleted} achevée{totalCompleted > 1 ? 's' : ''}
+          </span>
+        </div>
+        <div className="text-muted-foreground">
+          Solde net : <strong className={netBalance > 0 ? 'text-amber-600' : netBalance < 0 ? 'text-emerald-600' : 'text-foreground'}>
+            {netBalance > 0 ? `+${netBalance}` : netBalance}
+          </strong>
+        </div>
+      </div>
+
+      {/* Chart visualization */}
+      <div className="relative pt-4 pb-2">
+        {/* Y-axis gridlines & labels */}
+        <div className="absolute inset-x-0 top-4 bottom-8 flex flex-col justify-between pointer-events-none text-[10px] text-muted-foreground/60 font-mono">
+          <div className="flex items-center gap-2">
+            <span className="w-6 text-right shrink-0">{yMax}</span>
+            <div className="flex-1 border-t border-dashed border-border/50" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-6 text-right shrink-0">{yMid}</span>
+            <div className="flex-1 border-t border-dashed border-border/50" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-6 text-right shrink-0">0</span>
+            <div className="flex-1 border-t border-border/60" />
+          </div>
+        </div>
+
+        {/* Columns container */}
+        <div className="ml-8 flex items-end gap-1 sm:gap-1.5 h-44 w-[calc(100%-2rem)] pb-8 relative z-10">
+          {trends.map((pt, idx) => {
+            const hasCreated = (pt.created || 0) > 0
+            const hasCompleted = (pt.completed || 0) > 0
+            const cHeight = hasCreated ? Math.max(6, Math.min(100, ((pt.created || 0) / yMax) * 100)) : 0
+            const compHeight = hasCompleted ? Math.max(6, Math.min(100, ((pt.completed || 0) / yMax) * 100)) : 0
+            const showLabel = labelIndices.has(idx)
+
+            return (
+              <div
+                key={pt.date || idx}
+                className="flex-1 min-w-[12px] flex flex-col items-center justify-end h-full group relative hover:bg-muted/30 rounded-t-lg transition-colors cursor-pointer"
+              >
+                {/* Floating tooltip */}
+                <div className="pointer-events-none absolute -top-16 z-30 hidden group-hover:flex flex-col items-center rounded-xl bg-slate-900/95 dark:bg-slate-900 text-white p-2 text-[11px] shadow-2xl backdrop-blur-sm whitespace-nowrap border border-slate-700/60 animate-in fade-in zoom-in-95 duration-150">
+                  <span className="font-semibold text-slate-200 text-[10px] pb-1 mb-1 border-b border-slate-700 w-full text-center">
+                    {formatFullDate(pt.date)}
+                  </span>
+                  <div className="flex items-center gap-3 font-medium">
+                    <span className="text-indigo-400">Créées : <strong className="text-white">{pt.created || 0}</strong></span>
+                    <span className="text-emerald-400">Terminées : <strong className="text-white">{pt.completed || 0}</strong></span>
+                  </div>
+                </div>
+
+                {/* Bars */}
+                <div className="flex items-end justify-center gap-0.5 sm:gap-1 w-full h-[calc(100%-1.75rem)] pb-0.5">
+                  {/* Created Bar */}
+                  <div className="w-1.5 sm:w-2.5 flex items-end h-full">
+                    {cHeight > 0 ? (
+                      <div
+                        className="w-full rounded-t-sm sm:rounded-t-md bg-indigo-500 group-hover:bg-indigo-600 transition-all duration-300 shadow-xs"
+                        style={{ height: `${cHeight}%` }}
+                      />
+                    ) : (
+                      <div className="w-full h-0.5 bg-transparent" />
+                    )}
+                  </div>
+
+                  {/* Completed Bar */}
+                  <div className="w-1.5 sm:w-2.5 flex items-end h-full">
+                    {compHeight > 0 ? (
+                      <div
+                        className="w-full rounded-t-sm sm:rounded-t-md bg-emerald-500 group-hover:bg-emerald-600 transition-all duration-300 shadow-xs"
+                        style={{ height: `${compHeight}%` }}
+                      />
+                    ) : (
+                      <div className="w-full h-0.5 bg-transparent" />
+                    )}
+                  </div>
+                </div>
+
+                {/* X-axis Date label */}
+                <div className="h-6 flex items-center justify-center">
+                  {showLabel && (
+                    <span className="text-[10px] text-muted-foreground/80 font-medium whitespace-nowrap">
+                      {formatShortDate(pt.date)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Legend & zero helper */}
+      <div className="flex flex-wrap items-center justify-center gap-6 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded-md bg-indigo-500 shadow-xs" />
+          <span className="font-medium text-foreground">Tâches créées</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded bg-emerald-500" />
-          <span>Tâches achevées</span>
+          <span className="h-3 w-3 rounded-md bg-emerald-500 shadow-xs" />
+          <span className="font-medium text-foreground">Tâches achevées</span>
         </div>
       </div>
     </div>

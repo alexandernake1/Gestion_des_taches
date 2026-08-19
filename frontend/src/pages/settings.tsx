@@ -6,10 +6,25 @@ import { authService } from '@/services/auth'
 import { notificationsService } from '@/services/notifications'
 import { Button } from '@/components/ui/Button'
 import { requireAuthentication } from '@/router/auth'
-import { BellRing, Check, Key, ShieldCheck, Smartphone, UserRound, ArrowLeft } from 'lucide-react'
+import {
+  BellRing,
+  Check,
+  ShieldCheck,
+  Smartphone,
+  UserRound,
+  ArrowLeft,
+  HelpCircle,
+  Sparkles,
+  Play,
+  BookOpen,
+  RotateCcw,
+  ExternalLink,
+  Share2,
+} from 'lucide-react'
 import { useSmartBack } from '@/utils/navigation'
 import { requestPushPermission } from '@/utils/notifications'
 import { PasswordInput } from '@/components/auth/PasswordInput'
+import { useTutorial } from '@/context/TutorialContext'
 
 export const Route = createFileRoute('/settings')({
   beforeLoad: requireAuthentication,
@@ -18,19 +33,20 @@ export const Route = createFileRoute('/settings')({
 
 function SettingsPage() {
   const goBack = useSmartBack('/dashboard')
+  const { startTour, openHelpDrawer, resetOnboarding, openShareModal } = useTutorial()
   const [profileSaved, setProfileSaved] = useState(false)
   const [passwordSaved, setPasswordSaved] = useState(false)
   const [notificationsSaved, setNotificationsSaved] = useState(false)
+  const [resetMessage, setResetMessage] = useState('')
   const [passwordError, setPasswordError] = useState('')
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'help'>('profile')
   const queryClient = useQueryClient()
   
   const { data: currentUser, isLoading: isUserLoading } = useQuery({
     queryKey: ['current-user'],
     queryFn: authService.getCurrentUser,
   })
-
-
+  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
 
   const { data: notificationPreferences } = useQuery({
     queryKey: ['notification-preferences'],
@@ -100,7 +116,7 @@ function SettingsPage() {
     }
 
     updateNotifications.mutate({
-      assignments_enabled: data.has('assignments_enabled'),
+      assignments_enabled: isPersonalWorkspace ? false : data.has('assignments_enabled'),
       comments_enabled: data.has('comments_enabled'),
       task_reminders_enabled: data.has('task_reminders_enabled'),
       overdue_alerts_enabled: data.has('overdue_alerts_enabled'),
@@ -111,10 +127,14 @@ function SettingsPage() {
     })
   }
 
-  const isPersonalWorkspace = Boolean(currentUser?.is_personal_workspace)
+  const handleResetOnboarding = () => {
+    resetOnboarding()
+    setResetMessage('Guide et checklist réinitialisés avec succès.')
+    setTimeout(() => setResetMessage(''), 4000)
+  }
 
-  const inputClass = 'h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground transition-colors focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/25 placeholder:text-muted-foreground/60'
-  const inputWithIconClass = 'h-11 w-full rounded-xl border border-border bg-background pl-11 pr-4 text-sm text-foreground transition-colors focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/25'
+  const inputClass = 'h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
+  const inputWithIconClass = 'h-11 w-full rounded-xl border border-border bg-background pl-11 pr-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
 
   if (isUserLoading) {
     return (
@@ -135,16 +155,26 @@ function SettingsPage() {
             Retour
           </Button>
           <h1 className="text-2xl font-bold text-foreground">Paramètres du compte</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Gérez vos informations personnelles et vos préférences de sécurité.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Gérez vos informations personnelles, vos notifications et l'assistance.</p>
         </div>
 
         <div className="flex flex-col gap-8 px-4 sm:flex-row sm:px-6 lg:px-8">
           {/* Sidebar nav */}
           <div className="w-full sm:w-64 shrink-0">
             <div className="flex flex-col gap-1 rounded-2xl bg-card border border-border p-2 shadow-xs">
-              {(['profile', 'security', 'notifications'] as const).map((tab) => {
-                const icons = { profile: UserRound, security: ShieldCheck, notifications: BellRing }
-                const labels = { profile: 'Profil', security: 'Sécurité', notifications: 'Notifications' }
+              {(['profile', 'security', 'notifications', 'help'] as const).map((tab) => {
+                const icons = {
+                  profile: UserRound,
+                  security: ShieldCheck,
+                  notifications: BellRing,
+                  help: HelpCircle,
+                }
+                const labels = {
+                  profile: 'Profil',
+                  security: 'Sécurité',
+                  notifications: 'Notifications',
+                  help: 'Guide & Aide',
+                }
                 const Icon = icons[tab]
                 const isActive = activeTab === tab
                 return (
@@ -154,7 +184,7 @@ function SettingsPage() {
                     onClick={() => setActiveTab(tab)}
                     className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-primary/10 text-primary shadow-xs ring-1 ring-primary/20'
+                        ? 'bg-primary/10 text-primary shadow-xs ring-1 ring-primary/20 font-bold'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                   >
@@ -219,13 +249,12 @@ function SettingsPage() {
                 </div>
 
                 <div className="flex items-center justify-between border-t border-border pt-6">
-                  <div>
-                    {updateProfile.isError && <p className="text-sm font-medium text-destructive">{updateProfile.error instanceof Error ? updateProfile.error.message : 'Erreur'}</p>}
-                    {profileSaved && <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"><Check className="h-4 w-4" /> Enregistré avec succès</p>}
+                  {profileSaved && <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"><Check className="h-4 w-4" /> Profil mis à jour</p>}
+                  <div className="ml-auto">
+                    <Button type="submit" disabled={updateProfile.isPending} size="lg">
+                      {updateProfile.isPending ? 'Enregistrement…' : 'Enregistrer'}
+                    </Button>
                   </div>
-                  <Button type="submit" disabled={updateProfile.isPending} size="lg">
-                    {updateProfile.isPending ? 'Enregistrement…' : 'Enregistrer les modifications'}
-                  </Button>
                 </div>
               </form>
             )}
@@ -233,50 +262,49 @@ function SettingsPage() {
             {activeTab === 'security' && (
               <form onSubmit={savePassword} className="space-y-8 p-6 sm:p-8 animate-fade-in">
                 <div>
-                  <h3 className="text-lg font-bold text-foreground">Mot de passe</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Sécurisez votre compte avec un mot de passe robuste d'au moins 8 caractères.</p>
+                  <h3 className="text-lg font-bold text-foreground">Sécurité du mot de passe</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Changez votre mot de passe pour protéger votre compte.</p>
                 </div>
 
-                <div className="space-y-2 max-w-md">
-                  <label className="text-sm font-semibold text-foreground">Mot de passe actuel</label>
-                  <div className="relative">
-                    <Key className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <PasswordInput name="old_password" required autoComplete="current-password" className={inputWithIconClass} />
+                <div className="space-y-5 max-w-md">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">Mot de passe actuel</label>
+                    <PasswordInput name="old_password" required placeholder="••••••••" />
                   </div>
-                </div>
 
-                <div className="space-y-5 max-w-md rounded-xl border border-primary/20 bg-primary/5 p-5">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground">Nouveau mot de passe</label>
-                    <PasswordInput name="new_password" required minLength={8} autoComplete="new-password" placeholder="8 caractères minimum" className={inputClass} />
+                    <PasswordInput name="new_password" required placeholder="Minimum 8 caractères" />
                   </div>
+
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">Confirmation</label>
-                    <PasswordInput name="new_password_confirm" required minLength={8} autoComplete="new-password" placeholder="Retapez le mot de passe" className={inputClass} />
+                    <label className="text-sm font-semibold text-foreground">Confirmer le nouveau mot de passe</label>
+                    <PasswordInput name="new_password_confirm" required placeholder="••••••••" />
                   </div>
                 </div>
 
+                {passwordError && <p className="text-sm font-medium text-destructive">{passwordError}</p>}
+
                 <div className="flex items-center justify-between border-t border-border pt-6">
-                  <div>
-                    {passwordError && <p role="alert" className="text-sm font-medium text-destructive">{passwordError}</p>}
-                    {changePassword.isError && <p role="alert" className="text-sm font-medium text-destructive">{changePassword.error instanceof Error ? changePassword.error.message : 'Erreur'}</p>}
-                    {passwordSaved && <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"><Check className="h-4 w-4" /> Mot de passe modifié</p>}
+                  {passwordSaved && <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"><Check className="h-4 w-4" /> Mot de passe modifié</p>}
+                  <div className="ml-auto">
+                    <Button type="submit" disabled={changePassword.isPending} size="lg">
+                      {changePassword.isPending ? 'Modification…' : 'Modifier le mot de passe'}
+                    </Button>
                   </div>
-                  <Button type="submit" disabled={changePassword.isPending} size="lg">
-                    {changePassword.isPending ? 'Modification…' : 'Mettre à jour le mot de passe'}
-                  </Button>
                 </div>
               </form>
             )}
 
             {activeTab === 'notifications' && notificationPreferences && (
-              <form key={notificationPreferences.updated_at} onSubmit={saveNotifications} className="space-y-8 p-6 sm:p-8 animate-fade-in">
+              <form onSubmit={saveNotifications} className="space-y-8 p-6 sm:p-8 animate-fade-in">
                 <div>
-                  <h3 className="text-lg font-bold text-foreground">Notifications intelligentes</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Choisissez les alertes utiles et leur fréquence. Les doublons sont automatiquement évités.</p>
+                  <h3 className="text-lg font-bold text-foreground">Préférences de notification</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Sélectionnez les alertes et synthèses que vous souhaitez recevoir.</p>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <PreferenceToggle name="notification_sound_enabled" label="Signal sonore SaaS" description="Émettre un son discret lors de la réception d'une notification." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_sound_enabled') !== 'false' : true} />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <PreferenceToggle name="notification_sound_enabled" label="Signal sonore (Audio Chime)" description="Jouer un carillon subtil lors d'une nouvelle notification." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_sound_enabled') !== 'false' : true} />
                   <PreferenceToggle name="notification_desktop_enabled" label="Notifications Push bureau" description="Afficher une alerte Windows/OS quand l'application est en arrière-plan." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_desktop_enabled') !== 'false' : true} />
                   {!isPersonalWorkspace && <PreferenceToggle name="assignments_enabled" label="Nouvelles assignations" description="Lorsqu'une tâche vous est confiée." defaultChecked={notificationPreferences.assignments_enabled} />}
                   <PreferenceToggle name="comments_enabled" label="Commentaires" description="Activité sur les tâches qui vous concernent." defaultChecked={notificationPreferences.comments_enabled} />
@@ -309,6 +337,103 @@ function SettingsPage() {
                   </Button>
                 </div>
               </form>
+            )}
+
+            {activeTab === 'help' && (
+              <div className="space-y-8 p-6 sm:p-8 animate-fade-in">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Guide & Prise en main</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Retrouvez tous les outils pour découvrir et maîtriser l’ensemble des fonctionnalités d’Activity Control.
+                  </p>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  {/* Card 1: Relancer la visite guidée */}
+                  <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-card p-5 space-y-3 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider mb-2">
+                        <Sparkles className="h-4 w-4" />
+                        <span>Visite guidée</span>
+                      </div>
+                      <h4 className="font-extrabold text-sm text-foreground">Visite interactive pas-à-pas</h4>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                        Revisitez les 5 étapes fondamentales : Espaces, Tableau de bord, Tâches & Action directe, Validations et Notifications.
+                      </p>
+                    </div>
+                    <Button onClick={() => startTour(0)} className="w-full font-bold mt-2" size="sm">
+                      <Play className="h-4 w-4 mr-2 fill-current" />
+                      Lancer la visite guidée
+                    </Button>
+                  </div>
+
+                  {/* Card 2: Ouvrir le tiroir d'aide */}
+                  <div className="rounded-2xl border border-border bg-card p-5 space-y-3 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-muted-foreground font-bold text-xs uppercase tracking-wider mb-2">
+                        <BookOpen className="h-4 w-4 text-primary" />
+                        <span>Guides thématiques</span>
+                      </div>
+                      <h4 className="font-extrabold text-sm text-foreground">Centre d’Aide & Documentation</h4>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                        Consultez les guides détaillés avec astuces sur la création de tâches, les reports, les rôles et la facturation.
+                      </p>
+                    </div>
+                    <Button onClick={openHelpDrawer} variant="outline" className="w-full font-semibold mt-2" size="sm">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Ouvrir le centre d’aide
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Card 3: Partager la plateforme */}
+                <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider mb-1">
+                      <Share2 className="h-4 w-4" />
+                      <span>Recommandation</span>
+                    </div>
+                    <h4 className="font-bold text-sm text-foreground">Faites découvrir Activity Control</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Partagez la plateforme avec vos collègues par WhatsApp, LinkedIn, X, Email ou lien direct.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={openShareModal}
+                    className="shrink-0 font-bold bg-primary text-primary-foreground shadow-sm"
+                    size="sm"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Partager la plateforme
+                  </Button>
+                </div>
+
+                {/* Reset Onboarding Card */}
+                <div className="rounded-2xl border border-border/80 bg-muted/20 p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-sm text-foreground">Réinitialiser l’onboarding</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Fait réapparaître la checklist de démarrage sur le tableau de bord et réinitialise les marqueurs d’aide.
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleResetOnboarding}
+                      className="shrink-0 font-semibold"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      Réinitialiser
+                    </Button>
+                  </div>
+                  {resetMessage && (
+                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 animate-fade-in">
+                      <Check className="h-4 w-4" /> {resetMessage}
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>

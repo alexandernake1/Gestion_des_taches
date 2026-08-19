@@ -3,11 +3,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { playNotificationSound, sendDesktopNotification } from '@/utils/notifications'
-import { api } from '@/utils/api'
 
-type WebSocketLocation = Pick<Location, 'protocol' | 'host'>
-
-export function notificationWebSocketUrl(location: WebSocketLocation = window.location): string {
+export function notificationWebSocketUrl(location: { protocol: string; host: string } = window.location) {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${location.host}/ws/notifications/`
 }
@@ -19,21 +16,20 @@ export function useWebSocket() {
 
   useEffect(() => {
     let stopped = false
-    let reconnectTimer: ReturnType<typeof setTimeout> | undefined
     let attempt = 0
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
-    const connect = async () => {
+    function connect() {
       if (stopped) return
+
+      const wsUrl = notificationWebSocketUrl()
 
       try {
-        // Confirm or refresh the HttpOnly session before opening the socket.
-        await api.get('/auth/me/')
-      } catch {
+        ws.current = new WebSocket(wsUrl)
+      } catch (err) {
+        console.error('Failed to construct WebSocket', err)
         return
       }
-
-      if (stopped) return
-      ws.current = new WebSocket(notificationWebSocketUrl())
 
       ws.current.onopen = () => {
         attempt = 0
@@ -66,11 +62,12 @@ export function useWebSocket() {
             }
 
             // 4. Trigger Live In-App Toast
+            const isStartable = Boolean(taskId && ['task_due_soon', 'task_overdue', 'new_assignment', 'new_task'].includes(notif.type))
             const toastOptions = {
               description: body,
-              duration: 5000,
+              duration: 6000,
               action: {
-                label: taskId ? 'Voir la tâche' : 'Consulter',
+                label: isStartable ? 'Commencer la tâche' : (taskId ? 'Voir la tâche' : 'Consulter'),
                 onClick: handleNavigate,
               },
             }

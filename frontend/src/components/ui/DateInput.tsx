@@ -106,7 +106,7 @@ export function DateInput({ name, defaultValue = '', className, disabled, min, m
             {weekdayLabels.map((label) => <span key={label} className="pb-1 text-[10px] font-black uppercase tracking-wide text-muted-foreground">{label}</span>)}
             {days.map((date) => {
               const value = format(date, 'yyyy-MM-dd')
-              const unavailable = (min && value < min) || (max && value > max)
+              const unavailable = Boolean((min && value < min) || (max && value > max))
               const selected = !!selectedDate && isSameDay(date, selectedDate)
               return (
                 <button

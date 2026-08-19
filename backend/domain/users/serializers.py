@@ -32,17 +32,22 @@ def legal_acceptance_fields():
 
 
 def provision_workspace_subscription(company, plan):
-    """Attach a plan to a workspace and simulate its initial local payment."""
+    """Attach a plan to a workspace and simulate its initial local payment taking prorata into account."""
+    from decimal import Decimal
+    from domain.companies.services import calculate_subscription_quote
 
     now = timezone.now()
     is_free = plan.price == 0
+    quote = calculate_subscription_quote(company, plan, now=now)
+    net_amount = Decimal(str(quote['net_amount_due']))
+
     subscription, _ = CompanySubscription.objects.update_or_create(
         company=company,
         defaults={
             'plan': plan,
             'status': (
                 SubscriptionStatus.ACTIVE
-                if is_free else SubscriptionStatus.PENDING_VERIFICATION
+                if (is_free or net_amount == Decimal('0.00')) else SubscriptionStatus.PENDING_VERIFICATION
             ),
             'ends_at': (
                 None
@@ -54,20 +59,24 @@ def provision_workspace_subscription(company, plan):
         },
     )
     payment = None
-    if not is_free:
+    if not is_free and net_amount > Decimal('0.00'):
         payment = PaymentTransaction.objects.create(
             company=company,
             subscription=subscription,
             plan=plan,
             reference=f"TEST-{uuid.uuid4().hex[:20].upper()}",
-            amount=plan.price,
+            amount=net_amount,
             status=PaymentStatus.SUCCEEDED,
             paid_at=now,
-            provider_payload={'mode': 'simulation', 'result': 'approved'},
+            provider_payload={'mode': 'simulation', 'result': 'approved', 'quote': quote},
         )
         subscription.status = SubscriptionStatus.ACTIVE
         subscription.save(update_fields=['status', 'updated_at'])
+    elif not is_free and net_amount == Decimal('0.00'):
+        subscription.status = SubscriptionStatus.ACTIVE
+        subscription.save(update_fields=['status', 'updated_at'])
     return subscription, payment
+
 
 
 class UserSerializer(serializers.ModelSerializer):

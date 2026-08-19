@@ -1,11 +1,12 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Menu, Settings, Building } from 'lucide-react'
+import { Menu, Settings, Building, HelpCircle, Share2 } from 'lucide-react'
 import { authService } from '@/services/auth'
 import { companiesService } from '@/services/companies'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationDropdown } from './NotificationDropdown'
 import { ROLE_LABELS } from '@/constants/labels'
+import { useTutorial } from '@/context/TutorialContext'
 
 interface HeaderProps {
   title: string
@@ -23,6 +24,7 @@ function getInitials(name: string): string {
 
 export function Header({ title, onMenuClick }: HeaderProps) {
   const navigate = useNavigate()
+  const { openHelpDrawer, openShareModal } = useTutorial()
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: authService.getCurrentUser,
@@ -96,6 +98,26 @@ export function Header({ title, onMenuClick }: HeaderProps) {
             </select>
           </div>
         )}
+
+        {/* Share Platform */}
+        <button
+          onClick={openShareModal}
+          aria-label="Partager la plateforme"
+          title="Partager la plateforme"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+        >
+          <Share2 className="h-[18px] w-[18px]" />
+        </button>
+
+        {/* Help Center & Tutorial */}
+        <button
+          onClick={openHelpDrawer}
+          aria-label="Centre d'aide & Tutoriels"
+          title="Centre d'aide & Tutoriels"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+        >
+          <HelpCircle className="h-[18px] w-[18px]" />
+        </button>
 
         {/* Settings */}
         <button

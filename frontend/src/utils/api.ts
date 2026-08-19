@@ -76,7 +76,7 @@ async function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: BodyInit | object;
-  params?: Record<string, unknown>;
+  params?: object;
 }
 
 interface PaginatedResponse<T> {

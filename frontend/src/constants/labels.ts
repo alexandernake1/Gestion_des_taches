@@ -1,12 +1,12 @@
 export const ROLE_LABELS: Record<string, string> = {
   owner: 'Administrateur de la structure',
-  manager: 'Responsable',
+  manager: 'Manager',
   employee: 'Collaborateur',
 }
 
 export const ROLE_PLURAL_LABELS: Record<string, string> = {
   owner: 'Administrateurs de la structure',
-  manager: 'Responsables',
+  manager: 'Managers',
   employee: 'Collaborateurs',
 }
 

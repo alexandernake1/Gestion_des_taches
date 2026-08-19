@@ -300,8 +300,8 @@ PASSWORD_RESET_TIMEOUT = int(os.getenv('PASSWORD_RESET_TIMEOUT', 3600))
 APP_FRONTEND_URL = os.getenv('APP_FRONTEND_URL', 'http://localhost:5173')
 GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
 TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
-PAYMENT_PROVIDER = os.getenv('PAYMENT_PROVIDER', 'disabled')
+PAYMENT_PROVIDER = os.getenv('PAYMENT_PROVIDER', 'test' if DEBUG else 'disabled')
 ALLOW_TEST_PAYMENT_SIMULATOR = os.getenv(
     'ALLOW_TEST_PAYMENT_SIMULATOR',
-    'False',
-).lower() == 'true'
+    'True' if DEBUG else 'False',
+).lower() in ('true', '1', 'yes')

@@ -61,6 +61,12 @@ function OnboardingPage() {
   })
   const selectedPlan = plans.find((plan) => plan.code === form.plan_code)
 
+  const { data: quote } = useQuery({
+    queryKey: ['onboarding-quote', form.plan_code],
+    queryFn: () => subscriptionsService.getQuote(form.plan_code),
+    enabled: Boolean(isConvertingPersonalSpace && form.plan_code && form.plan_code !== ''),
+  })
+
   const mutation = useMutation({
     mutationFn: async () => {
       if (usageType === 'personal') {
@@ -233,11 +239,27 @@ function OnboardingPage() {
                         <p className="mt-3 min-h-10 text-xs leading-5 text-slate-500">{plan.description}</p>
                         <p className="mt-3 border-t border-slate-200 pt-3 text-xs font-semibold text-slate-600">
                           {usageType === 'personal'
-                            ? `${plan.storage_limit_mb} Mo de stockage privé`
+                            ? 'Espace individuel et confidentiel'
                             : `${plan.max_users === 0 ? 'Utilisateurs illimités' : `${plan.max_users} utilisateurs`} · ${plan.max_teams === 0 ? 'Équipes illimitées' : `${plan.max_teams} équipes`}`}
                         </p>
+
                       </button>
                     ))}
+                  </div>
+                )}
+                {quote && quote.credit_applied > 0 && (
+                  <div className="mt-5 flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-950">
+                    <div className="flex items-center gap-2.5">
+                      <Check className="h-5 w-5 text-emerald-600 shrink-0" />
+                      <div>
+                        <strong className="block text-emerald-900">Crédit prorata appliqué ({quote.prorata_details.remaining_days} j. restants)</strong>
+                        <span className="text-xs text-emerald-700">Votre crédit personnel est automatiquement déduit du premier paiement de votre structure.</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="block text-xs line-through text-slate-400">{Number(quote.gross_amount).toLocaleString('fr-FR')} FCFA</span>
+                      <strong className="text-lg font-black text-emerald-800">{Number(quote.net_amount_due).toLocaleString('fr-FR')} FCFA</strong>
+                    </div>
                   </div>
                 )}
                 {selectedPlan && Number(selectedPlan.price) > 0 && (
@@ -246,6 +268,7 @@ function OnboardingPage() {
                     <div><strong>Paiement de test sécurisé</strong><p className="mt-1 text-xs">La transaction sera automatiquement approuvée dans cet environnement.</p></div>
                   </div>
                 )}
+
                 <footer className="mt-8 flex items-center justify-between border-t border-slate-100 pt-6">
                   <button type="button" onClick={goBackFromPlans} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500"><ChevronLeft className="h-4 w-4" />Retour</button>
                   <button type="button" onClick={continueFromPlans} disabled={mutation.isPending || plans.length === 0} className="inline-flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50">

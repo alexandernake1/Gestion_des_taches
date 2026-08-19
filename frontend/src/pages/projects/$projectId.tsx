@@ -37,7 +37,7 @@ export function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<'kanban' | 'timeline'>('kanban')
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const draggedTaskId = useRef<number | null>(null)
-  const [draggingOver, setDraggingOver] = useState<Status | null>(null)
+  const [draggingOver, setDraggingOver] = useState<Status | 'pending_approval' | null>(null)
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: authService.getCurrentUser,

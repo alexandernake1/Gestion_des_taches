@@ -52,6 +52,10 @@ function ApprovalsPage() {
     }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['approvals'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar-pending-approvals'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar-pending-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['company-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['user-dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['task-approvals', String(variables.approval.task)] })
       queryClient.invalidateQueries({ queryKey: ['task', String(variables.approval.task)] })
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -70,6 +74,10 @@ function ApprovalsPage() {
     }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['approval-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar-pending-approvals'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar-pending-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['company-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['user-dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['task-reports', String(variables.report.task)] })
       queryClient.invalidateQueries({ queryKey: ['task', String(variables.report.task)] })
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -131,7 +139,7 @@ function ApprovalsPage() {
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                 {isManager
                   ? 'Examinez les livrables, motivez vos décisions et gardez une trace claire de chaque clôture.'
-                  : 'Suivez les demandes envoyées à vos responsables et consultez leurs décisions.'}
+                  : 'Suivez les demandes envoyées à vos managers et consultez leurs décisions.'}
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card px-5 py-4 text-center shadow-sm">
@@ -192,7 +200,7 @@ function ApprovalsPage() {
                     <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-foreground">{approval.reason}</p>
                     {approval.review_comment && (
                       <p className="mt-4 rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
-                        <strong className="text-foreground">Décision de {approval.reviewed_by_name || 'Responsable'} :</strong>{' '}{approval.review_comment}
+                        <strong className="text-foreground">Décision de {approval.reviewed_by_name || 'Manager'} :</strong>{' '}{approval.review_comment}
                       </p>
                     )}
                   </div>
@@ -233,7 +241,7 @@ function ApprovalsPage() {
                     <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">{report.reason}</p>
                     {report.review_comment && (
                       <p className="mt-4 rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
-                        <strong className="text-foreground">Décision de {report.reviewed_by_name || 'Responsable'} :</strong>{' '}{report.review_comment}
+                        <strong className="text-foreground">Décision de {report.reviewed_by_name || 'Manager'} :</strong>{' '}{report.review_comment}
                       </p>
                     )}
                   </div>

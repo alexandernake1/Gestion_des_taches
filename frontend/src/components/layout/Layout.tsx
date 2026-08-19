@@ -3,6 +3,9 @@ import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { SystemAnnouncementsBanner } from './SystemAnnouncementsBanner'
 import { useWebSocket } from '@/hooks/useWebSocket'
+import { ProductTourModal } from '@/components/tutorial/ProductTourModal'
+import { HelpCenterDrawer } from '@/components/tutorial/HelpCenterDrawer'
+import { SharePlatformModal } from '@/components/common/SharePlatformModal'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -26,6 +29,9 @@ export function Layout({ children, title }: LayoutProps) {
           {children}
         </main>
       </div>
+      <ProductTourModal />
+      <HelpCenterDrawer />
+      <SharePlatformModal />
     </div>
   )
 }

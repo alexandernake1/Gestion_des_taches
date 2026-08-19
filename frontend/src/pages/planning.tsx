@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { requireManagement } from '@/router/auth'
 import { tasksService } from '@/services/tasks'
+import { ROLE_LABELS } from '@/constants/labels'
 
 export const Route = createFileRoute('/planning')({
   beforeLoad: requireManagement,
@@ -222,7 +223,7 @@ function PlanningPage() {
                           </div>
                           <div>
                             <p className="text-lg font-bold text-foreground">{member.name}</p>
-                            <p className="text-sm font-medium text-muted-foreground">{memberRoleLabels[member.role] || member.role}</p>
+                            <p className="text-sm font-medium text-muted-foreground">{ROLE_LABELS[member.role] || member.role}</p>
                           </div>
                         </div>
                       </div>

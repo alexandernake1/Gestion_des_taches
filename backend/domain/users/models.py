@@ -41,7 +41,7 @@ class EmailUserManager(UserManager):
 
 class Role(models.TextChoices):
     OWNER = 'owner', 'Administrateur de la structure'
-    MANAGER = 'manager', 'Responsable'
+    MANAGER = 'manager', 'Manager'
     EMPLOYEE = 'employee', 'Collaborateur'
 
 

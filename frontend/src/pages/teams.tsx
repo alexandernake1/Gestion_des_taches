@@ -375,8 +375,8 @@ function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | nul
             </div>
             <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-slate-200 p-3">
               {users.map((user) => {
-                const isLeader = user.id === leaderId
-                const isChecked = isLeader || selectedMembers.includes(user.id)
+                const isLeader = Boolean(leaderId && Number(user.id) === Number(leaderId))
+                const isChecked = isLeader || selectedMembers.includes(Number(user.id))
                 return (
                   <label key={user.id} className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
                     <input
@@ -384,7 +384,7 @@ function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | nul
                       value={user.id}
                       checked={isChecked}
                       disabled={isLeader}
-                      onChange={() => handleMemberToggle(user.id)}
+                      onChange={() => handleMemberToggle(Number(user.id))}
                     />
                     <span>{user.full_name}</span>
                     {isLeader && <span className="text-xs font-bold text-indigo-600">(Responsable)</span>}
@@ -520,8 +520,8 @@ function CreateTeamModal({ isOpen, onClose, onSuccess, users }: { isOpen: boolea
           </div>
           <div className="max-h-44 space-y-2 overflow-auto rounded-xl border border-slate-200 p-3">
             {users.map((user) => {
-              const isLeader = user.id === leaderId
-              const isChecked = isLeader || selectedMembers.includes(user.id)
+              const isLeader = Boolean(leaderId && Number(user.id) === Number(leaderId))
+              const isChecked = isLeader || selectedMembers.includes(Number(user.id))
               return (
                 <label key={user.id} className="flex items-center gap-3 text-sm text-slate-700 cursor-pointer">
                   <input
@@ -529,7 +529,7 @@ function CreateTeamModal({ isOpen, onClose, onSuccess, users }: { isOpen: boolea
                     value={user.id}
                     checked={isChecked}
                     disabled={isLeader}
-                    onChange={() => handleMemberToggle(user.id)}
+                    onChange={() => handleMemberToggle(Number(user.id))}
                   />
                   <span>{user.full_name}</span>
                   {isLeader && <span className="text-xs font-bold text-indigo-600">(Responsable)</span>}

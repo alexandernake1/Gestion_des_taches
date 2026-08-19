@@ -101,5 +101,5 @@ function PlatformAuditPage() {
 }
 
 function formatAction(action: string) {
-  return action.replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase())
+  return action.replace(/_/g, ' ').replace(/^./, (letter: string) => letter.toUpperCase())
 }

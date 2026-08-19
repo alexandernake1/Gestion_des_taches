@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bell, AlertTriangle, CalendarClock } from 'lucide-react'
+import { Bell, AlertTriangle, CalendarClock, Play, ArrowRight, ExternalLink } from 'lucide-react'
 import { notificationsService } from '@/services/notifications'
+import { tasksService } from '@/services/tasks'
 import type { Notification } from '@/domain/types'
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 
 export function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false)
@@ -25,7 +27,7 @@ export function NotificationDropdown() {
   const { data: notifications } = useQuery({
     queryKey: ['notifications'],
     queryFn: notificationsService.list,
-    enabled: isOpen, // Fetch when dropdown is open
+    enabled: isOpen,
   })
 
   // Toast notification logic for new unread notifications
@@ -58,7 +60,41 @@ export function NotificationDropdown() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       queryClient.invalidateQueries({ queryKey: ['unreadCount'] })
       setIsOpen(false)
+      toast.success('Toutes les notifications ont été marquées comme lues.')
     }
+  })
+
+  const startTaskMutation = useMutation({
+    mutationFn: async ({ taskId, notifId, alreadyInProgress }: { taskId: number; notifId?: string | number; alreadyInProgress?: boolean }) => {
+      if (!alreadyInProgress) {
+        await tasksService.update(taskId, { status: 'in_progress' })
+      }
+      if (notifId) {
+        try {
+          await notificationsService.markAsRead(Number(notifId))
+        } catch {
+          // ignore
+        }
+      }
+      return { taskId, alreadyInProgress }
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['task', String(result.taskId)] })
+      queryClient.invalidateQueries({ queryKey: ['company-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['user-dashboard'] })
+      if (!result.alreadyInProgress) {
+        toast.success('Tâche démarrée ! Statut passé à « En cours ».')
+      }
+      setSelectedNotification(null)
+      setIsOpen(false)
+      navigate({ to: '/tasks/$taskId', params: { taskId: String(result.taskId) } })
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Impossible de démarrer la tâche.')
+    },
   })
 
   const handleOpenNotification = (notification: Notification) => {
@@ -69,11 +105,10 @@ export function NotificationDropdown() {
     setSelectedNotification(notification)
   }
 
-  const handleAction = () => {
-    if (selectedNotification?.task) {
-      setSelectedNotification(null)
-      navigate({ to: '/tasks/$taskId', params: { taskId: String(selectedNotification.task) } })
-    }
+  const handleOpenTask = (taskId: number) => {
+    setSelectedNotification(null)
+    setIsOpen(false)
+    navigate({ to: '/tasks/$taskId', params: { taskId: String(taskId) } })
   }
 
   // Close on outside click
@@ -130,40 +165,49 @@ export function NotificationDropdown() {
               </div>
             ) : (
               <div className="flex flex-col gap-1">
-                {notifications.slice(0, 5).map((notification) => {
+                {notifications.slice(0, 6).map((notification) => {
                   const requiresAction = ['approval_requested', 'task_overdue', 'payment_failed', 'subscription_suspended'].includes(notification.type)
                   const isReminder = notification.type === 'task_due_soon'
+                  const isAssignment = notification.type === 'new_assignment' || notification.type === 'new_task'
                   
                   return (
                     <button
                       key={notification.id}
                       onClick={() => handleOpenNotification(notification)}
                       className={`flex items-start gap-3 w-full text-left p-3 rounded-xl transition-colors ${
-                        !notification.is_read ? 'bg-muted/50' : 'hover:bg-muted/30'
+                        !notification.is_read ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/50'
                       }`}
                     >
-                      <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                      <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
                         requiresAction ? 'bg-destructive/10 text-destructive' : 
                         isReminder ? 'bg-amber-500/10 text-amber-500' : 
+                        isAssignment ? 'bg-primary/10 text-primary' :
                         'bg-primary/10 text-primary'
                       }`}>
-                        {requiresAction ? <AlertTriangle className="h-3.5 w-3.5" /> : 
-                         isReminder ? <CalendarClock className="h-3.5 w-3.5" /> : 
-                         <Bell className="h-3.5 w-3.5" />}
+                        {requiresAction ? <AlertTriangle className="h-4 w-4" /> :
+                         isReminder ? <CalendarClock className="h-4 w-4" /> :
+                         <Bell className="h-4 w-4" />}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <p className="text-sm font-semibold text-foreground truncate">{notification.title}</p>
                           {!notification.is_read && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                            <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
-                        <p className="text-[10px] text-muted-foreground/70 mt-1">
-                          {new Date(notification.created_at).toLocaleDateString('fr-FR', {
-                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                          })}
-                        </p>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-[10px] text-muted-foreground/70">
+                            {new Date(notification.created_at).toLocaleDateString('fr-FR', {
+                              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </span>
+                          {notification.task && (
+                            <span className="text-[11px] font-bold text-primary flex items-center gap-1">
+                              {notification.task_status === 'in_progress' ? 'Continuer →' : 'Commencer →'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   )
@@ -193,22 +237,67 @@ export function NotificationDropdown() {
           title={selectedNotification.title}
           size="md"
           description={new Date(selectedNotification.created_at).toLocaleDateString('fr-FR', {
-            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
           })}
         >
           <div className="space-y-6">
-            <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+            <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed bg-muted/30 p-4 rounded-2xl border border-border/50">
               {selectedNotification.message}
             </div>
+
+            {selectedNotification.task && selectedNotification.task_title && (
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary">Tâche concernée</p>
+                  <p className="font-semibold text-foreground truncate">{selectedNotification.task_title}</p>
+                </div>
+                {selectedNotification.task_status && (
+                  <Badge variant={selectedNotification.task_status === 'completed' ? 'success' : selectedNotification.task_status === 'in_progress' ? 'info' : 'warning'}>
+                    {selectedNotification.task_status === 'completed' ? 'Terminée' : selectedNotification.task_status === 'in_progress' ? 'En cours' : 'À faire'}
+                  </Badge>
+                )}
+              </div>
+            )}
             
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-border/50">
               <Button type="button" variant="secondary" onClick={() => setSelectedNotification(null)}>
                 Fermer
               </Button>
               {selectedNotification.task && (
-                <Button type="button" onClick={handleAction}>
-                  Voir la tâche associée
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleOpenTask(Number(selectedNotification.task))}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Consulter la tâche
+                  </Button>
+                  {selectedNotification.task_status !== 'completed' && (
+                    <Button
+                      type="button"
+                      onClick={() => startTaskMutation.mutate({
+                        taskId: Number(selectedNotification.task),
+                        notifId: selectedNotification.id,
+                        alreadyInProgress: selectedNotification.task_status === 'in_progress',
+                      })}
+                      disabled={startTaskMutation.isPending}
+                      className="bg-primary text-primary-foreground font-semibold shadow-sm"
+                    >
+                      {selectedNotification.task_status === 'in_progress' ? (
+                        <>
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                          Continuer la tâche
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2 fill-current" />
+                          Commencer la tâche
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>

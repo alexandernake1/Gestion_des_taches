@@ -32,8 +32,16 @@ export const authService = {
     return api.post<CompanyRegistrationResponse>('/auth/onboarding/company/', data);
   },
 
+  async onboardCompany(data: CompanyOnboardingRequest): Promise<CompanyRegistrationResponse> {
+    return this.completeCompanyOnboarding(data);
+  },
+
   async completePersonalOnboarding(data: PersonalOnboardingRequest): Promise<CompanyRegistrationResponse> {
     return api.post<CompanyRegistrationResponse>('/auth/onboarding/personal/', data);
+  },
+
+  async onboardPersonal(data: PersonalOnboardingRequest): Promise<CompanyRegistrationResponse> {
+    return this.completePersonalOnboarding(data);
   },
 
   async loginWithGoogle(credential: string, captcha_token?: string, remember_me = false, accept_terms = false): Promise<LoginResponse> {

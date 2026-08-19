@@ -10,7 +10,7 @@ import { subscriptionsService } from '@/services/subscriptions'
 import { authService } from '@/services/auth'
 import { requireOwner } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Check, ShieldAlert, Sparkles, Users, Layers, HardDrive, ReceiptText, XCircle, Clock3, ArrowLeft, FileText, ArrowRight } from 'lucide-react'
+import { Check, ShieldAlert, Sparkles, Users, Layers, ReceiptText, XCircle, Clock3, ArrowLeft, FileText, ArrowRight } from 'lucide-react'
 import type { PaymentTransaction, SubscriptionQuote } from '@/domain/types'
 import { useSmartBack } from '@/utils/navigation'
 
@@ -307,8 +307,8 @@ function SubscriptionPage() {
         {/* Plans Comparison Section */}
         <div>
           <div className="mb-6">
-            <h3 className="text-lg font-bold text-slate-950">Comparer les forfaits disponibles</h3>
-            <p className="text-sm text-slate-500">{isPersonalWorkspace ? 'Choisissez l’offre adaptée à votre usage quotidien.' : 'Choisissez l’offre adaptée aux besoins de votre entreprise.'}</p>
+            <h3 className="text-lg font-bold text-foreground">Comparer les forfaits disponibles</h3>
+            <p className="text-sm text-muted-foreground">{isPersonalWorkspace ? 'Choisissez l’offre adaptée à votre usage quotidien.' : 'Choisissez l’offre adaptée aux besoins de votre entreprise.'}</p>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -318,8 +318,10 @@ function SubscriptionPage() {
               return (
                 <div
                   key={plan.id}
-                  className={`relative flex flex-col justify-between rounded-3xl border bg-white p-6 shadow-sm transition-all duration-200 ${
-                    isCurrentPlan ? 'border-indigo-600 ring-2 ring-indigo-600/20' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
+                  className={`relative flex flex-col justify-between rounded-3xl border p-6 shadow-sm transition-all duration-200 ${
+                    isCurrentPlan
+                      ? 'border-indigo-600 bg-card dark:bg-slate-900 ring-2 ring-indigo-600/30 shadow-indigo-500/10'
+                      : 'border-border dark:border-slate-800 bg-card dark:bg-slate-900 hover:border-indigo-300 dark:hover:border-slate-700 hover:shadow-md'
                   }`}
                 >
                   {isCurrentPlan && (
@@ -329,34 +331,34 @@ function SubscriptionPage() {
                   )}
 
                   <div>
-                    <h4 className="text-xl font-bold text-slate-900">{plan.name}</h4>
-                    <p className="mt-2 text-xs text-slate-500 min-h-[36px]">{plan.description}</p>
+                    <h4 className="text-xl font-bold text-foreground">{plan.name}</h4>
+                    <p className="mt-2 text-xs text-muted-foreground dark:text-slate-300 min-h-[36px]">{plan.description}</p>
 
                     <div className="mt-4 mb-6">
-                      <span className="text-2xl font-extrabold text-slate-950">
+                      <span className="text-2xl font-extrabold text-foreground">
                         {Number(plan.price) === 0 ? 'Gratuit' : `${Number(plan.price).toLocaleString('fr-FR')} FCFA`}
                       </span>
-                      {Number(plan.price) > 0 && <span className="text-xs text-slate-400"> / mois</span>}
+                      {Number(plan.price) > 0 && <span className="text-xs text-muted-foreground"> / mois</span>}
                     </div>
 
-                    <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
-                      {!isPersonalWorkspace && <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                        <span><strong>{plan.max_users === 0 ? 'Utilisateurs illimités' : `Jusqu’à ${plan.max_users} utilisateurs`}</strong></span>
-                      </li>}
-                      {!isPersonalWorkspace && <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                        <span><strong>{plan.max_teams === 0 ? 'Équipes illimitées' : `Jusqu’à ${plan.max_teams} équipes`}</strong></span>
-                      </li>}
-                      <li className="flex items-center gap-2">
-                        <HardDrive className="h-4 w-4 text-slate-400 shrink-0" />
-                        <span>{plan.storage_limit_mb === 0 ? 'Stockage illimité' : `${plan.storage_limit_mb} Mo de stockage`}</span>
-                      </li>
+                    <ul className="space-y-3 text-xs border-t border-border/60 pt-4">
+                      {!isPersonalWorkspace && (
+                        <li className="flex items-center gap-2 text-foreground">
+                          <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                          <span><strong>{plan.max_users === 0 ? 'Utilisateurs illimités' : `Jusqu’à ${plan.max_users} utilisateurs`}</strong></span>
+                        </li>
+                      )}
+                      {!isPersonalWorkspace && (
+                        <li className="flex items-center gap-2 text-foreground">
+                          <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                          <span><strong>{plan.max_teams === 0 ? 'Équipes illimitées' : `Jusqu’à ${plan.max_teams} équipes`}</strong></span>
+                        </li>
+                      )}
                       {normalizedPlanFeatures(plan.feature_flags).map(([key, enabled]) => {
                         const labelText = featureLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
                         return (
-                          <li key={key} className={`flex items-center gap-2 ${enabled ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
-                            <Sparkles className={`h-4 w-4 shrink-0 ${enabled ? 'text-amber-500' : 'text-slate-300'}`} />
+                          <li key={key} className={`flex items-center gap-2 ${enabled ? 'text-foreground font-medium' : 'text-muted-foreground/60 dark:text-slate-500 line-through opacity-70'}`}>
+                            <Sparkles className={`h-4 w-4 shrink-0 ${enabled ? 'text-amber-500' : 'text-muted-foreground/40 dark:text-slate-600'}`} />
                             <span>{labelText}</span>
                           </li>
                         )
@@ -364,7 +366,7 @@ function SubscriptionPage() {
                     </ul>
                   </div>
 
-                  <div className="mt-8 pt-4 border-t border-slate-100">
+                  <div className="mt-8 pt-4 border-t border-border/60">
                     {isCurrentPlan ? (
                       <Button variant="secondary" disabled className="w-full">
                         Offre active
@@ -388,25 +390,40 @@ function SubscriptionPage() {
         <section>
           <div className="mb-4 flex items-center gap-3">
             <ReceiptText className="h-5 w-5 text-indigo-600" />
-            <div><h3 className="font-bold text-slate-950">Historique des paiements</h3><p className="text-xs text-slate-500">Transactions de test et reçus associés.</p></div>
+            <div>
+              <h3 className="font-bold text-foreground">Historique des paiements</h3>
+              <p className="text-xs text-muted-foreground">Transactions de test et reçus associés.</p>
+            </div>
           </div>
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-                  <tr><th className="px-5 py-3">Référence</th><th className="px-5 py-3">Forfait</th><th className="px-5 py-3">Date</th><th className="px-5 py-3">Montant</th><th className="px-5 py-3">Statut</th></tr>
+                <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-5 py-3">Référence</th>
+                    <th className="px-5 py-3">Forfait</th>
+                    <th className="px-5 py-3">Date</th>
+                    <th className="px-5 py-3">Montant</th>
+                    <th className="px-5 py-3">Statut</th>
+                  </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border text-foreground">
                   {payments.map((payment) => (
-                    <tr key={payment.id}>
-                      <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-700">{payment.reference}</td>
-                      <td className="px-5 py-4">{payment.plan_name}</td>
-                      <td className="px-5 py-4 text-slate-500">{new Date(payment.created_at).toLocaleString('fr-FR')}</td>
+                    <tr key={payment.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-5 py-4 font-mono text-xs font-semibold text-foreground">{payment.reference}</td>
+                      <td className="px-5 py-4 font-medium">{payment.plan_name}</td>
+                      <td className="px-5 py-4 text-muted-foreground">{new Date(payment.created_at).toLocaleString('fr-FR')}</td>
                       <td className="px-5 py-4 font-semibold">{Number(payment.amount).toLocaleString('fr-FR')} {payment.currency}</td>
                       <td className="px-5 py-4"><PaymentBadge status={payment.status} /></td>
                     </tr>
                   ))}
-                  {payments.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-slate-400">Aucune transaction enregistrée.</td></tr>}
+                  {payments.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-10 text-center text-muted-foreground italic">
+                        Aucune transaction enregistrée.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -461,6 +478,28 @@ function SubscriptionPage() {
                 </p>
               )}
 
+              {startPaymentMutation.isError && (
+                <div className="flex items-start gap-2 rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs text-rose-900">
+                  <ShieldAlert className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+                  <span>
+                    {startPaymentMutation.error instanceof Error
+                      ? startPaymentMutation.error.message
+                      : 'Impossible d’initialiser la transaction de paiement.'}
+                  </span>
+                </div>
+              )}
+
+              {changePlanMutation.isError && (
+                <div className="flex items-start gap-2 rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs text-rose-900">
+                  <ShieldAlert className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+                  <span>
+                    {changePlanMutation.error instanceof Error
+                      ? changePlanMutation.error.message
+                      : 'Impossible de changer de forfait.'}
+                  </span>
+                </div>
+              )}
+
               <div className="flex gap-3 justify-end pt-2">
                 <Button variant="secondary" onClick={() => setPendingQuote(null)}>
                   Annuler
@@ -469,7 +508,11 @@ function SubscriptionPage() {
                   onClick={handleConfirmQuote}
                   disabled={changePlanMutation.isPending || startPaymentMutation.isPending}
                 >
-                  {pendingQuote.net_amount_due === 0 ? 'Activer immédiatement' : 'Confirmer et procéder au paiement'}
+                  {changePlanMutation.isPending || startPaymentMutation.isPending
+                    ? 'Traitement en cours…'
+                    : pendingQuote.net_amount_due === 0
+                      ? 'Activer immédiatement'
+                      : 'Confirmer et procéder au paiement'}
                 </Button>
               </div>
             </div>

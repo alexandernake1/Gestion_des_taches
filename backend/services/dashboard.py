@@ -7,9 +7,11 @@ from domain.tasks.models import (
     ApprovalStatus,
     Priority,
     Project,
+    ReportStatus,
     Status,
     Task,
     TaskHistory,
+    TaskReport,
 )
 from domain.teams.models import Team
 from domain.users.models import User
@@ -107,8 +109,9 @@ class DashboardService:
         durations = []
         for t in completed_in_period.filter(completed_at__isnull=False):
             delta = (t.completed_at - t.created_at).total_seconds() / 3600
-            if delta >= 0:
-                durations.append(delta)
+            if delta < 0:
+                delta = abs(delta)
+            durations.append(max(0.5, delta))
 
         avg_completion_hours = round(sum(durations) / len(durations), 1) if durations else 0.0
         median_completion_hours = round(statistics.median(durations), 1) if durations else 0.0
@@ -196,12 +199,23 @@ class DashboardService:
                         'due_date': project.target_date.isoformat() if project.target_date else None,
                     })
 
-        # Approvals summary
-        approvals = ApprovalRequest.objects.filter(company=company)
+        # Approvals summary (aggregating completion approvals and deadline extension requests)
+        approval_reqs = ApprovalRequest.objects.filter(company=company)
+        task_reports = TaskReport.objects.filter(task__company=company)
         approvals_summary = {
-            'pending': approvals.filter(status=ApprovalStatus.PENDING).count(),
-            'approved': approvals.filter(status=ApprovalStatus.APPROVED).count(),
-            'rejected': approvals.filter(status=ApprovalStatus.REJECTED).count(),
+            'pending': approval_reqs.filter(status=ApprovalStatus.PENDING).count() + task_reports.filter(status=ReportStatus.PENDING).count(),
+            'approved': approval_reqs.filter(status=ApprovalStatus.APPROVED).count() + task_reports.filter(status=ReportStatus.APPROVED).count(),
+            'rejected': approval_reqs.filter(status=ApprovalStatus.REJECTED).count() + task_reports.filter(status=ReportStatus.REJECTED).count(),
+            'completion_requests': {
+                'pending': approval_reqs.filter(status=ApprovalStatus.PENDING).count(),
+                'approved': approval_reqs.filter(status=ApprovalStatus.APPROVED).count(),
+                'rejected': approval_reqs.filter(status=ApprovalStatus.REJECTED).count(),
+            },
+            'report_requests': {
+                'pending': task_reports.filter(status=ReportStatus.PENDING).count(),
+                'approved': task_reports.filter(status=ReportStatus.APPROVED).count(),
+                'rejected': task_reports.filter(status=ReportStatus.REJECTED).count(),
+            },
         }
 
         # Backwards compatible keys + rich analytics
@@ -333,8 +347,11 @@ class DashboardService:
             })
             curr = next_curr + timedelta(days=1)
 
-        # Action required
-        pending_my_approvals = ApprovalRequest.objects.filter(company=company, task__assigned_to=user, status=ApprovalStatus.PENDING).count()
+        # Action required (both completion approvals and postponement validations)
+        pending_my_approvals = (
+            ApprovalRequest.objects.filter(company=company, task__assigned_to=user, status=ApprovalStatus.PENDING).count()
+            + TaskReport.objects.filter(task__company=company, requested_by=user, status=ReportStatus.PENDING).count()
+        )
 
         return {
             'created': created_stats,

@@ -1,10 +1,11 @@
-import { Bell, Building2, ClipboardCheck, FolderKanban, CheckSquare2, CreditCard, Globe, LayoutDashboard, LogOut, Shield, UserRound, Users, X, Package, Megaphone, ChevronRight, ScrollText } from 'lucide-react'
+import { Bell, Building2, ClipboardCheck, FolderKanban, CheckSquare2, CreditCard, Globe, LayoutDashboard, LogOut, Shield, UserRound, Users, X, Package, Megaphone, ChevronRight, ScrollText, HelpCircle, Share2 } from 'lucide-react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { authService } from '@/services/auth'
 import { subscriptionsService } from '@/services/subscriptions'
 import { tasksService } from '@/services/tasks'
 import { useQuery } from '@tanstack/react-query'
 import { ROLE_LABELS } from '@/constants/labels'
+import { useTutorial } from '@/context/TutorialContext'
 
 interface NavigationItem {
   name: string
@@ -51,6 +52,7 @@ function getInitials(name: string): string {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation()
+  const { openHelpDrawer, openShareModal } = useTutorial()
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: authService.getCurrentUser,
@@ -273,10 +275,52 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           </div>
 
+          {/* Share Platform button */}
+          <button
+            onClick={() => {
+              onClose()
+              openShareModal()
+            }}
+            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 mb-1"
+            style={{ color: 'hsl(var(--sidebar-text))' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'hsl(var(--sidebar-hover-bg))'
+              e.currentTarget.style.color = 'hsl(var(--foreground))'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = 'hsl(var(--sidebar-text))'
+            }}
+          >
+            <Share2 className="h-4 w-4 text-primary transition-transform duration-200 group-hover:scale-110" />
+            <span>Partager la plateforme</span>
+          </button>
+
+          {/* Help Center & Tutorial button */}
+          <button
+            onClick={() => {
+              onClose()
+              openHelpDrawer()
+            }}
+            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 mb-1"
+            style={{ color: 'hsl(var(--sidebar-text))' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'hsl(var(--sidebar-hover-bg))'
+              e.currentTarget.style.color = 'hsl(var(--foreground))'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = 'hsl(var(--sidebar-text))'
+            }}
+          >
+            <HelpCircle className="h-4 w-4 text-primary transition-transform duration-200 group-hover:scale-110" />
+            <span>Guide & Aide</span>
+          </button>
+
           {/* Logout button */}
           <button
             onClick={handleLogout}
-            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200"
+            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200"
             style={{ color: 'hsl(var(--sidebar-text))' }}
             onMouseEnter={e => {
               e.currentTarget.style.background = 'hsl(var(--destructive) / 0.12)'

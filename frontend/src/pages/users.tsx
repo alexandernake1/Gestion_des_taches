@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { Modal } from '@/components/ui/Modal'
 import { useConfirmation } from '@/components/ui/confirmation'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { ROLE_LABELS, ROLE_PLURAL_LABELS } from '@/constants/labels'
 
 export const Route = createFileRoute('/users')({
@@ -45,7 +46,7 @@ function UsersPage() {
   })
   const isOwner = currentUser?.role === 'owner'
   const isSuperuser = currentUser?.is_superuser
-  const canManageAccounts = isOwner || currentUser?.role === 'manager' || isSuperuser
+  const canManageAccounts = isOwner || isSuperuser || currentUser?.role === 'manager'
   const { data: users, isLoading, isError, refetch } = useQuery({
     queryKey: ['users', search, roleFilter, statusFilter],
     queryFn: () => usersService.list({
@@ -63,9 +64,13 @@ function UsersPage() {
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => (
       isActive ? usersService.activate(id) : usersService.deactivate(id)
     ),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['user-audit-log'] })
+      toast.success(variables.isActive ? 'Compte réactivé avec succès.' : 'Compte archivé avec succès.')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Impossible de modifier le statut du compte.')
     },
   })
   const deleteAccountMutation = useMutation({
@@ -73,10 +78,15 @@ function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['user-audit-log'] })
+      toast.success('Compte supprimé avec succès.')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Impossible de supprimer le compte.')
     },
   })
   const confirmAction = useConfirmation()
   const handleToggleAccount = async (user: User) => {
+    const targetActive = !user.is_active
     const archiving = user.is_active
     const { confirmed } = await confirmAction({
       title: `${archiving ? 'Archiver' : 'Réactiver'} le compte de ${user.full_name} ?`,
@@ -89,7 +99,7 @@ function UsersPage() {
         ? ['Ses tâches et son historique restent conservés.']
         : ['Les droits précédemment attribués restent inchangés.'],
     })
-    if (confirmed) accountStatusMutation.mutate({ id: Number(user.id), isActive: user.is_active })
+    if (confirmed) accountStatusMutation.mutate({ id: Number(user.id), isActive: targetActive })
   }
   const handleDeleteAccount = async (user: User) => {
     const { confirmed } = await confirmAction({
@@ -148,7 +158,7 @@ function UsersPage() {
           <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <UserMetric icon={Users} label="Résultats" value={users?.length || 0} />
             <UserMetric icon={CheckCircle2} label="Comptes actifs" value={activeUsers} />
-            <UserMetric icon={UserRound} label="Responsables" value={managers} />
+            <UserMetric icon={UserRound} label="Managers" value={managers} />
             <UserMetric icon={ShieldCheck} label="Administrateur de la structure" value={administrators} />
           </div>
         </section>
@@ -492,7 +502,7 @@ function UserModal({ isOpen, user, onClose, onSuccess }: { isOpen: boolean; user
                   <input type="radio" name="role" value="manager" defaultChecked={user?.role === 'manager'} className="peer sr-only" />
                   <Briefcase className="h-5 w-5 text-slate-400 group-has-[:checked]:text-indigo-600" />
                   <div className="ml-3 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 group-has-[:checked]:text-indigo-900">Responsable</p>
+                    <p className="text-sm font-semibold text-slate-900 group-has-[:checked]:text-indigo-900">Manager</p>
                     <p className="text-xs text-slate-500 group-has-[:checked]:text-indigo-700">Peut créer et assigner des tâches, et piloter les équipes.</p>
                   </div>
                 </label>

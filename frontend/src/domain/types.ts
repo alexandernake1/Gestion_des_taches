@@ -375,6 +375,7 @@ export interface Notification {
   message: string;
   task?: number;
   task_title?: string;
+  task_status?: Status;
   is_read: boolean;
   created_at: string;
 }

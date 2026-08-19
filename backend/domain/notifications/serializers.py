@@ -7,12 +7,13 @@ class NotificationSerializer(serializers.ModelSerializer):
     
     type_display = serializers.CharField(source='get_type_display', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True, allow_null=True)
+    task_status = serializers.CharField(source='task.status', read_only=True, allow_null=True)
     
     class Meta:
         model = Notification
         fields = [
             'id', 'recipient', 'type', 'type_display', 'title', 'message',
-            'task', 'task_title', 'is_read', 'created_at'
+            'task', 'task_title', 'task_status', 'is_read', 'created_at'
         ]
         read_only_fields = ['id', 'recipient', 'created_at']
 
