@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 import re
 import unicodedata
 
@@ -140,6 +140,45 @@ def apply_task_filters(request, queryset):
         queryset = queryset.filter(
             Q(title__icontains=search) | Q(description__icontains=search)
         )
+
+    date_from_str = request.query_params.get('date_from')
+    date_to_str = request.query_params.get('date_to')
+    date_field = request.query_params.get('date_field') or 'due'
+
+    date_from = None
+    date_to = None
+
+    if date_from_str:
+        try:
+            date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValidationError({"date_from": "Format de date invalide (attendu: AAAA-MM-JJ)."})
+
+    if date_to_str:
+        try:
+            date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValidationError({"date_to": "Format de date invalide (attendu: AAAA-MM-JJ)."})
+
+    if date_from and date_to and date_from > date_to:
+        raise ValidationError({"detail": "La date de début ne peut pas être postérieure à la date de fin."})
+
+    if date_field == 'created':
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
+    elif date_field == 'completed':
+        if date_from:
+            queryset = queryset.filter(completed_at__date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(completed_at__date__lte=date_to)
+    else:  # default 'due'
+        if date_from:
+            queryset = queryset.filter(due_date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(due_date__lte=date_to)
+
     today = timezone.localdate()
     queryset = queryset.annotate(
         attention_rank=Case(
@@ -1451,7 +1490,7 @@ def export_tasks_excel(request):
 
     scope_titles = {
         'mine': 'Tâches créées par moi',
-        'assigned': 'Tâches assignées à moi',
+        'assigned': 'Mes tâches',
         'team': "Tâches d'équipe",
         'all': 'Toutes les tâches',
     }
@@ -1462,6 +1501,15 @@ def export_tasks_excel(request):
         title_parts.append(status_titles[request.query_params['status']])
     if request.query_params.get('priority') in priority_titles:
         title_parts.append(f"Priorité {priority_titles[request.query_params['priority']].lower()}")
+    if request.query_params.get('date_from') or request.query_params.get('date_to'):
+        d_from = request.query_params.get('date_from', '')
+        d_to = request.query_params.get('date_to', '')
+        if d_from and d_to:
+            title_parts.append(f"du {d_from} au {d_to}")
+        elif d_from:
+            title_parts.append(f"depuis le {d_from}")
+        elif d_to:
+            title_parts.append(f"jusqu'au {d_to}")
     requested_title = request.query_params.get('title', '').strip()
     export_title = requested_title or ' - '.join(title_parts)
     export_title = export_title[:120]

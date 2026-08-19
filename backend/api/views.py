@@ -58,7 +58,19 @@ def company_dashboard(request):
         )
     
     team_id = request.query_params.get('team_id')
-    statistics = DashboardService.get_company_statistics(company, team_id=team_id)
+    project_id = request.query_params.get('project_id')
+    assignee_id = request.query_params.get('assignee_id')
+    date_from = request.query_params.get('date_from')
+    date_to = request.query_params.get('date_to')
+
+    statistics = DashboardService.get_company_statistics(
+        company,
+        team_id=team_id,
+        project_id=project_id,
+        assignee_id=assignee_id,
+        date_from=date_from,
+        date_to=date_to,
+    )
     return Response(statistics)
 
 
@@ -72,7 +84,15 @@ def user_dashboard(request):
     """Get dashboard statistics for the current user."""
     
     company = get_requested_company(request)
-    statistics = DashboardService.get_user_statistics(request.user, company)
+    date_from = request.query_params.get('date_from')
+    date_to = request.query_params.get('date_to')
+
+    statistics = DashboardService.get_user_statistics(
+        request.user,
+        company,
+        date_from=date_from,
+        date_to=date_to,
+    )
     return Response(statistics)
 
 
@@ -115,5 +135,12 @@ def performance_metrics(request):
         )
     
     team_id = request.query_params.get('team_id')
-    metrics = DashboardService.get_performance_metrics(company, team_id=team_id)
+    date_from = request.query_params.get('date_from')
+    date_to = request.query_params.get('date_to')
+    metrics = DashboardService.get_performance_metrics(
+        company,
+        team_id=team_id,
+        date_from=date_from,
+        date_to=date_to,
+    )
     return Response(metrics)

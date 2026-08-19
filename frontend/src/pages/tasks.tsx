@@ -53,6 +53,11 @@ function TasksPage() {
   const confirmAction = useConfirmation()
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [priorityFilter, setPriorityFilter] = useState<string>('')
+  const [dateFrom, setDateFrom] = useState<string>(() => new URLSearchParams(window.location.search).get('date_from') || '')
+  const [dateTo, setDateTo] = useState<string>(() => new URLSearchParams(window.location.search).get('date_to') || '')
+  const [dateField, setDateField] = useState<'due' | 'created' | 'completed'>(
+    () => (new URLSearchParams(window.location.search).get('date_field') as 'due' | 'created' | 'completed') || 'due'
+  )
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') || '')
   const deferredSearch = useDeferredValue(search)
   const [view, setView] = useState<'list' | 'kanban' | 'calendar' | 'timeline'>(() => {
@@ -124,10 +129,13 @@ function TasksPage() {
     status: statusFilter || undefined,
     priority: priorityFilter as Priority || undefined,
     search: deferredSearch || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+    date_field: (dateFrom || dateTo) ? dateField : undefined,
   }
 
   const { data: tasks, isLoading, isError, refetch } = useQuery({
-    queryKey: ['tasks', scope, statusFilter, priorityFilter, deferredSearch],
+    queryKey: ['tasks', scope, statusFilter, priorityFilter, deferredSearch, dateFrom, dateTo, dateField],
     queryFn: () => {
       if (scope === 'mine') return tasksService.getMyTasks(filters)
       if (scope === 'assigned') return tasksService.getAssignedTasks(filters)
@@ -145,16 +153,20 @@ function TasksPage() {
     )).length || 0,
     completed: tasks?.filter((task) => task.status === 'completed').length || 0,
   }
-  const activeFilterCount = [statusFilter, priorityFilter, deferredSearch].filter(Boolean).length
+  const activeFilterCount = [statusFilter, priorityFilter, deferredSearch, dateFrom, dateTo].filter(Boolean).length
   const automaticExportTitle = [
     exportScopeTitles[scope] || 'Export des tâches',
     statusFilter ? exportStatusTitles[statusFilter] : '',
     priorityFilter ? exportPriorityTitles[priorityFilter] : '',
+    dateFrom || dateTo ? `Période (${dateFrom || 'début'} au ${dateTo || 'fin'})` : '',
   ].filter(Boolean).join(' - ')
   const clearFilters = () => {
     setStatusFilter('')
     setPriorityFilter('')
     setSearch('')
+    setDateFrom('')
+    setDateTo('')
+    setDateField('due')
     window.history.replaceState({}, '', window.location.pathname)
   }
 
@@ -447,6 +459,37 @@ function TasksPage() {
               <option value="high">Haute</option>
               <option value="urgent">Urgent</option>
             </select>
+
+            {/* Filtres de période F-05 */}
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/30 p-1">
+              <select
+                value={dateField}
+                onChange={(e) => setDateField(e.target.value as 'due' | 'created' | 'completed')}
+                aria-label="Critère de date"
+                className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground"
+              >
+                <option value="due">Échéance</option>
+                <option value="created">Création</option>
+                <option value="completed">Achèvement</option>
+              </select>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                aria-label="Date de début"
+                title="Date de début"
+                className="h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground"
+              />
+              <span className="text-xs text-muted-foreground">à</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                aria-label="Date de fin"
+                title="Date de fin"
+                className="h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground"
+              />
+            </div>
           </div>
             {activeFilterCount > 0 && (
               <Button variant="ghost" onClick={clearFilters} className="text-slate-500">

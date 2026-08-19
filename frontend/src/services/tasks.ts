@@ -1,8 +1,22 @@
 import { api } from '@/utils/api'
 import type { ApprovalRequest, ApprovalStatus, Status, Task, TaskCreateRequest, TaskUpdateRequest, TaskHistory, TaskComment, TaskCommentCreateRequest, TaskAttachment, TaskReport, TaskReportCreateRequest, TaskTemplate } from '@/domain/types'
 
+export interface TaskFilterParams {
+  status?: string
+  priority?: string
+  assigned_to?: number
+  team?: number
+  parent?: number
+  project?: number
+  search?: string
+  scope?: 'mine' | 'assigned' | 'team' | 'all'
+  date_from?: string
+  date_to?: string
+  date_field?: 'due' | 'created' | 'completed'
+}
+
 export const tasksService = {
-  async list(params?: { status?: string; priority?: string; assigned_to?: number; team?: number; parent?: number; project?: number; search?: string; scope?: 'team' | 'all' }) {
+  async list(params?: TaskFilterParams) {
     return api.getList<Task>('/tasks/', { params })
   },
 
@@ -71,11 +85,11 @@ export const tasksService = {
     return api.post<Task>(`/tasks/templates/${templateId}/instantiate/`, data || {})
   },
 
-  async getMyTasks(params?: { status?: string; priority?: string; search?: string }) {
+  async getMyTasks(params?: TaskFilterParams) {
     return api.get<Task[]>('/tasks/my/', { params })
   },
 
-  async getAssignedTasks(params?: { status?: string; priority?: string; search?: string }) {
+  async getAssignedTasks(params?: TaskFilterParams) {
     return api.get<Task[]>('/tasks/assigned/', { params })
   },
 
