@@ -1349,6 +1349,29 @@ def test_employee_task_is_automatically_personal(api_client, tenant_data):
 
 
 @pytest.mark.django_db
+def test_manager_personal_task_cannot_require_completion_approval(api_client, tenant_data):
+    manager = tenant_data['manager_a']
+    api_client.force_authenticate(manager)
+
+    response = api_client.post(
+        '/api/tasks/',
+        {
+            'title': 'Tâche personnelle du manager',
+            'priority': 'normal',
+            'status': 'todo',
+            'requires_completion_approval': True,
+        },
+        format='json',
+    )
+
+    assert response.status_code == 201
+    task = Task.objects.get(pk=response.data['id'])
+    assert task.assigned_to == manager
+    assert task.team is None
+    assert task.requires_completion_approval is False
+
+
+@pytest.mark.django_db
 def test_employee_cannot_assign_task_to_someone_else(api_client, tenant_data):
     api_client.force_authenticate(tenant_data['employee_a'])
 
@@ -1955,8 +1978,13 @@ def test_platform_superadmin_can_create_companies_and_others_cannot(api_client, 
 
     # Platform Super-admin can create company
     api_client.force_authenticate(tenant_data['superuser'])
-    res_super = api_client.post('/api/companies/', {'name': 'Super Co', 'slug': 'super-co'}, format='json')
+    res_super = api_client.post('/api/companies/', {'name': 'Super Co'}, format='json')
     assert res_super.status_code == 201
+    assert res_super.data['slug'] == 'super-co'
+
+    res_duplicate = api_client.post('/api/companies/', {'name': 'Super Co'}, format='json')
+    assert res_duplicate.status_code == 201
+    assert res_duplicate.data['slug'] == 'super-co-2'
 
 
 @pytest.mark.django_db

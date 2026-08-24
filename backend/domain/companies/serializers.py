@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils.text import slugify
 from .models import (
     Company,
     SubscriptionPlan,
@@ -30,6 +31,8 @@ class CompanySerializer(serializers.ModelSerializer):
 
 class CompanyCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating a company."""
+
+    slug = serializers.SlugField(required=False, allow_blank=True)
     
     class Meta:
         model = Company
@@ -39,15 +42,20 @@ class CompanyCreateSerializer(serializers.ModelSerializer):
             'timezone', 'language', 'workspace_type'
         ]
     
-    def validate_slug(self, value):
-        if Company.objects.filter(slug=value).exists():
-            raise serializers.ValidationError("Une entreprise utilise déjà cet identifiant.")
-        return value
+    def validate(self, attrs):
+        base_slug = slugify(attrs.get('slug') or attrs.get('name', '')).strip('-') or 'structure'
+        candidate = base_slug
+        suffix = 2
+        while Company.objects.filter(slug=candidate).exists():
+            candidate = f'{base_slug}-{suffix}'
+            suffix += 1
+        attrs['slug'] = candidate
+        return attrs
 
     def validate_contact_email(self, value):
         normalized_email = value.strip().lower()
         if Company.objects.filter(contact_email__iexact=normalized_email).exists():
-            raise serializers.ValidationError("Cet email d'entreprise est déjà utilisé.")
+            raise serializers.ValidationError("Cet email de structure est déjà utilisé.")
         return normalized_email
 
 
@@ -123,6 +131,50 @@ class ChangePlanSerializer(serializers.Serializer):
 
 class SubscriptionQuoteRequestSerializer(serializers.Serializer):
     plan_code = serializers.CharField(required=True)
+
+
+class SubscriptionQuoteCurrentPlanSerializer(serializers.Serializer):
+    id = serializers.IntegerField(allow_null=True)
+    name = serializers.CharField()
+    code = serializers.CharField(allow_null=True)
+    price = serializers.FloatField()
+    billing_period = serializers.CharField(allow_null=True)
+    status = serializers.CharField()
+    ends_at = serializers.DateTimeField(allow_null=True)
+
+
+class SubscriptionQuoteTargetPlanSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    code = serializers.CharField()
+    price = serializers.FloatField()
+    billing_period = serializers.CharField()
+    audience = serializers.CharField()
+    max_users = serializers.IntegerField()
+    max_teams = serializers.IntegerField()
+
+
+class SubscriptionQuoteProrataSerializer(serializers.Serializer):
+    remaining_days = serializers.IntegerField()
+    total_days = serializers.IntegerField()
+    consumed_days = serializers.IntegerField()
+    credit_amount = serializers.FloatField()
+
+
+class SubscriptionQuoteSerializer(serializers.Serializer):
+    company_id = serializers.IntegerField()
+    company_name = serializers.CharField()
+    workspace_type = serializers.CharField()
+    current_plan = SubscriptionQuoteCurrentPlanSerializer()
+    target_plan = SubscriptionQuoteTargetPlanSerializer()
+    prorata_details = SubscriptionQuoteProrataSerializer()
+    gross_amount = serializers.FloatField()
+    credit_applied = serializers.FloatField()
+    net_amount_due = serializers.FloatField()
+    unused_credit = serializers.FloatField()
+    currency = serializers.CharField()
+    quote_date = serializers.DateTimeField()
+    is_free_upgrade = serializers.BooleanField()
 
 
 class PaymentTransactionSerializer(serializers.ModelSerializer):

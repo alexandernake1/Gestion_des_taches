@@ -16,11 +16,11 @@ class ApiError extends Error {
 const ERROR_TRANSLATIONS: Array<[RegExp, string]> = [
   [/^invalid credentials\.?$/i, 'Adresse e-mail ou mot de passe incorrect.'],
   [/^this account has been deactivated\.?$/i, 'Ce compte a été désactivé. Contactez votre administrateur.'],
-  [/^your enterprise has been deactivated\.?$/i, "L'espace de travail de votre entreprise a été désactivé. Contactez l'assistance."],
+  [/^your enterprise has been deactivated\.?$/i, "L'espace de travail de votre structure a été désactivé. Contactez l'assistance."],
   [/^this field is required\.?$/i, 'Ce champ est obligatoire.'],
   [/^enter a valid email address\.?$/i, 'Saisissez une adresse e-mail valide.'],
   [/^old password is incorrect\.?$/i, "L'ancien mot de passe est incorrect."],
-  [/^invalid company\.?$/i, "L'élément sélectionné n'appartient pas à votre entreprise."],
+  [/^invalid company\.?$/i, "L'élément sélectionné n'appartient pas à votre structure."],
   [/^authentication credentials were not provided\.?$/i, 'Vous devez vous connecter pour continuer.'],
   [/^you do not have permission to perform this action\.?$/i, "Vous n'avez pas l'autorisation d'effectuer cette action."],
   [/^not found\.?$/i, "L'élément demandé est introuvable."],

@@ -114,7 +114,7 @@ function TaskTemplatesPage() {
                         </Badge>
                       ) : (
                         <Badge variant="info" className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3" /> Entreprise
+                          <Building2 className="h-3 w-3" /> Structure
                         </Badge>
                       ))}
                       {getPriorityBadge(template.priority)}
@@ -178,7 +178,7 @@ function TaskTemplatesPage() {
                 </div>
               ) : (
                 <select name="is_shared" defaultValue="true" className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/25">
-                  <option value="true">🏢 Partagé avec toute l'entreprise</option>
+                  <option value="true">🏢 Partagé avec toute la structure</option>
                   <option value="false">🔒 Personnel (Visible par moi uniquement)</option>
                 </select>
               )}

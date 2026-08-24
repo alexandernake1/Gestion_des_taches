@@ -3,8 +3,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ mode }) => ({
+  // Vitest 4 embeds Vite 8, which already transforms JSX through Oxc. Keeping
+  // the Vite 5 React plugin active in test mode emits deprecated esbuild
+  // options and does not provide any test-time capability.
+  plugins: mode === 'test' ? [] : [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -28,7 +31,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
         changeOrigin: true,
       },
     },
@@ -38,4 +41,4 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
   },
-})
+}))

@@ -708,7 +708,7 @@ def invite_user(request):
         and not request.user.is_administrator()
     ):
         return Response(
-            {"detail": "Only administrators can invite manager roles."},
+            {"detail": "Seul un administrateur peut inviter un manager."},
             status=status.HTTP_403_FORBIDDEN,
         )
     
@@ -838,7 +838,7 @@ def reset_user_password(request, user_id):
 
     if user.role == Role.OWNER and not (request.user.is_superuser or request.user == user):
         return Response(
-            {"detail": "Only the company owner or super-administrator can reset this password."},
+            {"detail": "Seul l’administrateur de la structure ou le super-administrateur peut réinitialiser ce mot de passe."},
             status=status.HTTP_403_FORBIDDEN,
         )
 
@@ -899,7 +899,7 @@ def deactivate_user(request, user_id):
 
     if user.role == Role.OWNER:
         return Response(
-            {"detail": "The company owner account cannot be deactivated."},
+            {"detail": "Le compte administrateur de la structure ne peut pas être désactivé."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -944,7 +944,7 @@ def activate_user(request, user_id):
 
     if user.role == Role.OWNER:
         return Response(
-            {"detail": "The company owner account cannot be deactivated or reactivated this way."},
+            {"detail": "Le compte administrateur de la structure ne peut pas être désactivé ou réactivé de cette manière."},
             status=status.HTTP_400_BAD_REQUEST,
         )
     if not (request.user.is_superuser or request.user.is_owner()) and user.role != Role.EMPLOYEE:

@@ -33,7 +33,7 @@ export function useWebSocket() {
 
       ws.current.onopen = () => {
         attempt = 0
-        console.log('WebSocket connected')
+        if (import.meta.env.DEV) console.debug('WebSocket connected')
       }
 
       ws.current.onmessage = (event) => {
@@ -94,7 +94,7 @@ export function useWebSocket() {
         if (stopped) return
         const delay = Math.min(1000 * 2 ** attempt, 30000)
         attempt += 1
-        console.log(`WebSocket disconnected, reconnecting in ${delay / 1000}s...`)
+        if (import.meta.env.DEV) console.debug(`WebSocket disconnected, reconnecting in ${delay / 1000}s...`)
         reconnectTimer = setTimeout(() => void connect(), delay)
       }
     }

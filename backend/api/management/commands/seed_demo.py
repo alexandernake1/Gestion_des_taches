@@ -498,12 +498,14 @@ class Command(BaseCommand):
                 email="demo@local.test",
                 username="demo",
                 first_name="Demo",
-                last_name="Owner",
+                last_name="Administrateur",
                 company=company,
                 role=Role.OWNER,
             )
         demo.company = company
         demo.role = Role.OWNER
+        demo.first_name = "Demo"
+        demo.last_name = "Administrateur"
         demo.is_active = True
         demo.set_password(self.password)
         demo.save()

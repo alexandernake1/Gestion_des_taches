@@ -102,7 +102,7 @@ function RegisterPage() {
         <header className="mb-8 flex items-center justify-between">
           <a href="/login" className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20"><UserRound className="h-5 w-5 text-white" /></span>
-            <span><strong className="block text-slate-950">Activity</strong><span className="text-xs text-slate-500">Votre espace personnel</span></span>
+            <span><strong className="block text-slate-950">Activity Control</strong><span className="text-xs text-slate-500">Votre espace personnel</span></span>
           </a>
           <a href="/login" className="rounded-xl border border-indigo-200 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50">Se connecter</a>
         </header>
@@ -111,9 +111,9 @@ function RegisterPage() {
           <aside className="bg-gradient-to-b from-slate-950 to-indigo-950 p-7 text-white sm:p-9">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-300">Compte gratuit</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight">Commencez par votre espace.</h1>
-            <p className="mt-4 text-sm leading-6 text-indigo-100">La création d'une entreprise est facultative. Vous pourrez choisir un forfait et configurer votre organisation ensuite.</p>
+            <p className="mt-4 text-sm leading-6 text-indigo-100">La création d'une structure est facultative. Vous pourrez choisir un forfait et configurer votre organisation ensuite.</p>
             <div className="mt-8 space-y-4 text-sm text-indigo-50">
-              {['Compte créé immédiatement', 'Entreprise facultative', 'Forfait choisi dans un second temps'].map((label) => (
+              {['Compte créé immédiatement', 'Structure facultative', 'Forfait choisi dans un second temps'].map((label) => (
                 <div key={label} className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-emerald-400" />{label}</div>
               ))}
             </div>
@@ -121,7 +121,7 @@ function RegisterPage() {
 
           <form onSubmit={submit} className="p-6 sm:p-10">
             <h2 className="text-2xl font-black tracking-tight text-slate-950">Créer mon compte gratuitement</h2>
-            <p className="mt-2 text-sm text-slate-500">Aucune information d'entreprise n'est demandée à cette étape.</p>
+            <p className="mt-2 text-sm text-slate-500">Aucune information de structure n'est demandée à cette étape.</p>
             {error && <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
             <div className="mt-7 grid gap-5 sm:grid-cols-2">

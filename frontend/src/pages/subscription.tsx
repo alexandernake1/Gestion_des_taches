@@ -219,7 +219,7 @@ function SubscriptionPage() {
         </Button>
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-950">Abonnement & Offres SaaS</h2>
-          <p className="mt-1 text-sm text-slate-500">{isPersonalWorkspace ? 'Gérez votre forfait personnel et les fonctionnalités de votre espace privé.' : 'Gérez le forfait de votre entreprise et suivez vos consommations de ressources.'}</p>
+          <p className="mt-1 text-sm text-slate-500">{isPersonalWorkspace ? 'Gérez votre forfait personnel et les fonctionnalités de votre espace privé.' : 'Gérez le forfait de votre structure et suivez son utilisation.'}</p>
         </div>
 
         {planChangeSuccess && (
@@ -308,7 +308,7 @@ function SubscriptionPage() {
         <div>
           <div className="mb-6">
             <h3 className="text-lg font-bold text-foreground">Comparer les forfaits disponibles</h3>
-            <p className="text-sm text-muted-foreground">{isPersonalWorkspace ? 'Choisissez l’offre adaptée à votre usage quotidien.' : 'Choisissez l’offre adaptée aux besoins de votre entreprise.'}</p>
+            <p className="text-sm text-muted-foreground">{isPersonalWorkspace ? 'Choisissez l’offre adaptée à votre usage quotidien.' : 'Choisissez l’offre adaptée aux besoins de votre structure.'}</p>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">

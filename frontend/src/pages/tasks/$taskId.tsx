@@ -343,11 +343,11 @@ function TaskDetailPage() {
                           if (!isPersonalWorkspace && currentUser?.role !== 'employee') {
                             const result = await confirmAction({
                               title: 'Visibilité du modèle',
-                              description: 'Choisissez si ce modèle doit être accessible à toute l’entreprise ou uniquement à vous.',
-                              confirmLabel: 'Partager avec l’entreprise',
+                              description: 'Choisissez si ce modèle doit être accessible à toute la structure ou uniquement à vous.',
+                              confirmLabel: 'Partager avec la structure',
                               cancelLabel: 'Modèle personnel',
                               tone: 'warning',
-                              impacts: ['Un modèle partagé pourra être utilisé par tous les membres autorisés de votre entreprise.'],
+                              impacts: ['Un modèle partagé pourra être utilisé par tous les membres autorisés de votre structure.'],
                             })
                             isShared = result.confirmed
                           }
@@ -452,7 +452,7 @@ function TaskDetailPage() {
               { id: 'attachments', label: 'Documents', count: attachments.length, icon: Paperclip },
               ...(!isPersonalWorkspace ? [
                 { id: 'approvals', label: 'Validations', count: approvals.length, icon: ShieldCheck },
-                { id: 'reports', label: 'Reports', count: reports.length, icon: CalendarClock },
+                { id: 'reports', label: "Reports d'échéance", count: reports.length, icon: CalendarClock },
               ] : []),
             ].map((tab) => (
               <button

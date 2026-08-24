@@ -108,7 +108,7 @@ function AdminSubscriptionsPage() {
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Espace Super-Admin</span>
           </div>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Abonnements des Entreprises Clients</h2>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Abonnements des structures clientes</h2>
           <p className="mt-1 text-sm text-slate-500">Surveillez le cycle de vie automatisé des abonnements, les paiements et les échéances de la plateforme.</p>
         </div>
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
@@ -126,7 +126,7 @@ function AdminSubscriptionsPage() {
             <table className="w-full text-left text-sm text-slate-600">
               <thead className="border-b border-slate-200 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500">
                 <tr>
-                  <th className="px-6 py-4">Entreprise</th>
+                  <th className="px-6 py-4">Structure</th>
                   <th className="px-6 py-4">Forfait Actuel</th>
                   <th className="px-6 py-4">Statut</th>
                   <th className="px-6 py-4">Utilisateurs</th>

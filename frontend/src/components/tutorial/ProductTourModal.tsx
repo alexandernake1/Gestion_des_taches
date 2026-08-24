@@ -34,16 +34,16 @@ const TOUR_STEPS: StepData[] = [
     badge: 'Étape 1 sur 5 • Bienvenue',
     title: 'Bienvenue dans votre nouvel espace de travail',
     description:
-      'Activity Control réunit les projets, tâches, validations et échanges de votre équipe dans une interface fluide et ultra-lisible. Basculez en un clic entre votre Espace Personnel autonome et vos Espaces Entreprises multi-équipes.',
+      'Activity Control réunit les projets, tâches, validations et échanges de votre équipe dans une interface fluide et très lisible. Basculez en un clic entre votre espace personnel autonome et vos espaces de structure collaboratifs.',
     highlights: [
-      'Bascule instantanée Espace Personnel ↔ Entreprise',
-      'Navigation latérale complète et responsive',
-      'Rôles clairs : Propriétaire, Manager, Employé',
+      'Bascule instantanée entre espace personnel et structure',
+      'Navigation latérale adaptée à tous les écrans',
+      'Rôles clairs : administrateur, manager et collaborateur',
     ],
   },
   {
     icon: BarChart3,
-    badge: 'Étape 2 sur 5 • Pilotage & KPIs',
+    badge: 'Étape 2 sur 5 • Pilotage et indicateurs',
     title: 'Un tableau de bord complet pour agir au bon moment',
     description:
       'Suivez en temps réel la progression des projets, vos priorités du jour, la répartition de la charge par collaborateur et les délais moyens d’exécution sans chercher dans plusieurs logiciels.',
@@ -59,8 +59,8 @@ const TOUR_STEPS: StepData[] = [
   },
   {
     icon: Play,
-    badge: 'Étape 3 sur 5 • Tâches & Démarrage',
-    title: 'Créez, assignez et démarrez vos tâches en un clic',
+    badge: 'Étape 3 sur 5 • Tâches et démarrage',
+    title: 'Créez et faites avancer vos tâches en un clic',
     description:
       'Organisez vos activités en vues Kanban ou Liste, découpez-les en sous-tâches et liez des dépendances. Dès réception d’un rappel, le bouton « Commencer la tâche » passe directement son statut en cours sans détour.',
     highlights: [
@@ -75,7 +75,7 @@ const TOUR_STEPS: StepData[] = [
   },
   {
     icon: ShieldCheck,
-    badge: 'Étape 4 sur 5 • Validations & Reports',
+    badge: 'Étape 4 sur 5 • Validations et reports',
     title: 'Un circuit de validation hiérarchique sans friction',
     description:
       'Garantissez la qualité de chaque livrable avant clôture. Les managers approuvent ou refusent avec motif obligatoire, et les collaborateurs peuvent solliciter un report d’échéance motivé en toute transparence.',
@@ -96,7 +96,7 @@ const TOUR_STEPS: StepData[] = [
     description:
       'Recevez des alertes en temps réel avec signal sonore discret. À tout moment, cliquez sur l’icône Aide dans la barre supérieure ou les paramètres pour relancer ce guide ou consulter les tutoriels rapides.',
     highlights: [
-      'Alertes instantanées WebSockets & son chime',
+      'Alertes instantanées et carillon discret',
       'Centre d’aide et guides accessibles partout',
       'Assistance disponible dans vos paramètres',
     ],

@@ -280,18 +280,18 @@ class TaskListCreateView(generics.ListCreateAPIView):
         is_team_leader_for_parent = bool(parent and parent.team and parent.team.leader == request.user)
 
         personal_workspace = company.is_personal
+        requested_assignee = serializer.validated_data.get('assigned_to')
+        team = serializer.validated_data.get('team')
         if personal_workspace:
             assigned_to = request.user
         elif request.user.is_superuser:
-            team = serializer.validated_data.get('team')
             assigned_to = (
-                serializer.validated_data.get('assigned_to')
+                requested_assignee
                 or (team.leader if team else None)
             )
         elif request.user.is_manager() or is_team_leader_for_parent:
-            team = serializer.validated_data.get('team')
             assigned_to = (
-                serializer.validated_data.get('assigned_to')
+                requested_assignee
                 or (team.leader if team else None)
                 or request.user
             )
@@ -312,7 +312,6 @@ class TaskListCreateView(generics.ListCreateAPIView):
                     )
 
             # Validate team is in the same company.
-            team = serializer.validated_data.get('team')
             if team and getattr(team, 'company', None) != company:
                 return Response(
                     {"detail": "Vous ne pouvez pas attribuer une tâche à une équipe d'une autre entreprise."},
@@ -322,6 +321,10 @@ class TaskListCreateView(generics.ListCreateAPIView):
             # Employee: always assigned to themselves, ignore any submitted assigned_to.
             assigned_to = request.user
 
+        is_delegated_task = bool(
+            team
+            or (requested_assignee and requested_assignee != request.user)
+        )
         task = serializer.save(
             company=company,
             creator=request.user,
@@ -329,7 +332,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
             team=None if personal_workspace else serializer.validated_data.get('team'),
             requires_completion_approval=(
                 False
-                if personal_workspace
+                if personal_workspace or not is_delegated_task
                 else serializer.validated_data.get('requires_completion_approval', False)
             ),
         )
@@ -563,6 +566,8 @@ class TaskTemplateListCreateView(generics.ListCreateAPIView):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return TaskTemplate.objects.none()
         company = get_requested_company(self.request)
         return TaskTemplate.objects.filter(
             Q(company=company, is_active=True) & (Q(is_shared=True) | Q(creator=self.request.user))
@@ -584,6 +589,8 @@ class TaskTemplateDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return TaskTemplate.objects.none()
         company = get_requested_company(self.request)
         return TaskTemplate.objects.filter(
             Q(company=company) & (Q(is_shared=True) | Q(creator=self.request.user))
@@ -1270,6 +1277,8 @@ class ApprovalRequestListView(generics.ListAPIView):
     serializer_class = ApprovalRequestSerializer
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return ApprovalRequest.objects.none()
         company = get_requested_company(self.request)
         if not company or company.is_personal:
             return ApprovalRequest.objects.none()
@@ -1283,6 +1292,10 @@ class ApprovalRequestListView(generics.ListAPIView):
             queryset = queryset.filter(status=status_filter)
         return queryset
 
+    @extend_schema(operation_id='approval_requests_list')
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
 
 class TaskApprovalRequestListCreateView(generics.ListCreateAPIView):
     """List a task's approvals or request validation of a sensitive action."""
@@ -1295,6 +1308,8 @@ class TaskApprovalRequestListCreateView(generics.ListCreateAPIView):
         return ApprovalRequestSerializer
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return ApprovalRequest.objects.none()
         task = get_accessible_task(self.request, self.kwargs['task_id'])
         if task.company.is_personal:
             return ApprovalRequest.objects.none()
@@ -1304,6 +1319,14 @@ class TaskApprovalRequestListCreateView(generics.ListCreateAPIView):
         if not self.request.user.is_manager():
             queryset = queryset.filter(requested_by=self.request.user)
         return queryset
+
+    @extend_schema(operation_id='task_approval_requests_list')
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @extend_schema(operation_id='task_approval_requests_create')
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
     @transaction.atomic
     def perform_create(self, serializer):

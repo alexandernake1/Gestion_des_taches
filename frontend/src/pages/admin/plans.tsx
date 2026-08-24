@@ -120,7 +120,7 @@ function AdminPlansPage() {
                 </div>
                 
                 <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-indigo-600">{plan.audience === 'personal' ? 'Personnel' : 'Entreprise'}</p>
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-indigo-600">{plan.audience === 'personal' ? 'Personnel' : 'Structure'}</p>
                 <p className="text-xs font-medium text-slate-500 mb-4">Code : <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700">{plan.code}</code></p>
                 
                 <div className="mb-4">
@@ -257,7 +257,7 @@ function PlanModal({ isOpen, plan, onClose, onSuccess }: { isOpen: boolean; plan
         <div>
           <label htmlFor="audience" className="mb-1 block text-sm font-medium text-slate-700">Type d'utilisation *</label>
           <select id="audience" name="audience" defaultValue={plan?.audience || 'company'} required className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
-            <option value="company">Entreprise</option>
+            <option value="company">Structure</option>
             <option value="personal">Personnel</option>
           </select>
         </div>

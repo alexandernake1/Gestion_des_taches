@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   FolderKanban, Plus, Search, CheckCircle2, AlertTriangle,
-  Calendar, ArrowUpRight, Edit3, Trash2, UserRound, Sparkles
+  Calendar, ArrowUpRight, Edit3, Trash2, UserRound, Sparkles,
+  CalendarRange, ClipboardCheck, FileText, UsersRound,
 } from 'lucide-react'
+import { FormWizard, FormWizardActions, FormWizardPanel, type FormWizardStep } from '@/components/forms/FormWizard'
 import { Layout } from '@/components/layout/Layout'
 import { Button } from '@/components/ui/Button'
 import { DateInput } from '@/components/ui/DateInput'
@@ -213,7 +215,7 @@ export function ProjectsPage() {
                 ? 'Créez votre premier projet pour organiser vos tâches autour d’un objectif.'
                 : canManageProjects
                 ? "Créez votre premier projet pour organiser vos tâches en grands objectifs d'équipe."
-                : "Les projets auxquels votre entreprise vous associe apparaîtront ici."}
+                : "Les projets auxquels votre structure vous associe apparaîtront ici."}
             </p>
             {canManageProjects && <Button
               onClick={() => {
@@ -420,6 +422,13 @@ function ProjectCard({
   )
 }
 
+const projectFormSteps: FormWizardStep[] = [
+  { id: 'identity', title: 'Identité', description: 'Nom et objectifs', icon: FileText },
+  { id: 'governance', title: 'Gouvernance', description: 'État, manager et équipes', icon: UsersRound },
+  { id: 'planning', title: 'Planification', description: 'Période du projet', icon: CalendarRange },
+  { id: 'review', title: 'Vérification', description: 'Contrôle avant création', icon: ClipboardCheck },
+]
+
 function ProjectFormModal({
   isOpen,
   onClose,
@@ -437,6 +446,17 @@ function ProjectFormModal({
 }) {
   const queryClient = useQueryClient()
   const isEditing = !!project
+  const formRef = useRef<HTMLFormElement>(null)
+  const [currentStep, setCurrentStep] = useState(0)
+  const [reviewData, setReviewData] = useState<CreateProjectPayload | null>(null)
+  const [stepError, setStepError] = useState('')
+
+  useEffect(() => {
+    if (!isOpen) return
+    setCurrentStep(0)
+    setReviewData(null)
+    setStepError('')
+  }, [isOpen, project])
 
   const mutation = useMutation({
     mutationFn: (data: CreateProjectPayload) => {
@@ -451,10 +471,10 @@ function ProjectFormModal({
     },
   })
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const form = new FormData(e.currentTarget)
-    const data: CreateProjectPayload = {
+  const buildPayload = (): CreateProjectPayload | null => {
+    if (!formRef.current) return null
+    const form = new FormData(formRef.current)
+    return {
       name: String(form.get('name')),
       description: String(form.get('description') || ''),
       status: String(form.get('status')),
@@ -464,120 +484,182 @@ function ProjectFormModal({
       manager: isPersonalWorkspace ? undefined : form.get('manager') ? Number(form.get('manager')) : undefined,
       teams: isPersonalWorkspace ? [] : form.getAll('teams').map((id) => Number(id)),
     }
+  }
+
+  const validateCurrentStep = () => {
+    const panel = formRef.current?.querySelector<HTMLElement>(`[data-form-wizard-step="${currentStep}"]`)
+    if (!panel) return true
+    const controls = Array.from(panel.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea'))
+    for (const control of controls) {
+      if (!control.checkValidity()) {
+        control.reportValidity()
+        return false
+      }
+    }
+    return true
+  }
+
+  const validateDates = (data: CreateProjectPayload) => {
+    if (data.start_date && data.due_date && data.due_date < data.start_date) {
+      setStepError("La date d'échéance doit être postérieure ou égale à la date de début.")
+      return false
+    }
+    return true
+  }
+
+  const goToNextStep = () => {
+    setStepError('')
+    if (!validateCurrentStep()) return
+    const data = buildPayload()
+    if (!data) return
+    if (currentStep === 2 && !validateDates(data)) return
+    if (currentStep === projectFormSteps.length - 2) setReviewData(data)
+    setCurrentStep((step) => Math.min(step + 1, projectFormSteps.length - 1))
+  }
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const data = buildPayload()
+    if (!data) return
+    if (!isEditing && currentStep !== projectFormSteps.length - 1) {
+      goToNextStep()
+      return
+    }
+    if (!validateDates(data)) {
+      if (!isEditing) setCurrentStep(2)
+      return
+    }
     mutation.mutate(data)
   }
 
   const inputClass = 'h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Modifier le projet' : isPersonalWorkspace ? 'Nouveau projet' : 'Nouveau projet stratégique'} size="lg">
-      <form onSubmit={handleSubmit} className="space-y-5">
+  const identityPanel = (
+    <FormWizardPanel step={0} active={isEditing || currentStep === 0} title="Présentez le projet" description="Donnez un nom explicite et résumez le résultat attendu.">
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold text-foreground">Nom du projet *</label>
+        <input name="name" required defaultValue={project?.name} placeholder="Ex. Refonte du site client" autoFocus={!isEditing} className={inputClass} />
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold text-foreground">Objectifs et livrables</label>
+        <textarea name="description" rows={4} defaultValue={project?.description} placeholder="Décrivez la finalité, les livrables et les critères de réussite…" className="min-h-[120px] w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+      </div>
+    </FormWizardPanel>
+  )
+
+  const governancePanel = (
+    <FormWizardPanel step={1} active={isEditing || currentStep === 1} title="Définissez la gouvernance" description="Choisissez l'état initial, le manager et les équipes participantes.">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-foreground">Nom du projet *</label>
-          <input name="name" required defaultValue={project?.name} placeholder="Ex: Refonte du Site Web Q3" className={inputClass} />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-foreground">Description</label>
-          <textarea
-            name="description"
-            rows={3}
-            defaultValue={project?.description}
-            placeholder="Objectifs et livrables clés..."
-            className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground">Statut</label>
-            <select name="status" defaultValue={project?.status || 'in_progress'} className={inputClass}>
-              <option value="in_progress">En cours</option>
-              <option value="on_hold">En pause</option>
-              <option value="completed">Terminé</option>
-              <option value="cancelled">Annulé</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground">Santé du projet</label>
-            <select name="health" defaultValue={project?.health || 'on_track'} className={inputClass}>
-              <option value="on_track">Sur les rails 🟢</option>
-              <option value="at_risk">En risque 🟠</option>
-              <option value="off_track">En retard 🔴</option>
-            </select>
-          </div>
-        </div>
-
-        {!isPersonalWorkspace && <div className="space-y-2">
-          <div>
-            <label className="text-xs font-bold text-foreground">Équipes rattachées au projet</label>
-            <p className="mt-0.5 text-xs text-muted-foreground">Sélectionnez une ou plusieurs équipes qui participeront au projet.</p>
-          </div>
-          {teams.length > 0 ? (
-            <div className="grid max-h-44 gap-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3 sm:grid-cols-2">
-              {teams.map((team) => (
-                <label key={team.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-sm hover:border-border hover:bg-background">
-                  <input
-                    type="checkbox"
-                    name="teams"
-                    value={team.id}
-                    defaultChecked={project?.teams?.includes(Number(team.id))}
-                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                  />
-                  <span className="min-w-0">
-                    <span className="block truncate font-semibold text-foreground">{team.name}</span>
-                    <span className="text-xs text-muted-foreground">{team.member_count ?? team.members?.length ?? 0} membre(s)</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-              Aucune équipe disponible. Créez d’abord une équipe depuis le module Équipes.
-            </div>
-          )}
-        </div>}
-
-        {!isPersonalWorkspace && <div className="space-y-1.5">
-          <label className="text-xs font-bold text-foreground">Responsable</label>
-          <select name="manager" defaultValue={project?.manager || ''} className={inputClass}>
-            <option value="">Sélectionner un manager</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.full_name}
-              </option>
-            ))}
+          <label className="text-xs font-bold text-foreground">Statut</label>
+          <select name="status" defaultValue={project?.status || 'in_progress'} className={inputClass}>
+            <option value="in_progress">En cours</option>
+            <option value="on_hold">En pause</option>
+            <option value="completed">Terminé</option>
+            <option value="cancelled">Annulé</option>
           </select>
-        </div>}
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground">Date de début</label>
-            <DateInput name="start_date" defaultValue={project?.start_date} className={inputClass} />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground">Date d'échéance</label>
-            <DateInput name="due_date" defaultValue={project?.due_date} className={inputClass} />
-          </div>
         </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-foreground">Santé du projet</label>
+          <select name="health" defaultValue={project?.health || 'on_track'} className={inputClass}>
+            <option value="on_track">Sur les rails</option>
+            <option value="at_risk">En risque</option>
+            <option value="off_track">En retard</option>
+          </select>
+        </div>
+      </div>
 
-        {mutation.isError && (
-          <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-xs font-medium text-destructive">
-            {mutation.error instanceof Error ? mutation.error.message : 'Erreur lors de l’enregistrement.'}
+      {!isPersonalWorkspace && (
+        <>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-foreground">Manager du projet</label>
+            <select name="manager" defaultValue={project?.manager || ''} className={inputClass}>
+              <option value="">Sélectionner un manager</option>
+              {users.map((user) => <option key={user.id} value={user.id}>{user.full_name}</option>)}
+            </select>
           </div>
+          <div className="space-y-2">
+            <div>
+              <label className="text-xs font-bold text-foreground">Équipes rattachées</label>
+              <p className="mt-0.5 text-xs text-muted-foreground">Sélectionnez les équipes qui participeront au projet.</p>
+            </div>
+            {teams.length > 0 ? (
+              <div className="grid max-h-52 gap-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3 sm:grid-cols-2">
+                {teams.map((team) => (
+                  <label key={team.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm transition hover:border-border hover:bg-background">
+                    <input type="checkbox" name="teams" value={team.id} defaultChecked={project?.teams?.includes(Number(team.id))} className="h-4 w-4 rounded border-border text-primary focus:ring-primary" />
+                    <span className="min-w-0"><span className="block truncate font-semibold text-foreground">{team.name}</span><span className="text-xs text-muted-foreground">{team.member_count ?? team.members?.length ?? 0} membres</span></span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Aucune équipe disponible. Créez d'abord une équipe.</div>
+            )}
+          </div>
+        </>
+      )}
+    </FormWizardPanel>
+  )
+
+  const planningPanel = (
+    <FormWizardPanel step={2} active={isEditing || currentStep === 2} title="Cadrez la période" description="Les dates restent facultatives et pourront être ajustées ensuite.">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5"><label className="text-xs font-bold text-foreground">Date de début</label><DateInput name="start_date" defaultValue={project?.start_date} className={inputClass} /></div>
+        <div className="space-y-1.5"><label className="text-xs font-bold text-foreground">Date d'échéance</label><DateInput name="due_date" defaultValue={project?.due_date} className={inputClass} /></div>
+      </div>
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm leading-6 text-muted-foreground">Après la création, vous pourrez ajouter les tâches, suivre l'avancement et consulter les statistiques du projet.</div>
+    </FormWizardPanel>
+  )
+
+  const reviewPanel = !isEditing && (
+    <FormWizardPanel step={3} active={currentStep === 3} title="Vérifiez le projet" description="Revenez à une étape précédente si une information doit être ajustée.">
+      {reviewData && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ProjectReviewCard label="Projet" value={reviewData.name} detail={reviewData.description || 'Aucune description'} />
+          <ProjectReviewCard label="État initial" value={`${projectStatusLabel(reviewData.status)} · ${projectHealthLabel(reviewData.health)}`} detail="Ces indicateurs pourront évoluer pendant l'exécution." />
+          <ProjectReviewCard label="Gouvernance" value={users.find((user) => Number(user.id) === reviewData.manager)?.full_name || 'Aucun manager sélectionné'} detail={(reviewData.teams || []).map((id) => teams.find((team) => Number(team.id) === id)?.name).filter(Boolean).join(' · ') || 'Aucune équipe sélectionnée'} />
+          <ProjectReviewCard label="Période" value={reviewData.start_date ? `Début : ${formatProjectDate(reviewData.start_date)}` : 'Début non défini'} detail={reviewData.due_date ? `Échéance : ${formatProjectDate(reviewData.due_date)}` : 'Échéance non définie'} />
+        </div>
+      )}
+    </FormWizardPanel>
+  )
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Modifier le projet' : isPersonalWorkspace ? 'Nouveau projet' : 'Nouveau projet stratégique'} size={isEditing ? 'lg' : 'xl'}>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+        {isEditing ? <div className="space-y-7">{identityPanel}{governancePanel}{planningPanel}</div> : (
+          <FormWizard steps={projectFormSteps} currentStep={currentStep} onStepSelect={(step) => { setStepError(''); setCurrentStep(step) }}>
+            {identityPanel}{governancePanel}{planningPanel}{reviewPanel}
+          </FormWizard>
         )}
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-border">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Enregistrement…' : isEditing ? 'Enregistrer' : 'Créer le projet'}
-          </Button>
-        </div>
+        {(stepError || mutation.isError) && <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-xs font-medium text-destructive">{stepError || (mutation.error instanceof Error ? mutation.error.message : "Erreur lors de l'enregistrement.")}</div>}
+
+        {isEditing ? (
+          <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+            <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">Annuler</Button>
+            <Button type="submit" loading={mutation.isPending} className="w-full sm:w-auto">Enregistrer</Button>
+          </div>
+        ) : (
+          <FormWizardActions currentStep={currentStep} totalSteps={projectFormSteps.length} onBack={() => { setStepError(''); setCurrentStep((step) => Math.max(0, step - 1)) }} onNext={goToNextStep} onCancel={onClose} isSubmitting={mutation.isPending} submitLabel="Créer le projet" submittingLabel="Création…" />
+        )}
       </form>
     </Modal>
   )
+}
+
+function ProjectReviewCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <div className="rounded-2xl border border-border bg-muted/20 p-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-primary">{label}</p><p className="mt-2 text-sm font-bold text-foreground">{value}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p></div>
+}
+
+function projectStatusLabel(status?: string) {
+  return ({ in_progress: 'En cours', on_hold: 'En pause', completed: 'Terminé', cancelled: 'Annulé' } as Record<string, string>)[status || ''] || 'En cours'
+}
+
+function projectHealthLabel(health?: string) {
+  return ({ on_track: 'Sur les rails', at_risk: 'En risque', off_track: 'En retard' } as Record<string, string>)[health || ''] || 'Sur les rails'
+}
+
+function formatProjectDate(value: string) {
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(`${value}T00:00:00`))
 }

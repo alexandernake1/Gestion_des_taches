@@ -27,14 +27,14 @@ function PrivacyPage() {
     >
       <LegalSection id="responsable" title="1. Responsable du traitement">
         <p><strong>Activity Control</strong> est le nom du service. L’entité qui l’exploitera commercialement sera responsable des traitements liés aux comptes, à la sécurité et à la fourniture du SaaS.</p>
-        <p>Pour une entreprise cliente, celle-ci reste responsable des contenus et données professionnelles qu’elle fait saisir par ses collaborateurs. Activity Control agit alors comme prestataire technique selon les instructions de l’entreprise.</p>
+        <p>Pour une structure cliente, celle-ci reste responsable des contenus et données professionnelles qu’elle fait saisir par ses collaborateurs. Activity Control agit alors comme prestataire technique selon les instructions de la structure.</p>
         <p>Contact relatif aux données personnelles : <a href="mailto:support@activity-tracker.com">support@activity-tracker.com</a>.</p>
       </LegalSection>
 
       <LegalSection id="donnees" title="2. Données que nous traitons">
         <ul>
           <li><strong>Compte :</strong> nom, prénom, adresse email, téléphone facultatif, avatar, rôle et paramètres.</li>
-          <li><strong>Espace de travail :</strong> informations de l’entreprise ou de l’espace personnel, membres, équipes et droits d’accès.</li>
+          <li><strong>Espace de travail :</strong> informations de la structure ou de l’espace personnel, membres, équipes et droits d’accès.</li>
           <li><strong>Activité :</strong> tâches, projets, commentaires, pièces jointes, historiques, validations et notifications.</li>
           <li><strong>Abonnement :</strong> forfait choisi, état de l’abonnement, références et métadonnées de transaction. Les données bancaires complètes ne doivent pas être saisies dans les tâches ou commentaires.</li>
           <li><strong>Sécurité :</strong> journaux techniques, tentatives de connexion, preuves anti-robot, identifiants de session et actions administratives.</li>
@@ -45,7 +45,7 @@ function PrivacyPage() {
       <LegalSection id="finalites" title="3. Finalités et bases légales">
         <ul>
           <li><strong>Fournir le service et gérer le compte :</strong> exécution des Conditions d’utilisation.</li>
-          <li><strong>Organiser les tâches, projets et collaborations :</strong> exécution du service demandé par l’utilisateur ou l’entreprise cliente.</li>
+          <li><strong>Organiser les tâches, projets et collaborations :</strong> exécution du service demandé par l’utilisateur ou la structure cliente.</li>
           <li><strong>Gérer les forfaits, paiements et justificatifs :</strong> exécution du contrat et respect des obligations comptables applicables.</li>
           <li><strong>Prévenir la fraude, les robots et les accès non autorisés :</strong> intérêt légitime à sécuriser le service et ses utilisateurs.</li>
           <li><strong>Envoyer les notifications fonctionnelles :</strong> exécution du service. Les notifications facultatives peuvent être désactivées dans les paramètres.</li>
@@ -56,7 +56,7 @@ function PrivacyPage() {
 
       <LegalSection id="visibilite" title="4. Visibilité dans les espaces de travail">
         <p>Dans un espace personnel, les contenus appartiennent au seul compte concerné, sous réserve des accès techniques strictement nécessaires à la maintenance et à la sécurité.</p>
-        <p>Dans un espace d’entreprise, les responsables autorisés peuvent consulter et administrer les membres, tâches, projets, historiques et rapports selon leur rôle. L’utilisateur doit éviter d’y déposer des informations privées ou sensibles sans lien avec l’activité professionnelle.</p>
+        <p>Dans un espace de structure, les responsables autorisés peuvent consulter et administrer les membres, tâches, projets, historiques et rapports selon leur rôle. L’utilisateur doit éviter d’y déposer des informations privées ou sensibles sans lien avec l’activité professionnelle.</p>
       </LegalSection>
 
       <LegalSection id="destinataires" title="5. Destinataires et prestataires">

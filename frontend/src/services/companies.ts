@@ -3,7 +3,7 @@ import type { Company, PlatformAuditLog } from '@/domain/types';
 
 export interface CreateCompanyPayload {
   name: string;
-  slug: string;
+  slug?: string;
   description?: string;
   website?: string;
   contact_email: string;

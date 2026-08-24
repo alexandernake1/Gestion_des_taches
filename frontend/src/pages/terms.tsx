@@ -23,13 +23,13 @@ function TermsPage() {
   return (
     <LegalDocumentLayout
       title="Conditions générales d’utilisation"
-      description="Ces conditions définissent les règles applicables à la création d’un compte et à l’utilisation d’Activity Control, en espace personnel comme en entreprise."
+      description="Ces conditions définissent les règles applicables à la création d’un compte et à l’utilisation d’Activity Control, en espace personnel comme en structure."
       current="terms"
       toc={toc}
     >
       <LegalSection id="objet" title="1. Objet du service">
         <p>Activity Control est une application SaaS de gestion d’activité permettant notamment de gérer des tâches, projets, échéances, validations, équipes, notifications, rapports et abonnements.</p>
-        <p>Le service propose des espaces personnels et des espaces d’entreprise. Certaines fonctions dépendent du forfait et du type d’espace sélectionnés.</p>
+        <p>Le service propose des espaces personnels et des espaces de structure. Certaines fonctions dépendent du forfait et du type d’espace sélectionnés.</p>
       </LegalSection>
 
       <LegalSection id="editeur" title="2. Éditeur et contact">
@@ -39,7 +39,7 @@ function TermsPage() {
 
       <LegalSection id="acceptation" title="3. Acceptation des conditions">
         <p>La création d’un compte nécessite une action positive par laquelle l’utilisateur accepte la version en vigueur des présentes Conditions et reconnaît avoir pris connaissance de la Politique de confidentialité.</p>
-        <p>La date et la version des documents acceptés peuvent être enregistrées afin d’assurer la traçabilité du consentement. Si l’utilisateur agit pour une entreprise, il déclare être autorisé à engager ou à utiliser le service pour celle-ci.</p>
+        <p>La date et la version des documents acceptés peuvent être enregistrées afin d’assurer la traçabilité du consentement. Si l’utilisateur agit pour une organisation, il déclare être autorisé à engager ou à utiliser le service pour celle-ci.</p>
       </LegalSection>
 
       <LegalSection id="compte" title="4. Compte et sécurité">
@@ -52,9 +52,9 @@ function TermsPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection id="espaces" title="5. Espaces personnels et d’entreprise">
+      <LegalSection id="espaces" title="5. Espaces personnels et de structure">
         <p>Un espace personnel est destiné à un usage individuel et ne comporte pas de mécanisme d’assignation à des collaborateurs.</p>
-        <p>Dans un espace d’entreprise, le propriétaire et les responsables habilités administrent les membres, rôles et accès. L’entreprise est responsable des invitations, du retrait des accès et de l’information de ses collaborateurs.</p>
+        <p>Dans un espace de structure, l’administrateur et les managers habilités administrent les membres, les rôles et les accès. La structure est responsable des invitations, du retrait des accès et de l’information de ses collaborateurs.</p>
       </LegalSection>
 
       <LegalSection id="usage" title="6. Utilisation autorisée">
@@ -69,7 +69,7 @@ function TermsPage() {
       </LegalSection>
 
       <LegalSection id="contenus" title="7. Contenus et données de l’utilisateur">
-        <p>L’utilisateur ou l’entreprise conserve ses droits sur les contenus qu’il saisit. Il accorde à Activity Control les autorisations techniques strictement nécessaires pour les héberger, sauvegarder, afficher et traiter afin de fournir le service.</p>
+        <p>L’utilisateur ou la structure conserve ses droits sur les contenus saisis. Il accorde à Activity Control les autorisations techniques strictement nécessaires pour les héberger, sauvegarder, afficher et traiter afin de fournir le service.</p>
         <p>Le client garantit disposer des droits et autorisations nécessaires sur les données importées, notamment celles de ses salariés, prestataires ou clients. Il est responsable de ses propres obligations d’information et de conformité.</p>
       </LegalSection>
 

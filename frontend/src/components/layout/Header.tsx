@@ -104,7 +104,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           onClick={openShareModal}
           aria-label="Partager la plateforme"
           title="Partager la plateforme"
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+          className="hidden h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground sm:flex"
         >
           <Share2 className="h-[18px] w-[18px]" />
         </button>
@@ -114,7 +114,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           onClick={openHelpDrawer}
           aria-label="Centre d'aide & Tutoriels"
           title="Centre d'aide & Tutoriels"
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+          className="hidden h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground sm:flex"
         >
           <HelpCircle className="h-[18px] w-[18px]" />
         </button>

@@ -103,7 +103,7 @@ export function OnboardingChecklist({ isPersonalWorkspace }: { isPersonalWorkspa
       ? [
           {
             id: 'team',
-            title: 'Explorer vos équipes & collaborateurs',
+            title: 'Explorer vos équipes et collaborateurs',
             description: 'Structurez vos équipes et vérifiez les attributions de rôles.',
             icon: Users,
             actionLabel: 'Voir les équipes',
@@ -116,8 +116,8 @@ export function OnboardingChecklist({ isPersonalWorkspace }: { isPersonalWorkspa
       : []),
     {
       id: 'settings',
-      title: 'Configurer vos notifications & profil',
-      description: 'Activez le son chime et les alertes push pour ne rien manquer.',
+      title: 'Configurer vos notifications et votre profil',
+      description: 'Activez le signal sonore et les alertes sur le bureau pour ne rien manquer.',
       icon: Settings,
       actionLabel: 'Paramètres',
       onAction: () => {

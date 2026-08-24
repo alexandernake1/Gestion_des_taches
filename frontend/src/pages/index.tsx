@@ -38,8 +38,8 @@ function LandingPage() {
 
   const faqs = [
     {
-      q: 'Quelle est la différence entre un espace personnel et une entreprise ?',
-      a: 'L’espace personnel vous permet de gérer vos tâches individuelles en toute autonomie et gratuitement. Dès que vous créez une organisation, vous débloquez le mode multi-utilisateurs avec équipes, rôles hiérarchiques (Managers, Employés), circuits de validation et tableau de bord exécutif.',
+      q: 'Quelle est la différence entre un espace personnel et une structure ?',
+      a: 'L’espace personnel vous permet de gérer vos tâches individuelles en toute autonomie et gratuitement. Dès que vous créez une organisation, vous débloquez la collaboration avec des équipes, des rôles hiérarchiques (managers et collaborateurs), des circuits de validation et un tableau de bord exécutif.',
     },
     {
       q: 'Comment fonctionnent les validations et reports d’échéance ?',
@@ -51,7 +51,7 @@ function LandingPage() {
     },
     {
       q: 'Les notifications sont-elles transmises en temps réel ?',
-      a: 'Oui. Grâce à notre moteur WebSockets et notifications push, toute assignation, rappel d’échéance ou validation apparaît instantanément avec un signal sonore discret et un bouton d’action rapide « Commencer la tâche ».',
+      a: 'Oui. Grâce aux notifications en temps réel, toute attribution, tout rappel d’échéance ou toute validation apparaît instantanément avec un signal sonore discret et un bouton d’action rapide « Commencer la tâche ».',
     },
   ]
 
@@ -74,12 +74,12 @@ function LandingPage() {
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base font-extrabold tracking-tight text-white">Activity Control</span>
-                <span className="rounded-full bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-bold text-indigo-300">
+                <span className="whitespace-nowrap text-base font-extrabold tracking-tight text-white">Activity Control</span>
+                <span className="hidden rounded-full bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-bold text-indigo-300 sm:inline-flex">
                   PRO
                 </span>
               </div>
-              <span className="text-[11px] font-medium text-slate-400">Pilotage d’activité & projets</span>
+              <span className="hidden text-[11px] font-medium text-slate-400 sm:block">Pilotage d’activité et projets</span>
             </div>
           </a>
 
@@ -90,19 +90,20 @@ function LandingPage() {
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <a
               href="/login"
-              className="rounded-xl px-4 py-2 text-sm font-bold text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-xl px-2 py-2 text-sm font-bold text-slate-300 transition-colors hover:bg-white/10 hover:text-white sm:px-4"
             >
               Se connecter
             </a>
             <a
               href="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:scale-105 hover:shadow-indigo-500/40"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:scale-105 hover:shadow-indigo-500/40 sm:px-4"
             >
-              <span>Démarrer l’expérience</span>
-              <ArrowRight className="h-4 w-4" />
+              <span className="sm:hidden">S’inscrire</span>
+              <span className="hidden sm:inline">Démarrer l’expérience</span>
+              <ArrowRight className="hidden h-4 w-4 sm:block" />
             </a>
           </div>
         </div>
@@ -113,7 +114,7 @@ function LandingPage() {
         <div className="mx-auto max-w-5xl text-center">
           <div className="inline-flex items-center gap-2.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-bold text-indigo-300 backdrop-blur-md shadow-inner">
             <Sparkles className="h-4 w-4 text-indigo-400 animate-pulse" />
-            <span>Pilotage opérationnel & gouvernance collaborative</span>
+            <span>Pilotage opérationnel et gouvernance collaborative</span>
           </div>
 
           <h1 className="mt-8 text-4xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl lg:leading-[1.1]">
@@ -155,11 +156,11 @@ function LandingPage() {
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-xs font-semibold text-slate-400">
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              Espace Personnel & Entreprise
+              Espace personnel et organisation
             </span>
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              Validation & Reports en 1 clic
+              Validations et reports en un clic
             </span>
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
@@ -173,10 +174,10 @@ function LandingPage() {
           {/* Tabs Selector */}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-6">
             {[
-              { id: 'dashboard', label: 'Tableau de bord & KPIs', icon: BarChart3 },
-              { id: 'approvals', label: 'Validations & Reports', icon: ShieldCheck },
-              { id: 'kanban', label: 'Flux de tâches & Priorités', icon: Kanban },
-              { id: 'collab', label: 'Collaboration & Alertes', icon: BellRing },
+              { id: 'dashboard', label: 'Tableau de bord et indicateurs', icon: BarChart3 },
+              { id: 'approvals', label: 'Validations et reports', icon: ShieldCheck },
+              { id: 'kanban', label: 'Flux de tâches et priorités', icon: Kanban },
+              { id: 'collab', label: 'Collaboration et alertes', icon: BellRing },
             ].map((tab) => {
               const Icon = tab.icon
               const isCurrent = activeTab === tab.id
@@ -211,7 +212,7 @@ function LandingPage() {
                   <span className="h-3 w-3 rounded-full bg-rose-500/80" />
                   <span className="h-3 w-3 rounded-full bg-amber-500/80" />
                   <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
-                  <span className="ml-3 text-xs font-bold text-slate-400">Activity Control Console</span>
+                  <span className="ml-3 text-xs font-bold text-slate-400">Aperçu Activity Control</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="rounded-lg bg-indigo-500/15 border border-indigo-500/30 px-2.5 py-1 text-[11px] font-bold text-indigo-300">
@@ -279,7 +280,7 @@ function LandingPage() {
                         <div className="space-y-3">
                           {[
                             { user: 'Sarah D.', action: 'a validé la tâche', task: 'Rapport annuel 2026', time: 'Il y a 10 min' },
-                            { user: 'Marc K.', action: 'a demandé un report sur', task: 'Maquettes Dashboard', time: 'Il y a 35 min' },
+                            { user: 'Marc K.', action: 'a demandé un report sur', task: 'Maquettes du tableau de bord', time: 'Il y a 35 min' },
                             { user: 'Alex N.', action: 'a terminé la sous-tâche', task: 'Tests d’intégration', time: 'Il y a 1h' },
                           ].map((act, i) => (
                             <div key={i} className="flex items-start gap-3 rounded-xl bg-white/[0.03] p-2.5">
@@ -304,7 +305,7 @@ function LandingPage() {
                   <div className="space-y-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-base font-bold text-white">Circuit de validation & Reports</h3>
+                        <h3 className="text-base font-bold text-white">Circuit de validation et reports</h3>
                         <p className="text-xs text-slate-400">Validez les livrables avant clôture ou approuvez les reports d’échéances motivés.</p>
                       </div>
                       <span className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-400">
@@ -373,16 +374,16 @@ function LandingPage() {
                         title: 'En cours',
                         count: 3,
                         tasks: [
-                          { title: 'Développement WebSockets Live', tag: 'Tech', priority: 'Urgent', color: 'bg-rose-500/20 text-rose-300', startBtn: true },
+                          { title: 'Déployer les notifications en temps réel', tag: 'Technique', priority: 'Urgent', color: 'bg-rose-500/20 text-rose-300', startBtn: true },
                           { title: 'Revue budgétaire trimestrielle', tag: 'Finance', priority: 'Normale', color: 'bg-indigo-500/20 text-indigo-300' },
                         ],
                       },
                       {
-                        title: 'Validé & Terminé',
+                        title: 'Validé et terminé',
                         count: 8,
                         tasks: [
                           { title: 'Validation architecture serveur', tag: 'DevOps', priority: 'Terminée', color: 'bg-emerald-500/20 text-emerald-300' },
-                          { title: 'Onboarding 5 nouveaux employés', tag: 'RH', priority: 'Terminée', color: 'bg-emerald-500/20 text-emerald-300' },
+                          { title: 'Intégration de 5 nouveaux collaborateurs', tag: 'RH', priority: 'Terminée', color: 'bg-emerald-500/20 text-emerald-300' },
                         ],
                       },
                     ].map((col) => (
@@ -424,7 +425,7 @@ function LandingPage() {
                           <BellRing className="h-5 w-5" />
                         </div>
                         <div>
-                          <h4 className="text-sm font-bold text-white">Alertes instantanées & audio chime</h4>
+                          <h4 className="text-sm font-bold text-white">Alertes instantanées et signal sonore</h4>
                           <p className="text-xs text-slate-400">Notification en direct dès qu’une action vous concerne.</p>
                         </div>
                       </div>
@@ -464,8 +465,8 @@ function LandingPage() {
                           <Shield className="h-5 w-5" />
                         </span>
                         <div>
-                          <h4 className="text-sm font-bold text-white">Rôles stricts & sécurité des données</h4>
-                          <p className="text-xs text-slate-400">Droits spécifiques pour Managers, Employés et Propriétaires.</p>
+                          <h4 className="text-sm font-bold text-white">Rôles stricts et sécurité des données</h4>
+                          <p className="text-xs text-slate-400">Droits spécifiques pour les managers, collaborateurs et administrateurs.</p>
                         </div>
                       </div>
                     </div>
@@ -519,7 +520,7 @@ function LandingPage() {
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/20 text-indigo-400 mb-6">
                 <ShieldCheck className="h-6 w-6" />
               </span>
-              <h3 className="text-xl font-extrabold text-white">Circuit d’approbation & Validation hiérarchique</h3>
+              <h3 className="text-xl font-extrabold text-white">Circuit d’approbation et validation hiérarchique</h3>
               <p className="mt-3 text-sm text-slate-400 max-w-xl leading-relaxed">
                 Ne laissez plus les livrables être clôturés sans confirmation. Les managers examinent les pièces jointes, formulent des retours et approuvent ou refusent directement.
               </p>
@@ -558,7 +559,7 @@ function LandingPage() {
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 mb-6">
                 <BarChart3 className="h-6 w-6" />
               </span>
-              <h3 className="text-xl font-extrabold text-white">Indicateurs de performance & Charge d’équipe</h3>
+              <h3 className="text-xl font-extrabold text-white">Indicateurs de performance et charge d’équipe</h3>
               <p className="mt-3 text-sm text-slate-400 max-w-xl leading-relaxed">
                 Visualisez la répartition du travail par collaborateur, les délais moyens d’exécution, les taux de complétion et anticipez les goulets d’étranglement.
               </p>
@@ -585,19 +586,19 @@ function LandingPage() {
             {[
               {
                 num: '01',
-                title: 'Créez & Assignez',
-                desc: 'Définissez les tâches, échéances, priorités, dépendances et assignez les membres d’équipe responsables.',
+                title: 'Créez vos tâches',
+                desc: 'Définissez les tâches, échéances, priorités et dépendances, puis confiez-les aux membres concernés si nécessaire.',
                 icon: FolderGit2,
               },
               {
                 num: '02',
-                title: 'Exécutez & Échangez',
-                desc: 'Commencez les tâches en un clic, commentez dans le contexte et recevez des alertes sonores et push en direct.',
+                title: 'Exécutez et échangez',
+                desc: 'Commencez les tâches en un clic, commentez dans le contexte et recevez des alertes instantanées avec un signal sonore.',
                 icon: Layers,
               },
               {
                 num: '03',
-                title: 'Validez & Clôturez',
+                title: 'Validez et clôturez',
                 desc: 'Soumettez pour validation hiérarchique, consolidez les rapports et alimentez votre tableau de bord stratégique.',
                 icon: FileCheck2,
               },

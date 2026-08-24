@@ -219,7 +219,7 @@ function SettingsPage() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     {isPersonalWorkspace
                       ? 'Ces informations permettent de personnaliser votre compte.'
-                      : 'Ces informations seront visibles par les membres de votre entreprise.'}
+                      : 'Ces informations seront visibles par les membres de votre structure.'}
                   </p>
                 </div>
                 
@@ -304,8 +304,8 @@ function SettingsPage() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <PreferenceToggle name="notification_sound_enabled" label="Signal sonore (Audio Chime)" description="Jouer un carillon subtil lors d'une nouvelle notification." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_sound_enabled') !== 'false' : true} />
-                  <PreferenceToggle name="notification_desktop_enabled" label="Notifications Push bureau" description="Afficher une alerte Windows/OS quand l'application est en arrière-plan." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_desktop_enabled') !== 'false' : true} />
+                  <PreferenceToggle name="notification_sound_enabled" label="Signal sonore" description="Jouer un carillon discret lors d'une nouvelle notification." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_sound_enabled') !== 'false' : true} />
+                  <PreferenceToggle name="notification_desktop_enabled" label="Notifications sur le bureau" description="Afficher une alerte du système quand l'application est en arrière-plan." defaultChecked={typeof localStorage !== 'undefined' ? localStorage.getItem('notification_desktop_enabled') !== 'false' : true} />
                   {!isPersonalWorkspace && <PreferenceToggle name="assignments_enabled" label="Nouvelles assignations" description="Lorsqu'une tâche vous est confiée." defaultChecked={notificationPreferences.assignments_enabled} />}
                   <PreferenceToggle name="comments_enabled" label="Commentaires" description="Activité sur les tâches qui vous concernent." defaultChecked={notificationPreferences.comments_enabled} />
                   <PreferenceToggle name="task_reminders_enabled" label="Échéances proches" description="Rappel avant la date limite." defaultChecked={notificationPreferences.task_reminders_enabled} />
@@ -358,7 +358,7 @@ function SettingsPage() {
                       </div>
                       <h4 className="font-extrabold text-sm text-foreground">Visite interactive pas-à-pas</h4>
                       <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        Revisitez les 5 étapes fondamentales : Espaces, Tableau de bord, Tâches & Action directe, Validations et Notifications.
+                        Revisitez les 5 étapes fondamentales : espaces, tableau de bord, tâches et actions rapides, validations et notifications.
                       </p>
                     </div>
                     <Button onClick={() => startTour(0)} className="w-full font-bold mt-2" size="sm">

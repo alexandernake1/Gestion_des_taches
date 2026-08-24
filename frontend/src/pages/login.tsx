@@ -134,7 +134,7 @@ function LoginPage() {
           <div>
             <p className="text-[15px] font-bold text-white leading-tight">Activity Control</p>
             <p className="text-[11px] font-medium" style={{ color: 'hsl(228 20% 55%)' }}>
-              Centre de pilotage d'entreprise
+              Centre de pilotage des activités
             </p>
           </div>
         </div>
@@ -253,7 +253,7 @@ function LoginPage() {
                   }}
                   aria-invalid={credentialError || undefined}
                   aria-describedby={credentialError ? 'login-error' : undefined}
-                  placeholder="vous@entreprise.com"
+                  placeholder="vous@organisation.com"
                   className={`h-11 w-full rounded-xl border bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:outline-none focus:ring-2 ${credentialError ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/20' : 'border-border/80 focus:border-primary/60 focus:ring-primary/25 hover:border-border'}`}
                 />
               </div>

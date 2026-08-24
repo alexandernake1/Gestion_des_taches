@@ -87,8 +87,9 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', descripti
           {/* Panel */}
           <div
             ref={panelRef}
+            data-modal-panel
             className={cn(
-              'relative w-full pointer-events-auto animate-scale-in',
+              'relative max-h-[calc(100vh-2rem)] w-full overflow-y-auto pointer-events-auto animate-scale-in sm:max-h-[calc(100vh-3rem)]',
               'rounded-2xl border border-border/80 bg-card shadow-modal',
               sizes[size]
             )}

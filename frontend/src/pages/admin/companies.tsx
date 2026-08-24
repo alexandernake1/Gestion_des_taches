@@ -25,7 +25,6 @@ function AdminCompaniesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
-    slug: '',
     description: '',
     website: '',
     contact_email: '',
@@ -47,12 +46,12 @@ function AdminCompaniesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
       setIsModalOpen(false)
       setFormData({
-        name: '', slug: '', description: '', website: '', contact_email: '', contact_phone: '', address: '', timezone: 'Africa/Abidjan', language: 'fr',
+        name: '', description: '', website: '', contact_email: '', contact_phone: '', address: '', timezone: 'Africa/Abidjan', language: 'fr',
       })
       setFormError('')
     },
     onError: (err: Error) => {
-      setFormError(err.message || 'Erreur lors de la création de la société.')
+      setFormError(err.message || 'Erreur lors de la création de la structure.')
     },
   })
 
@@ -65,19 +64,13 @@ function AdminCompaniesPage() {
   })
 
   const handleNameChange = (name: string) => {
-    const slug = name
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/[\s_-]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-    setFormData((current) => ({ ...current, name, slug }))
+    setFormData((current) => ({ ...current, name }))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name || !formData.slug || !formData.contact_email || !formData.contact_phone) {
-      setFormError('Le nom et le slug de la société sont obligatoires.')
+    if (!formData.name || !formData.contact_email || !formData.contact_phone) {
+      setFormError('Le nom, l’adresse e-mail et le téléphone de la structure sont obligatoires.')
       return
     }
     createCompanyMutation.mutate(formData)
@@ -88,12 +81,12 @@ function AdminCompaniesPage() {
     const { confirmed } = await confirmAction({
       title: `${deactivating ? 'Désactiver' : 'Réactiver'} « ${company.name} » ?`,
       description: deactivating
-        ? 'Les membres de cette entreprise perdront l’accès à leur espace.'
-        : 'Les membres de cette entreprise pourront de nouveau accéder à leur espace.',
-      confirmLabel: deactivating ? 'Désactiver l’entreprise' : 'Réactiver l’entreprise',
+        ? 'Les membres de cette structure perdront l’accès à leur espace.'
+        : 'Les membres de cette structure pourront de nouveau accéder à leur espace.',
+      confirmLabel: deactivating ? 'Désactiver la structure' : 'Réactiver la structure',
       tone: deactivating ? 'danger' : 'warning',
       impacts: deactivating
-        ? ['Les données sont conservées et pourront être restaurées en réactivant l’entreprise.']
+        ? ['Les données sont conservées et pourront être restaurées en réactivant la structure.']
         : ['Les accès précédemment configurés seront rétablis.'],
       requireText: deactivating ? 'DÉSACTIVER' : undefined,
     })
@@ -107,7 +100,7 @@ function AdminCompaniesPage() {
 
   if (isLoading) {
     return (
-      <Layout title="Administration des Entreprises">
+      <Layout title="Administration des structures">
         <div className="mx-auto max-w-7xl px-4 py-8 animate-pulse space-y-4">
           <div className="h-8 w-64 rounded-xl bg-slate-200" />
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -122,7 +115,7 @@ function AdminCompaniesPage() {
 
   if (isError) {
     return (
-      <Layout title="Administration des Entreprises">
+      <Layout title="Administration des structures">
         <div className="mx-auto max-w-7xl px-4 py-8">
           <ErrorState onRetry={() => refetch()} />
         </div>
@@ -131,7 +124,7 @@ function AdminCompaniesPage() {
   }
 
   return (
-    <Layout title="Administration des Entreprises">
+    <Layout title="Administration des structures">
       <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-6">
         <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900" onClick={goBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -140,15 +133,15 @@ function AdminCompaniesPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Espace Super-Admin</span>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Espace super-administrateur</span>
             </div>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Gestion des Entreprises (Multi-Tenant)</h2>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Gestion des structures clientes</h2>
             <p className="mt-1 text-sm text-slate-500">Supervisez et créez les organisations clientes de la plateforme SaaS.</p>
           </div>
 
           <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            <span>Créer une entreprise</span>
+            <span>Créer une structure</span>
           </Button>
         </div>
 
@@ -163,7 +156,7 @@ function AdminCompaniesPage() {
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-900">{company.name}</h3>
-                      <p className="text-xs font-mono text-slate-400">slug: {company.slug}</p>
+                      <p className="text-xs text-slate-400">{company.contact_email || 'Structure cliente'}</p>
                     </div>
                   </div>
                   <Badge variant={company.is_active ? 'success' : 'danger'}>
@@ -210,8 +203,8 @@ function AdminCompaniesPage() {
           ))}
         </div>
 
-        {/* Modal création entreprise */}
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Créer une nouvelle entreprise">
+        {/* Modal de création d'une structure */}
+        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Créer une nouvelle structure">
           <form onSubmit={handleSubmit} className="space-y-4">
             {formError && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700">
@@ -220,7 +213,7 @@ function AdminCompaniesPage() {
             )}
 
             <div>
-              <label className="block text-xs font-bold text-slate-700">Nom de l'entreprise *</label>
+              <label className="block text-xs font-bold text-slate-700">Nom de la structure *</label>
               <input
                 type="text"
                 value={formData.name}
@@ -234,12 +227,12 @@ function AdminCompaniesPage() {
             <fieldset className="rounded-xl border border-slate-200 p-4">
               <legend className="px-1 text-xs font-bold uppercase tracking-wide text-slate-500">Coordonnées principales</legend>
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-xs font-bold text-slate-700">Email de l'entreprise *
+                <label className="block text-xs font-bold text-slate-700">Email de la structure *
                   <input
                     type="email"
                     value={formData.contact_email}
                     onChange={(e) => setFormData((current) => ({ ...current, contact_email: e.target.value }))}
-                    placeholder="contact@entreprise.com"
+                    placeholder="contact@organisation.com"
                     className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none"
                     required
                   />
@@ -259,7 +252,7 @@ function AdminCompaniesPage() {
                     type="text"
                     value={formData.address}
                     onChange={(e) => setFormData((current) => ({ ...current, address: e.target.value }))}
-                    placeholder="Siège de l'entreprise"
+                    placeholder="Siège de la structure"
                     className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none"
                   />
                 </label>
@@ -275,24 +268,12 @@ function AdminCompaniesPage() {
             </fieldset>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700">Identifiant Slug *</label>
-              <input
-                type="text"
-                value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                placeholder="ex: sahel-digital-corp"
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm font-mono focus:border-indigo-500 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div>
               <label className="block text-xs font-bold text-slate-700">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
-                placeholder="Courte description de l'entreprise..."
+                placeholder="Courte description de la structure..."
                 className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
@@ -313,7 +294,7 @@ function AdminCompaniesPage() {
                 Annuler
               </Button>
               <Button type="submit" disabled={createCompanyMutation.isPending}>
-                {createCompanyMutation.isPending ? 'Création...' : 'Créer la société'}
+                {createCompanyMutation.isPending ? 'Création…' : 'Créer la structure'}
               </Button>
             </div>
           </form>

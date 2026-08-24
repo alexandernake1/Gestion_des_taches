@@ -16,7 +16,7 @@ export const Route = createFileRoute('/admin/audit')({
 })
 
 const categoryLabels: Record<string, string> = {
-  company: 'Entreprise',
+  company: 'Structure',
   plan: 'Forfait',
   subscription: 'Abonnement',
   announcement: 'Annonce',
@@ -47,7 +47,7 @@ function PlatformAuditPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Gouvernance de la plateforme</p>
               <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">Journal d’audit super-admin</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Historique lisible des actions sensibles réalisées dans l’administration SaaS. Les données des entreprises restent isolées.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Historique lisible des actions sensibles réalisées dans l’administration SaaS. Les données des structures restent isolées.</p>
             </div>
           </div>
         </section>
@@ -59,9 +59,9 @@ function PlatformAuditPage() {
               {Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
-          <label className="text-xs font-bold text-slate-600">Entreprise concernée
+          <label className="text-xs font-bold text-slate-600">Structure concernée
             <select value={company} onChange={(event) => setCompany(event.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal">
-              <option value="">Toutes les entreprises</option>
+              <option value="">Toutes les structures</option>
               {companies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
           </label>

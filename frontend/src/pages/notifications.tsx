@@ -112,15 +112,15 @@ function NotificationsPage() {
           Retour
         </Button>
 
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-black text-foreground">Centre de notifications</h1>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <h1 className="min-w-0 text-2xl font-black leading-tight text-foreground">Centre de notifications</h1>
             {unreadCount && unreadCount.count > 0 && (
-              <Badge variant="danger">{unreadCount.count} non lue{unreadCount.count > 1 ? 's' : ''}</Badge>
+              <Badge variant="danger" className="shrink-0">{unreadCount.count} non lue{unreadCount.count > 1 ? 's' : ''}</Badge>
             )}
           </div>
           {unreadCount && unreadCount.count > 0 && (
-            <Button variant="secondary" onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending}>
+            <Button className="w-full sm:w-auto" variant="secondary" onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending}>
               <CheckCheck className="h-4 w-4 mr-2" />
               Tout marquer comme lu
             </Button>

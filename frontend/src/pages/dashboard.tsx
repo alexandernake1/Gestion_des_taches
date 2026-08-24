@@ -262,7 +262,7 @@ function DashboardPage() {
                 className="inline-flex items-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-900 shadow-lg shadow-white/10 transition-all hover:-translate-y-1 hover:shadow-xl hover:bg-slate-50"
               >
                 <Globe className="mr-2 h-5 w-5" />
-                Gérer les entreprises
+                Gérer les structures
               </button>
               <button
                 onClick={() => navigate({ to: '/admin/subscriptions' })}
@@ -275,7 +275,7 @@ function DashboardPage() {
           </div>
 
           <div className="mb-8 grid grid-cols-2 gap-5 xl:grid-cols-4">
-            <PlatformMetric icon={Building2} label="Entreprises actives" value={activeCompanies} detail={`${platformCompanies.length} au total`} color="indigo" />
+            <PlatformMetric icon={Building2} label="Structures actives" value={activeCompanies} detail={`${platformCompanies.length} au total`} color="indigo" />
             <PlatformMetric icon={CircleDollarSign} label="Revenu mensuel estimé" value={`${recurringRevenue.toLocaleString('fr-FR')} F`} detail="Abonnements actifs" color="emerald" />
             <PlatformMetric icon={ShieldAlert} label="À surveiller" value={attentionRequired} detail="Paiements ou suspensions" alert={attentionRequired > 0} color="rose" />
             <PlatformMetric icon={TimerReset} label="Périodes d’essai" value={trials} detail="Conversions potentielles" color="amber" />
@@ -285,14 +285,14 @@ function DashboardPage() {
              <Card className="group border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 cursor-pointer" onClick={() => navigate({ to: '/admin/companies' })}>
                 <CardHeader>
                    <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-bold text-slate-800 group-hover:text-indigo-900 transition-colors">Entreprises</h3>
+                      <h3 className="text-xl font-bold text-slate-800 group-hover:text-indigo-900 transition-colors">Structures</h3>
                       <div className="p-3 bg-indigo-50 rounded-xl group-hover:bg-indigo-100 transition-colors">
                         <Globe className="h-6 w-6 text-indigo-600" />
                       </div>
                    </div>
                 </CardHeader>
                 <CardContent>
-                   <p className="text-slate-500 mb-6 text-base">Ajoutez de nouvelles entreprises clientes, activez ou désactivez leur accès, et modifiez leurs informations principales.</p>
+                   <p className="text-slate-500 mb-6 text-base">Ajoutez de nouvelles structures clientes, activez ou désactivez leur accès et modifiez leurs informations principales.</p>
                    <span className="inline-flex text-sm font-bold text-indigo-600 items-center">Accéder à la gestion <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1"/></span>
                 </CardContent>
              </Card>
@@ -589,7 +589,7 @@ function ManagementDashboardView({
   return (
     <div className="space-y-8">
       {/* 6 Core KPIs */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 2xl:grid-cols-6">
         <StatCard
           title="Créées (période)"
           value={stats?.created_in_period ?? stats?.new_tasks_this_week ?? 0}
@@ -954,7 +954,7 @@ function ManagementDashboardView({
                     Demandes de validation
                   </h3>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                    Reports & Livrables
+                    Reports d'échéance et livrables
                   </span>
                 </div>
               </CardHeader>
@@ -1378,18 +1378,18 @@ function StatCard({
       <CardContent className="p-4 pl-5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">{title}</p>
+            <p className="min-h-8 text-[11px] font-bold uppercase leading-4 tracking-wider text-muted-foreground">{title}</p>
             {loading ? (
               <div className="h-8 w-16 skeleton rounded-lg my-1" />
             ) : (
               <p
-                className="text-[26px] font-black tracking-tight leading-none my-1 truncate"
+                className="my-1 text-[26px] font-black leading-none tracking-tight"
                 style={{ color: alert ? 'hsl(var(--destructive))' : 'hsl(var(--foreground))' }}
               >
                 {value}
               </p>
             )}
-            {detail && <p className="text-[11px] font-medium text-muted-foreground truncate">{detail}</p>}
+            {detail && <p className="min-h-8 text-[11px] font-medium leading-4 text-muted-foreground">{detail}</p>}
           </div>
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"

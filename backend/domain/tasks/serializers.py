@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from common.utils import get_requested_company
 from django.db.models import Sum
 from pathlib import Path
@@ -23,6 +24,21 @@ from .models import (
 )
 
 
+class ProjectMemberSummarySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    email = serializers.EmailField()
+    role = serializers.CharField()
+
+
+class ProjectTeamSummarySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    leader_id = serializers.IntegerField(allow_null=True)
+    leader_name = serializers.CharField(allow_blank=True)
+    member_count = serializers.IntegerField()
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     health_display = serializers.CharField(source='get_health_display', read_only=True)
@@ -45,13 +61,15 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'company', 'created_at', 'updated_at']
 
-    def get_member_details(self, obj):
+    @extend_schema_field(ProjectMemberSummarySerializer(many=True))
+    def get_member_details(self, obj: Project) -> list[dict]:
         return [
             {'id': m.id, 'full_name': m.full_name, 'email': m.email, 'role': m.role}
             for m in obj.members.all()
         ]
 
-    def get_team_details(self, obj):
+    @extend_schema_field(ProjectTeamSummarySerializer(many=True))
+    def get_team_details(self, obj: Project) -> list[dict]:
         return [
             {
                 'id': team.id,
@@ -440,6 +458,14 @@ class TaskTemplateInstantiateSerializer(serializers.Serializer):
     start_date = serializers.DateField(required=False)
 
 
+TASK_BULK_ACTION_CHOICES = [
+    ('status', 'Changer le statut'),
+    ('archive', 'Archiver'),
+    ('restore', 'Restaurer'),
+    ('assign', 'Assigner'),
+]
+
+
 class TaskBulkActionSerializer(serializers.Serializer):
     task_ids = serializers.ListField(
         child=serializers.IntegerField(),
@@ -447,7 +473,7 @@ class TaskBulkActionSerializer(serializers.Serializer):
         max_length=100,
     )
     action = serializers.ChoiceField(
-        choices=['status', 'archive', 'restore', 'assign'],
+        choices=TASK_BULK_ACTION_CHOICES,
     )
     status = serializers.ChoiceField(choices=Status.choices, required=False)
     assigned_to = serializers.IntegerField(required=False, allow_null=True)

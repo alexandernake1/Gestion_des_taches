@@ -5,13 +5,14 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
+import { FormWizard, FormWizardActions, FormWizardPanel, type FormWizardStep } from '@/components/forms/FormWizard'
 import { useConfirmation } from '@/components/ui/confirmation'
 import { teamsService } from '@/services/teams'
 import { authService } from '@/services/auth'
 import { tasksService } from '@/services/tasks'
 import type { Team, User } from '@/domain/types'
-import { Archive, ArchiveRestore, CheckCircle2, Plus, Search, ShieldCheck, Trash2, UserRound, Users, X, AlertCircle } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Archive, ArchiveRestore, CheckCircle2, Plus, Search, ShieldCheck, Trash2, UserRound, Users, X, AlertCircle, ClipboardCheck, FileText } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import { requireManagement } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { ROLE_LABELS } from '@/constants/labels'
@@ -428,9 +429,28 @@ function ManageTeamModal({ team, onClose, onSuccess, users }: { team: Team | nul
   )
 }
 
+const createTeamSteps: FormWizardStep[] = [
+  { id: 'identity', title: 'Identité', description: 'Nom et mission', icon: FileText },
+  { id: 'members', title: 'Composition', description: 'Manager et collaborateurs', icon: Users },
+  { id: 'review', title: 'Vérification', description: 'Contrôle avant création', icon: ClipboardCheck },
+]
+
 function CreateTeamModal({ isOpen, onClose, onSuccess, users }: { isOpen: boolean; onClose: () => void; onSuccess: () => void; users: User[] }) {
+  const formRef = useRef<HTMLFormElement>(null)
   const [leaderId, setLeaderId] = useState<number | undefined>(undefined)
   const [selectedMembers, setSelectedMembers] = useState<number[]>([])
+  const [currentStep, setCurrentStep] = useState(0)
+  const [stepError, setStepError] = useState('')
+  const [reviewIdentity, setReviewIdentity] = useState({ name: '', description: '' })
+
+  useEffect(() => {
+    if (!isOpen) return
+    setLeaderId(undefined)
+    setSelectedMembers([])
+    setCurrentStep(0)
+    setStepError('')
+    setReviewIdentity({ name: '', description: '' })
+  }, [isOpen])
 
   const effectiveMembers = new Set([
     ...selectedMembers,
@@ -452,115 +472,122 @@ function CreateTeamModal({ isOpen, onClose, onSuccess, users }: { isOpen: boolea
     )
   }
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (effectiveMembers.size < 2) return
-    const formData = new FormData(e.currentTarget)
+  const validateCurrentStep = () => {
+    const panel = formRef.current?.querySelector<HTMLElement>(`[data-form-wizard-step="${currentStep}"]`)
+    if (!panel) return true
+    const controls = Array.from(panel.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea'))
+    for (const control of controls) {
+      if (!control.checkValidity()) {
+        control.reportValidity()
+        return false
+      }
+    }
+    return true
+  }
+
+  const goToNextStep = () => {
+    setStepError('')
+    if (!validateCurrentStep()) return
+    if (currentStep === 1 && effectiveMembers.size < 2) {
+      setStepError('Sélectionnez au moins deux personnes, manager compris.')
+      return
+    }
+    if (currentStep === createTeamSteps.length - 2 && formRef.current) {
+      const formData = new FormData(formRef.current)
+      setReviewIdentity({
+        name: String(formData.get('name') || '').trim(),
+        description: String(formData.get('description') || '').trim(),
+      })
+    }
+    setCurrentStep((step) => Math.min(step + 1, createTeamSteps.length - 1))
+  }
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (currentStep !== createTeamSteps.length - 1) {
+      goToNextStep()
+      return
+    }
+    if (effectiveMembers.size < 2 || !leaderId || !formRef.current) {
+      setCurrentStep(1)
+      setStepError('Choisissez un manager et au moins un autre collaborateur.')
+      return
+    }
+    const formData = new FormData(formRef.current)
     mutation.mutate({
-      name: formData.get('name') as string,
-      description: formData.get('description') as string || undefined,
-      leader: leaderId ? Number(leaderId) : Number(formData.get('leader')),
+      name: String(formData.get('name') || '').trim(),
+      description: String(formData.get('description') || '').trim() || undefined,
+      leader: Number(leaderId),
       member_ids: Array.from(effectiveMembers),
     })
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Créer une équipe" size="md">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nom de l'équipe
-          </label>
-          <input
-            name="name"
-            type="text"
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Nom de l'équipe"
-          />
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Créer une équipe" size="lg">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+        <FormWizard steps={createTeamSteps} currentStep={currentStep} onStepSelect={(step) => { setStepError(''); setCurrentStep(step) }}>
+          <FormWizardPanel step={0} active={currentStep === 0} title="Donnez une identité à l'équipe" description="Un nom clair aide les collaborateurs à comprendre immédiatement sa mission.">
+            <div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Nom de l'équipe *</label>
+              <input name="name" type="text" required autoFocus className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ex. Équipe commerciale" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Mission de l'équipe</label>
+              <textarea name="description" rows={4} className="min-h-[110px] w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Responsabilités principales et périmètre d'intervention…" />
+            </div>
+          </FormWizardPanel>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
-          <textarea
-            name="description"
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Description de l'équipe"
-          />
-        </div>
+          <FormWizardPanel step={1} active={currentStep === 1} title="Composez l'équipe" description="Une équipe active doit contenir un manager et au moins un autre collaborateur.">
+            <div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Manager *</label>
+              <select name="leader" required value={leaderId || ''} onChange={(event) => setLeaderId(event.target.value ? Number(event.target.value) : undefined)} className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">Choisir un manager</option>
+                {users.map((user) => <option key={user.id} value={user.id}>{user.full_name} — {ROLE_LABELS[user.role] || user.role_display}</option>)}
+              </select>
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Responsable
-          </label>
-          <select
-            name="leader"
-            required
-            value={leaderId || ''}
-            onChange={(e) => setLeaderId(e.target.value ? Number(e.target.value) : undefined)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Choisir un responsable</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.full_name} — {ROLE_LABELS[user.role] || user.role_display}
-              </option>
-            ))}
-          </select>
-        </div>
-        <fieldset>
-          <div className="mb-2 flex items-center justify-between">
-            <legend className="text-sm font-medium text-gray-700">Membres</legend>
-            <span className={`text-xs font-semibold ${effectiveMembers.size >= 2 ? 'text-emerald-600' : 'text-amber-600'}`}>
-              {effectiveMembers.size} personne{effectiveMembers.size > 1 ? 's' : ''} (min. 2)
-            </span>
-          </div>
-          <div className="max-h-44 space-y-2 overflow-auto rounded-xl border border-slate-200 p-3">
-            {users.map((user) => {
-              const isLeader = Boolean(leaderId && Number(user.id) === Number(leaderId))
-              const isChecked = isLeader || selectedMembers.includes(Number(user.id))
-              return (
-                <label key={user.id} className="flex items-center gap-3 text-sm text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    value={user.id}
-                    checked={isChecked}
-                    disabled={isLeader}
-                    onChange={() => handleMemberToggle(Number(user.id))}
-                  />
-                  <span>{user.full_name}</span>
-                  {isLeader && <span className="text-xs font-bold text-indigo-600">(Responsable)</span>}
-                  <span className="ml-auto text-xs text-slate-400">{ROLE_LABELS[user.role] || user.role_display}</span>
-                </label>
-              )
-            })}
-          </div>
-          {effectiveMembers.size < 2 && (
-            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600 font-medium">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              Sélectionnez au moins deux personnes, responsable compris.
-            </p>
-          )}
-        </fieldset>
+            <fieldset>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <legend className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Collaborateurs</legend>
+                <span className={`shrink-0 text-xs font-semibold ${effectiveMembers.size >= 2 ? 'text-emerald-600' : 'text-amber-600'}`}>{effectiveMembers.size} personne{effectiveMembers.size > 1 ? 's' : ''} · minimum 2</span>
+              </div>
+              <div className="max-h-64 space-y-2 overflow-auto rounded-2xl border border-border bg-muted/20 p-3">
+                {users.map((user) => {
+                  const isLeader = Boolean(leaderId && Number(user.id) === Number(leaderId))
+                  const isChecked = isLeader || selectedMembers.includes(Number(user.id))
+                  return (
+                    <label key={user.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm transition hover:border-border hover:bg-background">
+                      <input type="checkbox" value={user.id} checked={isChecked} disabled={isLeader} onChange={() => handleMemberToggle(Number(user.id))} className="h-4 w-4 rounded border-border text-primary focus:ring-primary" />
+                      <span className="min-w-0 flex-1"><span className="block truncate font-semibold text-foreground">{user.full_name}</span><span className="text-xs text-muted-foreground">{ROLE_LABELS[user.role] || user.role_display}</span></span>
+                      {isLeader && <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">Manager</span>}
+                    </label>
+                  )
+                })}
+              </div>
+              {effectiveMembers.size < 2 && <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-600"><AlertCircle className="h-3.5 w-3.5 shrink-0" />Ajoutez au moins un collaborateur en plus du manager.</p>}
+            </fieldset>
+          </FormWizardPanel>
 
-        {mutation.isError && (
-          <p className="text-sm text-rose-600">
-            {mutation.error instanceof Error ? mutation.error.message : 'Création impossible.'}
-          </p>
-        )}
+          <FormWizardPanel step={2} active={currentStep === 2} title="Vérifiez la composition" description="Contrôlez l'identité et les membres avant de créer l'équipe.">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TeamReviewCard label="Équipe" value={reviewIdentity.name} detail={reviewIdentity.description || 'Aucune description'} />
+              <TeamReviewCard label="Manager" value={users.find((user) => Number(user.id) === leaderId)?.full_name || 'Non sélectionné'} detail={ROLE_LABELS[users.find((user) => Number(user.id) === leaderId)?.role || 'employee']} />
+            </div>
+            <div className="rounded-2xl border border-border bg-muted/20 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-primary">Composition · {effectiveMembers.size} personnes</p>
+              <div className="mt-3 flex flex-wrap gap-2">{Array.from(effectiveMembers).map((id) => <span key={id} className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground">{users.find((user) => Number(user.id) === id)?.full_name || `Utilisateur #${id}`}</span>)}</div>
+            </div>
+          </FormWizardPanel>
+        </FormWizard>
 
-        <div className="flex justify-end gap-3 pt-4">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button type="submit" disabled={mutation.isPending || effectiveMembers.size < 2}>
-            {mutation.isPending ? 'Création...' : 'Créer'}
-          </Button>
-        </div>
+        {(stepError || mutation.isError) && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{stepError || (mutation.error instanceof Error ? mutation.error.message : 'Création impossible.')}</p>}
+
+        <FormWizardActions currentStep={currentStep} totalSteps={createTeamSteps.length} onBack={() => { setStepError(''); setCurrentStep((step) => Math.max(0, step - 1)) }} onNext={goToNextStep} onCancel={onClose} isSubmitting={mutation.isPending} submitDisabled={effectiveMembers.size < 2 || !leaderId} submitLabel="Créer l'équipe" submittingLabel="Création…" />
       </form>
     </Modal>
   )
+}
+
+function TeamReviewCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <div className="rounded-2xl border border-border bg-muted/20 p-4"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-primary">{label}</p><p className="mt-2 text-sm font-bold text-foreground">{value}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p></div>
 }

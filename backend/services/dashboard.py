@@ -327,8 +327,11 @@ class DashboardService:
 
         # Weekly stats (backwards compatibility)
         week_ago = today - timedelta(days=7)
-        new_this_week = visible_tasks.filter(created_at__gte=week_ago).count()
-        completed_this_week = visible_tasks.filter(status=Status.COMPLETED, completed_at__gte=week_ago).count()
+        new_this_week = visible_tasks.filter(created_at__date__gte=week_ago).count()
+        completed_this_week = visible_tasks.filter(
+            status=Status.COMPLETED,
+            completed_at__date__gte=week_ago,
+        ).count()
         weekly_completion_rate = round((completed_this_week / new_this_week * 100)) if new_this_week > 0 else (100 if completed_this_week > 0 else 0)
 
         # Personal daily trends across requested period

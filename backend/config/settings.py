@@ -251,6 +251,9 @@ SPECTACULAR_SETTINGS = {
     'ENUM_NAME_OVERRIDES': {
         'TaskStatusEnum': 'domain.tasks.models.Status.choices',
         'TaskReportStatusEnum': 'domain.tasks.models.ReportStatus.choices',
+        'WorkspaceTypeEnum': 'domain.companies.models.WorkspaceType.choices',
+        'ApprovalActionEnum': 'domain.tasks.models.ApprovalAction.choices',
+        'TaskBulkActionEnum': 'domain.tasks.serializers.TASK_BULK_ACTION_CHOICES',
     },
 }
 

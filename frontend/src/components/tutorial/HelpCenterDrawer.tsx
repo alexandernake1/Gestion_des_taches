@@ -62,13 +62,13 @@ const GUIDES: GuideTopic[] = [
     title: 'Comprendre les rôles et espaces de travail',
     category: 'teams',
     icon: Users,
-    summary: 'Basculez entre votre compte personnel et les espaces de travail entreprise.',
+    summary: 'Basculez entre votre compte personnel et les espaces de travail de votre structure.',
     steps: [
-      'Espace Personnel : dédié à vos tâches privées, gratuit et sans hiérarchie.',
-      'Espace Entreprise : active la collaboration multi-utilisateurs avec équipes et projets partagés.',
-      'Rôle Propriétaire / Owner : gère l’abonnement, les équipes, et les paramètres d’entreprise.',
+      'Espace personnel : dédié à vos tâches privées, gratuit et sans hiérarchie.',
+      'Espace de structure : active la collaboration à plusieurs avec des équipes et des projets partagés.',
+      'Rôle Administrateur de la structure : gère l’abonnement, les équipes et les paramètres de la structure.',
       'Rôle Manager : supervise les tâches de ses équipes, approuve les livrables et valide les reports.',
-      'Rôle Employé : réalise ses tâches assignées, échange des commentaires et sollicite des validations.',
+      'Rôle Collaborateur : réalise ses tâches confiées, échange des commentaires et sollicite des validations.',
     ],
   },
   {
@@ -79,7 +79,7 @@ const GUIDES: GuideTopic[] = [
     summary: 'Comment fonctionne le calcul au prorata et le solde créditeur.',
     steps: [
       'Lors d’un changement d’offre ou ajout d’équipe, le système calcule automatiquement le prorata temporis restant sur la période actuelle.',
-      'Si le changement génère un trop-perçu, un excédent de crédit est conservé sur votre compte entreprise.',
+      'Si le changement génère un trop-perçu, un excédent de crédit est conservé sur le compte de votre structure.',
       'Cet excédent est automatiquement déduit de votre prochain renouvellement sans action manuelle requise.',
     ],
   },
@@ -119,7 +119,7 @@ export function HelpCenterDrawer() {
                 <HelpCircle className="h-5 w-5" />
               </span>
               <div>
-                <h3 className="font-extrabold text-base text-foreground">Centre d’Aide & Guides</h3>
+                <h3 className="font-extrabold text-base text-foreground">Centre d’aide et guides</h3>
                 <p className="text-xs text-muted-foreground">Tutoriels et assistance interactive</p>
               </div>
             </div>
@@ -232,7 +232,7 @@ export function HelpCenterDrawer() {
             <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold text-foreground">
                 <Keyboard className="h-4 w-4 text-primary" />
-                <span>Raccourcis & Bonnes pratiques</span>
+                <span>Raccourcis et bonnes pratiques</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="p-2 rounded-xl bg-card border border-border/60">

@@ -99,15 +99,15 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'is_superuser', 'must_change_password', 'created_at', 'updated_at', 'company']
 
-    def get_company_name(self, obj):
+    def get_company_name(self, obj: User) -> str | None:
         if not obj.company_id:
             return None
         return 'Mon espace personnel' if obj.company.is_personal else obj.company.name
 
-    def get_workspace_type(self, obj):
+    def get_workspace_type(self, obj: User) -> str | None:
         return obj.company.workspace_type if obj.company_id else None
 
-    def get_is_personal_workspace(self, obj):
+    def get_is_personal_workspace(self, obj: User) -> bool:
         return bool(obj.company_id and obj.company.is_personal)
 
 
@@ -522,18 +522,18 @@ class UserManagementSerializer(serializers.ModelSerializer):
         requester = self.context['request'].user
         if value == Role.OWNER:
             raise serializers.ValidationError(
-                "The Owner role cannot be assigned directly."
+                "Le rôle d’administrateur de la structure ne peut pas être attribué directement."
             )
         if not requester.is_administrator() and value != Role.EMPLOYEE:
             raise serializers.ValidationError(
-                "Only administrators can assign manager roles."
+                "Seul un administrateur peut attribuer le rôle de manager."
             )
         return value
 
     def validate_weekly_capacity_hours(self, value):
         if value < 1 or value > 168:
             raise serializers.ValidationError(
-                "Weekly capacity must be between 1 and 168 hours."
+                "La capacité hebdomadaire doit être comprise entre 1 et 168 heures."
             )
         return value
 
@@ -544,14 +544,14 @@ class UserManagementSerializer(serializers.ModelSerializer):
             if instance.role == Role.OWNER:
                 if not (requester.is_superuser or requester.is_owner()):
                     raise serializers.ValidationError(
-                        "Only the company owner or super-administrator can modify this account."
+                        "Seul l’administrateur de la structure ou le super-administrateur peut modifier ce compte."
                     )
                 if (
                     attrs.get('role', instance.role) != Role.OWNER
                     or attrs.get('is_active', instance.is_active) is False
                 ):
                     raise serializers.ValidationError(
-                        "The company owner account cannot be deactivated or demoted."
+                        "Le compte administrateur de la structure ne peut pas être désactivé ni rétrogradé."
                     )
         return attrs
 
@@ -570,11 +570,11 @@ class InviteUserSerializer(serializers.Serializer):
         requester = self.context['request'].user
         if value == Role.OWNER:
             raise serializers.ValidationError(
-                "The Owner role cannot be assigned via invitation."
+                "Le rôle d’administrateur de la structure ne peut pas être attribué par invitation."
             )
         if not requester.is_administrator() and value != Role.EMPLOYEE:
             raise serializers.ValidationError(
-                "Only administrators can invite manager roles."
+                "Seul un administrateur peut inviter un manager."
             )
         return value
 

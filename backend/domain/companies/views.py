@@ -30,6 +30,7 @@ from .serializers import (
     AdminCompanySubscriptionUpdateSerializer,
     ChangePlanSerializer,
     SubscriptionQuoteRequestSerializer,
+    SubscriptionQuoteSerializer,
     CompleteTestPaymentSerializer,
     PaymentTransactionSerializer,
     StartTestPaymentSerializer,
@@ -88,7 +89,7 @@ class CompanyListCreateView(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         if not request.user.is_superuser:
             return Response(
-                {"detail": "Only platform super-administrators can create companies."},
+                {"detail": "Seuls les super-administrateurs de la plateforme peuvent créer une structure."},
                 status=status.HTTP_403_FORBIDDEN
             )
         return super().post(request, *args, **kwargs)
@@ -232,7 +233,7 @@ def my_subscription(request):
 @extend_schema(
     description="Calculate subscription quote and prorata credit for plan switch",
     request=SubscriptionQuoteRequestSerializer,
-    responses={200: serializers.DictField()}
+    responses={200: SubscriptionQuoteSerializer}
 )
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
@@ -314,7 +315,7 @@ def change_subscription_plan(request):
     else:
         if not user.is_owner():
             return Response(
-                {"detail": "Only the company owner can change the subscription plan."},
+                {"detail": "Seul l’administrateur de la structure peut modifier l’offre d’abonnement."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         if not user.company:
