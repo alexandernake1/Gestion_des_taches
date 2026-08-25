@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { requireManagement } from '@/router/auth'
 import { tasksService } from '@/services/tasks'
 import { ROLE_LABELS } from '@/constants/labels'
+import { useTutorial } from '@/context/TutorialContext'
 
 export const Route = createFileRoute('/planning')({
   beforeLoad: requireManagement,
@@ -43,13 +44,13 @@ function Metric({ icon: Icon, label, value, alert }: { icon: React.ElementType; 
 }
 
 function CircularProgress({ percent, isOverloaded }: { percent: number, isOverloaded: boolean }) {
-  const radius = 38;
-  const circumference = 2 * Math.PI * radius;
-  const clampedPercent = Math.min(percent, 100);
-  const strokeDashoffset = circumference - (clampedPercent / 100) * circumference;
+  const radius = 38
+  const circumference = 2 * Math.PI * radius
+  const clampedPercent = Math.min(percent, 100)
+  const strokeDashoffset = circumference - (clampedPercent / 100) * circumference
   
-  const colorClass = isOverloaded ? 'text-rose-500' : percent >= 80 ? 'text-amber-500' : 'text-emerald-500';
-  const trackColorClass = isOverloaded ? 'text-rose-200 dark:text-rose-900' : percent >= 80 ? 'text-amber-200 dark:text-amber-900' : 'text-emerald-200 dark:text-emerald-900';
+  const colorClass = isOverloaded ? 'text-rose-500' : percent >= 80 ? 'text-amber-500' : 'text-emerald-500'
+  const trackColorClass = isOverloaded ? 'text-rose-200 dark:text-rose-900' : percent >= 80 ? 'text-amber-200 dark:text-amber-900' : 'text-emerald-200 dark:text-emerald-900'
 
   return (
     <div className="relative flex items-center justify-center">
@@ -81,12 +82,13 @@ function CircularProgress({ percent, isOverloaded }: { percent: number, isOverlo
         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Occupé</span>
       </div>
     </div>
-  );
+  )
 }
 
 function PlanningPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { openHelpDrawer } = useTutorial()
   const [week, setWeek] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [showAllMembers, setShowAllMembers] = useState(false)
   const weekKey = format(week, 'yyyy-MM-dd')
@@ -133,6 +135,11 @@ function PlanningPage() {
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
                   Visualisez et répartissez équitablement le travail. Assurez-vous que personne ne soit en surchauffe pour préserver l'efficacité de l'équipe.
                 </p>
+                <div className="mt-3">
+                  <Button variant="secondary" size="sm" onClick={() => openHelpDrawer('planning-capacity')}>
+                    Guide de planification & charge
+                  </Button>
+                </div>
               </div>
               
               {/* Date Controller */}

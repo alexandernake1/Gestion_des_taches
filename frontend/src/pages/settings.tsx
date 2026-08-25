@@ -379,7 +379,7 @@ function SettingsPage() {
                         Consultez les guides détaillés avec astuces sur la création de tâches, les reports, les rôles et la facturation.
                       </p>
                     </div>
-                    <Button onClick={openHelpDrawer} variant="outline" className="w-full font-semibold mt-2" size="sm">
+                    <Button onClick={() => openHelpDrawer()} variant="outline" className="w-full font-semibold mt-2" size="sm">
                       <ExternalLink className="h-4 w-4 mr-2" />
                       Ouvrir le centre d’aide
                     </Button>

@@ -12,6 +12,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
+import { useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 
 type TutorialRoute = '/dashboard' | '/tasks' | '/approvals' | '/settings'
@@ -110,6 +111,47 @@ const TOUR_STEPS: StepData[] = [
 export function ProductTourModal() {
   const { isTourOpen, currentStep, nextStep, prevStep, closeTour, goToStep } = useTutorial()
   const navigate = useNavigate()
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isTourOpen) return undefined
+
+    const previousFocusedElement = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    const focusDialog = () => dialogRef.current?.focus()
+    const timer = window.setTimeout(focusDialog, 0)
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeTour()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) || [])
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.clearTimeout(timer)
+      document.removeEventListener('keydown', handleKeyDown)
+      previousFocusedElement?.focus()
+    }
+  }, [isTourOpen, closeTour])
 
   if (!isTourOpen) return null
 
@@ -131,7 +173,15 @@ export function ProductTourModal() {
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-white/20 bg-slate-900 text-slate-100 shadow-2xl shadow-indigo-950/80 z-10 animate-scale-up">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="product-tour-title"
+        aria-describedby="product-tour-description"
+        tabIndex={-1}
+        className="relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl border border-white/20 bg-slate-900 text-slate-100 shadow-2xl shadow-indigo-950/80 animate-scale-up"
+      >
         {/* Glow ambient accent */}
         <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-violet-500/20 blur-3xl pointer-events-none" />
@@ -148,6 +198,7 @@ export function ProductTourModal() {
           </div>
 
           <button
+            type="button"
             onClick={closeTour}
             className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
             aria-label="Fermer le guide"
@@ -159,10 +210,10 @@ export function ProductTourModal() {
         {/* Body content */}
         <div className="p-6 sm:p-8 space-y-6">
           <div>
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            <h2 id="product-tour-title" className="text-xl sm:text-2xl font-black text-white tracking-tight">
               {step.title}
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-300">
+            <p id="product-tour-description" className="mt-3 text-sm leading-relaxed text-slate-300">
               {step.description}
             </p>
           </div>
@@ -200,6 +251,7 @@ export function ProductTourModal() {
             {Array.from({ length: TOTAL_TOUR_STEPS }).map((_, index) => (
               <button
                 key={index}
+                type="button"
                 onClick={() => goToStep(index)}
                 aria-label={`Aller à l'étape ${index + 1}`}
                 className={`h-2 rounded-full transition-all ${

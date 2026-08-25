@@ -195,6 +195,14 @@ function DashboardPage() {
     enabled: enabledQueries,
   })
 
+  // Cette requête n'utilise pas le filtre de période : le guide de démarrage
+  // doit refléter les premières actions réellement effectuées, même anciennes.
+  const { data: onboardingStats } = useQuery({
+    queryKey: ['onboarding-progress'],
+    queryFn: () => dashboardService.getUserStatistics(),
+    enabled: enabledQueries,
+  })
+
   const {
     data: activity,
     isLoading: activityLoading,
@@ -344,7 +352,14 @@ function DashboardPage() {
         />
 
         {/* Onboarding Checklist for easy start */}
-        <OnboardingChecklist isPersonalWorkspace={isPersonalWorkspace} />
+        <OnboardingChecklist
+          isPersonalWorkspace={isPersonalWorkspace}
+          role={currentUser?.role}
+          createdTaskCount={onboardingStats?.created.total}
+          assignedTaskCount={onboardingStats?.assigned.total}
+          teamCount={teams.length}
+          projectCount={projects.length}
+        />
 
         {hasError && (
           <div className="mb-6">

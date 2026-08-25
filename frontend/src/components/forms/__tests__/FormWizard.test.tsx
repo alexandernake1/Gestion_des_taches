@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { FileText, Settings2, CheckCircle2 } from 'lucide-react'
+import { useState } from 'react'
 import { FormWizard, FormWizardActions, type FormWizardStep } from '@/components/forms/FormWizard'
 
 const steps: FormWizardStep[] = [
@@ -8,6 +9,29 @@ const steps: FormWizardStep[] = [
   { id: 'settings', title: 'Organisation', description: 'Paramètres de travail', icon: Settings2 },
   { id: 'review', title: 'Vérification', description: 'Contrôle final', icon: CheckCircle2 },
 ]
+
+function ConfirmationHarness({ onSubmit }: { onSubmit: () => void }) {
+  const [currentStep, setCurrentStep] = useState(0)
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        onSubmit()
+      }}
+    >
+      <p>{currentStep === 0 ? 'Saisie' : 'Récapitulatif'}</p>
+      <FormWizardActions
+        currentStep={currentStep}
+        totalSteps={2}
+        onBack={() => setCurrentStep(0)}
+        onNext={() => setCurrentStep(1)}
+        onCancel={() => undefined}
+        submitLabel="Confirmer"
+      />
+    </form>
+  )
+}
 
 describe('FormWizard', () => {
   it('annonce la progression et autorise le retour vers une étape terminée', async () => {
@@ -46,5 +70,20 @@ describe('FormWizard', () => {
     )
     expect(screen.getByRole('button', { name: 'Retour' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Créer' })).toHaveAttribute('type', 'submit')
+  })
+
+  it('attend un nouveau clic explicite après l’arrivée sur le récapitulatif', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(<ConfirmationHarness onSubmit={onSubmit} />)
+
+    await user.click(screen.getByRole('button', { name: 'Continuer' }))
+
+    expect(screen.getByText('Récapitulatif')).toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Confirmer' }))
+    expect(onSubmit).toHaveBeenCalledOnce()
   })
 })

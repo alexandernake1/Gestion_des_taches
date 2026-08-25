@@ -11,6 +11,7 @@ import { useConfirmation } from '@/components/ui/confirmation'
 import { authService } from '@/services/auth'
 import { tasksService } from '@/services/tasks'
 import { requireCollaborativeWorkspace } from '@/router/auth'
+import { useTutorial } from '@/context/TutorialContext'
 import type { ApprovalRequest, ApprovalStatus, TaskReport } from '@/domain/types'
 
 export const Route = createFileRoute('/approvals')({
@@ -22,6 +23,7 @@ function ApprovalsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const confirmAction = useConfirmation()
+  const { openHelpDrawer } = useTutorial()
   const [statusFilter, setStatusFilter] = useState<ApprovalStatus | ''>('pending')
 
   const { data: currentUser } = useQuery({
@@ -181,6 +183,11 @@ function ApprovalsPage() {
             <ClipboardCheck className="mx-auto h-10 w-10 text-muted-foreground/40" />
             <h2 className="mt-4 font-bold text-foreground">Aucune validation dans cette vue</h2>
             <p className="mt-2 text-sm text-muted-foreground">Les nouvelles demandes apparaîtront ici automatiquement.</p>
+            <div className="mt-5 flex justify-center">
+              <Button variant="secondary" size="sm" onClick={() => openHelpDrawer('approvals-flow')}>
+                Consulter le guide des validations
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">

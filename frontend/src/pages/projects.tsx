@@ -18,6 +18,7 @@ import { projectsService, type CreateProjectPayload } from '@/services/projects'
 import { subscriptionsService } from '@/services/subscriptions'
 import { authService } from '@/services/auth'
 import { teamsService } from '@/services/teams'
+import { useTutorial } from '@/context/TutorialContext'
 import type { Project, ProjectHealth, ProjectStatus, Team } from '@/domain/types'
 
 export const Route = createFileRoute('/projects')({
@@ -42,6 +43,7 @@ export function ProjectsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const confirmAction = useConfirmation()
+  const { openHelpDrawer } = useTutorial()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [healthFilter, setHealthFilter] = useState<string>('')
@@ -217,15 +219,19 @@ export function ProjectsPage() {
                 ? "Créez votre premier projet pour organiser vos tâches en grands objectifs d'équipe."
                 : "Les projets auxquels votre structure vous associe apparaîtront ici."}
             </p>
-            {canManageProjects && <Button
-              onClick={() => {
-                setEditingProject(null)
-                setIsModalOpen(true)
-              }}
-              className="mt-6"
-            >
-              <Plus className="h-4 w-4 mr-2" /> Créer un projet
-            </Button>}
+            {canManageProjects && (
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <Button variant="secondary" onClick={() => openHelpDrawer('create-project')}>Voir le guide</Button>
+                <Button
+                  onClick={() => {
+                    setEditingProject(null)
+                    setIsModalOpen(true)
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Créer un projet
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

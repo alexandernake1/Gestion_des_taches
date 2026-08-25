@@ -26,7 +26,7 @@ const collaborator = {
   updated_at: '2026-08-24T00:00:00Z',
 } satisfies User
 
-function renderTaskForm() {
+function renderTaskForm(onSubmit = vi.fn()) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -34,7 +34,7 @@ function renderTaskForm() {
   return render(
     <QueryClientProvider client={queryClient}>
       <TaskForm
-        onSubmit={vi.fn()}
+        onSubmit={onSubmit}
         onCancel={vi.fn()}
         users={[collaborator]}
         teams={[]}
@@ -73,5 +73,22 @@ describe('TaskForm', () => {
 
     expect(screen.getByText('Validation requise avant clôture')).toBeInTheDocument()
     expect(container.querySelector<HTMLInputElement>('input[name="requires_completion_approval"]')).toBeChecked()
+  })
+
+  it('attend une confirmation explicite sur le récapitulatif avant de créer', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    const { container } = renderTaskForm(onSubmit)
+
+    await user.type(container.querySelector<HTMLInputElement>('input[name="title"]')!, 'Valider le rapport final')
+    await user.click(screen.getByRole('button', { name: 'Continuer' }))
+    await user.click(screen.getByRole('button', { name: 'Continuer' }))
+    await user.click(screen.getByRole('button', { name: 'Continuer' }))
+
+    expect(screen.getByText('Vérifiez avant la création')).toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Créer la tâche' }))
+    expect(onSubmit).toHaveBeenCalledOnce()
   })
 })

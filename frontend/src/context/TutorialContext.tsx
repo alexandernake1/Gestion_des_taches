@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useCallback, useContext, useState } from 'react'
 
 export interface TutorialContextType {
   isTourOpen: boolean
@@ -8,8 +8,10 @@ export interface TutorialContextType {
   prevStep: () => void
   goToStep: (step: number) => void
   closeTour: () => void
+  completeTour: () => void
   isHelpDrawerOpen: boolean
-  openHelpDrawer: () => void
+  activeHelpGuideId: string | null
+  openHelpDrawer: (guideId?: string) => void
   closeHelpDrawer: () => void
   isShareModalOpen: boolean
   openShareModal: () => void
@@ -26,6 +28,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [isTourOpen, setIsTourOpen] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false)
+  const [activeHelpGuideId, setActiveHelpGuideId] = useState<string | null>(null)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [hasSeenTour, setHasSeenTour] = useState<boolean>(() => {
     return localStorage.getItem('has_seen_product_tour') === 'true'
@@ -34,6 +37,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   // Start the interactive tour
   const startTour = (initialStep = 0) => {
     setIsHelpDrawerOpen(false)
+    setActiveHelpGuideId(null)
     setIsShareModalOpen(false)
     setCurrentStep(initialStep)
     setIsTourOpen(true)
@@ -43,7 +47,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     if (currentStep < TOTAL_TOUR_STEPS - 1) {
       setCurrentStep((prev) => prev + 1)
     } else {
-      closeTour()
+      completeTour()
     }
   }
 
@@ -59,19 +63,25 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const closeTour = () => {
+  const closeTour = useCallback(() => {
+    setIsTourOpen(false)
+  }, [])
+
+  const completeTour = useCallback(() => {
     setIsTourOpen(false)
     localStorage.setItem('has_seen_product_tour', 'true')
     setHasSeenTour(true)
-  }
+  }, [])
 
-  const openHelpDrawer = () => {
+  const openHelpDrawer = useCallback((guideId?: string) => {
+    setActiveHelpGuideId(guideId || null)
     setIsHelpDrawerOpen(true)
-  }
+  }, [])
 
-  const closeHelpDrawer = () => {
+  const closeHelpDrawer = useCallback(() => {
     setIsHelpDrawerOpen(false)
-  }
+    setActiveHelpGuideId(null)
+  }, [])
 
   const openShareModal = () => {
     setIsShareModalOpen(true)
@@ -84,6 +94,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const resetOnboarding = () => {
     localStorage.removeItem('has_seen_product_tour')
     localStorage.removeItem('onboarding_checklist_dismissed')
+    localStorage.removeItem('onboarding_checklist_collapsed')
     localStorage.removeItem('onboarding_completed_items')
     setHasSeenTour(false)
     startTour(0)
@@ -99,7 +110,9 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
         prevStep,
         goToStep,
         closeTour,
+        completeTour,
         isHelpDrawerOpen,
+        activeHelpGuideId,
         openHelpDrawer,
         closeHelpDrawer,
         isShareModalOpen,

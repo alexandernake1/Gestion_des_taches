@@ -111,7 +111,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
 
         {/* Help Center & Tutorial */}
         <button
-          onClick={openHelpDrawer}
+          onClick={() => openHelpDrawer()}
           aria-label="Centre d'aide & Tutoriels"
           title="Centre d'aide & Tutoriels"
           className="hidden h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted hover:text-foreground sm:flex"

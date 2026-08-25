@@ -16,6 +16,7 @@ import { useState, useEffect, useRef } from 'react'
 import { requireManagement } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { ROLE_LABELS } from '@/constants/labels'
+import { useTutorial } from '@/context/TutorialContext'
 
 export const Route = createFileRoute('/teams')({
   beforeLoad: requireManagement,
@@ -27,6 +28,7 @@ function TeamsPage() {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const [search, setSearch] = useState('')
   const queryClient = useQueryClient()
+  const { openHelpDrawer } = useTutorial()
 
   const { data: teams, isLoading, isError, refetch } = useQuery({
     queryKey: ['teams'],
@@ -162,7 +164,10 @@ function TeamsPage() {
                 {search ? (
                   <Button className="mt-5" variant="secondary" onClick={() => setSearch('')}>Effacer la recherche</Button>
                 ) : (
-                  <Button className="mt-5" onClick={() => setIsModalOpen(true)}><Plus className="mr-2 h-4 w-4" />Créer une équipe</Button>
+                  <div className="mt-5 flex flex-wrap justify-center gap-3">
+                    <Button variant="secondary" onClick={() => openHelpDrawer('create-team')}>Voir le guide</Button>
+                    <Button onClick={() => setIsModalOpen(true)}><Plus className="mr-2 h-4 w-4" />Créer une équipe</Button>
+                  </div>
                 )}
               </div>
             )}

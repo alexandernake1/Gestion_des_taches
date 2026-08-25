@@ -17,6 +17,7 @@ import { fr } from 'date-fns/locale'
 import { requireCompanyMember } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { TimelineView } from '@/components/tasks/TimelineView'
+import { useTutorial } from '@/context/TutorialContext'
 import { api } from '@/utils/api'
 import { toast } from 'sonner'
 
@@ -51,6 +52,7 @@ function TasksPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const confirmAction = useConfirmation()
+  const { openHelpDrawer } = useTutorial()
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [priorityFilter, setPriorityFilter] = useState<string>('')
   const [dateFrom, setDateFrom] = useState<string>(() => new URLSearchParams(window.location.search).get('date_from') || '')
@@ -557,9 +559,12 @@ function TasksPage() {
                   {activeFilterCount > 0 ? (
                     <Button variant="secondary" onClick={clearFilters}>Effacer les filtres</Button>
                   ) : (
-                    <Button onClick={() => navigate({ to: '/tasks/create' })}>
-                      <Plus className="mr-2 h-4 w-4" />Créer une tâche
-                    </Button>
+                    <>
+                      <Button variant="secondary" onClick={() => openHelpDrawer('create-task')}>Voir le guide</Button>
+                      <Button onClick={() => navigate({ to: '/tasks/create' })}>
+                        <Plus className="mr-2 h-4 w-4" />Créer une tâche
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>

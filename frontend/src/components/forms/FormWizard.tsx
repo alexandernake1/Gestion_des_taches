@@ -190,6 +190,7 @@ export function FormWizardActions({
 
       {isLastStep ? (
         <Button
+          key="submit"
           type="submit"
           loading={isSubmitting}
           disabled={submitDisabled}
@@ -199,8 +200,15 @@ export function FormWizardActions({
         </Button>
       ) : (
         <Button
+          key="next"
           type="button"
-          onClick={onNext}
+          onClick={(event) => {
+            // The same action slot becomes a submit button on the review step.
+            // Prevent the current click's default action before changing steps,
+            // otherwise some browsers may submit the form after the rerender.
+            event.preventDefault()
+            onNext()
+          }}
           disabled={nextDisabled}
           rightIcon={<ChevronRight className="h-4 w-4" />}
           className="w-full sm:w-auto"

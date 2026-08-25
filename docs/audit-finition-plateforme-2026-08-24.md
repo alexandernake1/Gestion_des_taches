@@ -86,7 +86,7 @@ Les cinq redirections relevées par l'outil correspondent exactement aux restric
 
 - Vérification TypeScript stricte (`tsc --noEmit`) : réussie.
 - Analyse statique ESLint : réussie.
-- Tests Vitest : 11 fichiers et 20 tests réussis.
+- Tests Vitest : 13 fichiers et 25 tests réussis.
 - Compilation de production Vite : réussie.
 - Contrôle visuel final : aucun débordement horizontal et aucune image cassée.
 - Contrôle de vocabulaire ciblé : aucun terme anglais résiduel détecté dans les pages auditées.

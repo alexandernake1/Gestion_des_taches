@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { subscriptionsService } from '@/services/subscriptions'
 import { authService } from '@/services/auth'
 import { requireOwner } from '@/router/auth'
+import { useTutorial } from '@/context/TutorialContext'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Check, ShieldAlert, Sparkles, Users, Layers, ReceiptText, XCircle, Clock3, ArrowLeft, FileText, ArrowRight } from 'lucide-react'
 import type { PaymentTransaction, SubscriptionQuote } from '@/domain/types'
@@ -53,6 +54,7 @@ function normalizedPlanFeatures(flags: Record<string, boolean>) {
 function SubscriptionPage() {
   const goBack = useSmartBack('/dashboard')
   const queryClient = useQueryClient()
+  const { openHelpDrawer } = useTutorial()
 
   const { data: currentUser, isLoading: isUserLoading } = useQuery({
     queryKey: ['current-user'],
@@ -217,9 +219,14 @@ function SubscriptionPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Retour
         </Button>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-950">Abonnement & Offres SaaS</h2>
-          <p className="mt-1 text-sm text-slate-500">{isPersonalWorkspace ? 'Gérez votre forfait personnel et les fonctionnalités de votre espace privé.' : 'Gérez le forfait de votre structure et suivez son utilisation.'}</p>
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-950">Abonnement & Offres SaaS</h2>
+            <p className="mt-1 text-sm text-slate-500">{isPersonalWorkspace ? 'Gérez votre forfait personnel et les fonctionnalités de votre espace privé.' : 'Gérez le forfait de votre structure et suivez son utilisation.'}</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => openHelpDrawer('billing-prorata')}>
+            Guide facturation & prorata
+          </Button>
         </div>
 
         {planChangeSuccess && (

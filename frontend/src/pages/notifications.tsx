@@ -13,6 +13,7 @@ import { requireCompanyMember } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Modal } from '@/components/ui/Modal'
 import { useSmartBack } from '@/utils/navigation'
+import { useTutorial } from '@/context/TutorialContext'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/notifications')({
@@ -24,6 +25,7 @@ function NotificationsPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const goBack = useSmartBack('/dashboard')
+  const { openHelpDrawer } = useTutorial()
   const [filter, setFilter] = useState<'all' | 'unread' | 'action'>('all')
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
 
@@ -119,12 +121,17 @@ function NotificationsPage() {
               <Badge variant="danger" className="shrink-0">{unreadCount.count} non lue{unreadCount.count > 1 ? 's' : ''}</Badge>
             )}
           </div>
-          {unreadCount && unreadCount.count > 0 && (
-            <Button className="w-full sm:w-auto" variant="secondary" onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending}>
-              <CheckCheck className="h-4 w-4 mr-2" />
-              Tout marquer comme lu
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => openHelpDrawer('notifications-alerts')}>
+              Guide des alertes
             </Button>
-          )}
+            {unreadCount && unreadCount.count > 0 && (
+              <Button className="w-full sm:w-auto" variant="secondary" onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending}>
+                <CheckCheck className="h-4 w-4 mr-2" />
+                Tout marquer comme lu
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="Filtrer les notifications">
