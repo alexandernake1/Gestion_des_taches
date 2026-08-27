@@ -4,9 +4,9 @@ export interface TutorialContextType {
   isTourOpen: boolean
   currentStep: number
   startTour: (initialStep?: number) => void
-  nextStep: () => void
+  nextStep: (maxSteps?: number) => void
   prevStep: () => void
-  goToStep: (step: number) => void
+  goToStep: (step: number, maxSteps?: number) => void
   closeTour: () => void
   completeTour: () => void
   isHelpDrawerOpen: boolean
@@ -43,8 +43,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     setIsTourOpen(true)
   }
 
-  const nextStep = () => {
-    if (currentStep < TOTAL_TOUR_STEPS - 1) {
+  const nextStep = (maxSteps = TOTAL_TOUR_STEPS) => {
+    if (currentStep < maxSteps - 1) {
       setCurrentStep((prev) => prev + 1)
     } else {
       completeTour()
@@ -57,8 +57,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const goToStep = (step: number) => {
-    if (step >= 0 && step < TOTAL_TOUR_STEPS) {
+  const goToStep = (step: number, maxSteps = TOTAL_TOUR_STEPS) => {
+    if (step >= 0 && step < maxSteps) {
       setCurrentStep(step)
     }
   }

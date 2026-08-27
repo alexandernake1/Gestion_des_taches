@@ -1,10 +1,5 @@
-import { useTutorial, TOTAL_TOUR_STEPS } from '@/context/TutorialContext'
+import { useTutorial } from '@/context/TutorialContext'
 import {
-  Sparkles,
-  BarChart3,
-  Play,
-  ShieldCheck,
-  BellRing,
   ArrowRight,
   ArrowLeft,
   X,
@@ -12,106 +7,45 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
-
-type TutorialRoute = '/dashboard' | '/tasks' | '/approvals' | '/settings'
-
-interface StepData {
-  icon: typeof Sparkles
-  badge: string
-  title: string
-  description: string
-  highlights: string[]
-  shortcutAction?: {
-    label: string
-    route: TutorialRoute
-  }
-}
-
-const TOUR_STEPS: StepData[] = [
-  {
-    icon: Sparkles,
-    badge: 'Étape 1 sur 5 • Bienvenue',
-    title: 'Bienvenue dans votre nouvel espace de travail',
-    description:
-      'Activity Control réunit les projets, tâches, validations et échanges de votre équipe dans une interface fluide et très lisible. Basculez en un clic entre votre espace personnel autonome et vos espaces de structure collaboratifs.',
-    highlights: [
-      'Bascule instantanée entre espace personnel et structure',
-      'Navigation latérale adaptée à tous les écrans',
-      'Rôles clairs : administrateur, manager et collaborateur',
-    ],
-  },
-  {
-    icon: BarChart3,
-    badge: 'Étape 2 sur 5 • Pilotage et indicateurs',
-    title: 'Un tableau de bord complet pour agir au bon moment',
-    description:
-      'Suivez en temps réel la progression des projets, vos priorités du jour, la répartition de la charge par collaborateur et les délais moyens d’exécution sans chercher dans plusieurs logiciels.',
-    highlights: [
-      'Indicateurs clés et taux de complétion',
-      'Charge de travail par collaborateur',
-      'Filtres par équipe, projet et période',
-    ],
-    shortcutAction: {
-      label: 'Voir le Tableau de bord',
-      route: '/dashboard',
-    },
-  },
-  {
-    icon: Play,
-    badge: 'Étape 3 sur 5 • Tâches et démarrage',
-    title: 'Créez et faites avancer vos tâches en un clic',
-    description:
-      'Organisez vos activités en vues Kanban ou Liste, découpez-les en sous-tâches et liez des dépendances. Dès réception d’un rappel, le bouton « Commencer la tâche » passe directement son statut en cours sans détour.',
-    highlights: [
-      'Bouton d’action directe « Commencer la tâche »',
-      'Gestion des dépendances et sous-tâches',
-      'Modèles de tâches réutilisables en 1 clic',
-    ],
-    shortcutAction: {
-      label: 'Explorer les Tâches',
-      route: '/tasks',
-    },
-  },
-  {
-    icon: ShieldCheck,
-    badge: 'Étape 4 sur 5 • Validations et reports',
-    title: 'Un circuit de validation hiérarchique sans friction',
-    description:
-      'Garantissez la qualité de chaque livrable avant clôture. Les managers approuvent ou refusent avec motif obligatoire, et les collaborateurs peuvent solliciter un report d’échéance motivé en toute transparence.',
-    highlights: [
-      'Validation de fin de tâche avec pièces jointes',
-      'Demandes de report d’échéance avec motif',
-      'Compteurs et badges mis à jour en temps réel',
-    ],
-    shortcutAction: {
-      label: 'Accéder aux Validations',
-      route: '/approvals',
-    },
-  },
-  {
-    icon: BellRing,
-    badge: 'Étape 5 sur 5 • Accompagnement',
-    title: 'Restez toujours synchronisé et soutenu',
-    description:
-      'Recevez des alertes en temps réel avec signal sonore discret. À tout moment, cliquez sur l’icône Aide dans la barre supérieure ou les paramètres pour relancer ce guide ou consulter les tutoriels rapides.',
-    highlights: [
-      'Alertes instantanées et carillon discret',
-      'Centre d’aide et guides accessibles partout',
-      'Assistance disponible dans vos paramètres',
-    ],
-    shortcutAction: {
-      label: 'Découvrir les Paramètres',
-      route: '/settings',
-    },
-  },
-]
+import { authService } from '@/services/auth'
+import { subscriptionsService } from '@/services/subscriptions'
+import { getAdaptiveTourSteps, type AdaptiveTourStep } from '@/components/tutorial/guideData'
 
 export function ProductTourModal() {
   const { isTourOpen, currentStep, nextStep, prevStep, closeTour, goToStep } = useTutorial()
   const navigate = useNavigate()
   const dialogRef = useRef<HTMLDivElement>(null)
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: authService.getCurrentUser,
+    enabled: isTourOpen,
+  })
+
+  const { data: subscription } = useQuery({
+    queryKey: ['mySubscription'],
+    queryFn: subscriptionsService.getMySubscription,
+    enabled: isTourOpen && !!currentUser?.company && !currentUser?.is_superuser,
+  })
+
+  const steps = useMemo<AdaptiveTourStep[]>(() => {
+    return getAdaptiveTourSteps({
+      isPersonalWorkspace: Boolean(currentUser?.is_personal_workspace),
+      role: currentUser?.role,
+      isSuperuser: currentUser?.is_superuser,
+      hasCompany: !!currentUser?.company,
+      featureFlags: subscription?.plan_details?.feature_flags,
+    })
+  }, [currentUser, subscription])
+
+  const totalSteps = steps.length
+  const safeStepIndex = Math.min(Math.max(0, currentStep), totalSteps - 1)
+  const step = steps[safeStepIndex] || steps[0]
+  const Icon = step.icon
+  const isLastStep = safeStepIndex === totalSteps - 1
 
   useEffect(() => {
     if (!isTourOpen) return undefined
@@ -153,13 +87,9 @@ export function ProductTourModal() {
     }
   }, [isTourOpen, closeTour])
 
-  if (!isTourOpen) return null
+  if (!isTourOpen || !step) return null
 
-  const step = TOUR_STEPS[currentStep] || TOUR_STEPS[0]
-  const Icon = step.icon
-  const isLastStep = currentStep === TOTAL_TOUR_STEPS - 1
-
-  const handleShortcut = (route: TutorialRoute) => {
+  const handleShortcut = (route: string) => {
     closeTour()
     navigate({ to: route })
   }
@@ -248,14 +178,14 @@ export function ProductTourModal() {
         <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4 border-t border-white/10 bg-slate-950/60 px-6 py-4">
           {/* Bullets indicator */}
           <div className="flex items-center gap-1.5 justify-center sm:justify-start">
-            {Array.from({ length: TOTAL_TOUR_STEPS }).map((_, index) => (
+            {Array.from({ length: totalSteps }).map((_, index) => (
               <button
                 key={index}
                 type="button"
-                onClick={() => goToStep(index)}
+                onClick={() => goToStep(index, totalSteps)}
                 aria-label={`Aller à l'étape ${index + 1}`}
                 className={`h-2 rounded-full transition-all ${
-                  currentStep === index
+                  safeStepIndex === index
                     ? 'w-6 bg-indigo-500 shadow-sm shadow-indigo-500/50'
                     : 'w-2 bg-slate-700 hover:bg-slate-600'
                 }`}
@@ -273,7 +203,7 @@ export function ProductTourModal() {
               Passer
             </button>
 
-            {currentStep > 0 && (
+            {safeStepIndex > 0 && (
               <Button
                 variant="secondary"
                 size="sm"
@@ -287,7 +217,7 @@ export function ProductTourModal() {
 
             <Button
               size="sm"
-              onClick={nextStep}
+              onClick={() => nextStep(totalSteps)}
               className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold shadow-md shadow-indigo-500/30 hover:brightness-110"
             >
               {isLastStep ? (
