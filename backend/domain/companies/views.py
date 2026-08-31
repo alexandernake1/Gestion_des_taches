@@ -109,8 +109,8 @@ class CompanyListCreateView(generics.ListCreateAPIView):
         )
 
 
-class CompanyDetailView(generics.RetrieveUpdateAPIView):
-    """Retrieve and update a company."""
+class CompanyDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, and delete a company."""
 
     permission_classes = [IsAuthenticated]
     lookup_field = 'id'
@@ -118,6 +118,8 @@ class CompanyDetailView(generics.RetrieveUpdateAPIView):
     def get_permissions(self):
         if self.request.user.is_superuser:
             permission_classes = [IsAuthenticated]
+        elif self.request.method == 'DELETE':
+            permission_classes = [IsAuthenticated, IsSuperUser]
         elif self.request.method in ['PUT', 'PATCH']:
             permission_classes = [IsAuthenticated, IsAdministrator, IsSameCompany]
         else:
@@ -157,6 +159,20 @@ class CompanyDetailView(generics.RetrieveUpdateAPIView):
                 details={'changes': changes},
             )
 
+    def perform_destroy(self, instance):
+        company_name = instance.name
+        company_id = instance.id
+        slug = instance.slug
+        log_platform_audit(
+            self.request,
+            category='company',
+            action='company_deleted',
+            entity_label=company_name,
+            company=None,
+            details={'company_id': company_id, 'name': company_name, 'slug': slug},
+        )
+        instance.delete()
+
     @extend_schema(description="Get company details", responses=CompanySerializer)
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -168,6 +184,10 @@ class CompanyDetailView(generics.RetrieveUpdateAPIView):
     @extend_schema(description="Partially update company details", request=CompanyUpdateSerializer, responses=CompanySerializer)
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
+
+    @extend_schema(description="Delete a company (super-admin only)", responses={204: None})
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
 
 
 @extend_schema(description="Get current user's company", responses=CompanySerializer)

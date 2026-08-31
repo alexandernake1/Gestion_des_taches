@@ -8,6 +8,16 @@ from django.core import mail
 from django.contrib.auth.tokens import default_token_generator
 from django.test import override_settings
 from django.utils.encoding import force_bytes
+from datetime import date, timedelta
+from io import BytesIO
+
+import openpyxl
+import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core import mail
+from django.contrib.auth.tokens import default_token_generator
+from django.test import override_settings
+from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -19,6 +29,7 @@ from domain.companies.models import (
     CompanySubscription,
     PaymentStatus,
     PaymentTransaction,
+    PlatformAuditLog,
     SubscriptionPlan,
     WorkspaceType,
 )
@@ -2601,3 +2612,52 @@ def test_report_request_notifies_reviewers_and_rejection_requires_reason(api_cli
         type=NotificationType.REPORT_REJECTED,
         task=task,
     ).exists()
+
+
+@pytest.mark.django_db
+def test_superadmin_can_delete_company(api_client, tenant_data):
+    superadmin = User.objects.create_superuser(
+        email='platform_admin@example.com',
+        password='StrongAdminPass123!',
+        first_name='Super',
+        last_name='Admin',
+    )
+    company = tenant_data['company_a']
+    company_id = company.id
+    company_name = company.name
+
+    api_client.force_authenticate(superadmin)
+    response = api_client.delete(f'/api/companies/{company_id}/')
+
+    assert response.status_code == 204
+    assert not Company.objects.filter(id=company_id).exists()
+    assert not User.objects.filter(company_id=company_id).exists()
+    assert not Team.objects.filter(company_id=company_id).exists()
+    assert not Project.objects.filter(company_id=company_id).exists()
+
+    audit_entry = PlatformAuditLog.objects.filter(
+        category='company',
+        action='company_deleted',
+        entity_label=company_name,
+    ).first()
+    assert audit_entry is not None
+    assert audit_entry.details['company_id'] == company_id
+
+
+@pytest.mark.django_db
+def test_regular_user_and_owner_cannot_delete_company(api_client, tenant_data):
+    company = tenant_data['company_a']
+    owner = tenant_data['owner_a']
+    employee = tenant_data['employee_a']
+
+    # Owner attempts deletion
+    api_client.force_authenticate(owner)
+    owner_resp = api_client.delete(f'/api/companies/{company.id}/')
+    assert owner_resp.status_code == 403
+    assert Company.objects.filter(id=company.id).exists()
+
+    # Employee attempts deletion
+    api_client.force_authenticate(employee)
+    emp_resp = api_client.delete(f'/api/companies/{company.id}/')
+    assert emp_resp.status_code == 403
+    assert Company.objects.filter(id=company.id).exists()

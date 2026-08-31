@@ -12,13 +12,23 @@ describe('Company Service', () => {
 
   describe('listCompanies', () => {
     it('should fetch companies', async () => {
-      const mockData = { results: [{ id: 1, name: 'Company A' }] };
+      const mockData = [{ id: 1, name: 'Company A' }];
       vi.mocked(api.getList).mockResolvedValueOnce(mockData as any);
 
       const result = await companiesService.listCompanies();
 
       expect(api.getList).toHaveBeenCalledWith('/companies/');
       expect(result).toEqual(mockData);
+    });
+  });
+
+  describe('deleteCompany', () => {
+    it('should call api.delete with company id', async () => {
+      vi.mocked(api.delete).mockResolvedValueOnce(undefined as any);
+
+      await companiesService.deleteCompany(42);
+
+      expect(api.delete).toHaveBeenCalledWith('/companies/42/');
     });
   });
 });

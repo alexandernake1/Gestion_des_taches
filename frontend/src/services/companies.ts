@@ -26,6 +26,10 @@ export const companiesService = {
     return api.patch<Company>(`/companies/${id}/`, data);
   },
 
+  async deleteCompany(id: string | number): Promise<void> {
+    return api.delete(`/companies/${id}/`);
+  },
+
   async getPlatformAuditLog(params?: { category?: string; company?: string | number }): Promise<PlatformAuditLog[]> {
     return api.getList<PlatformAuditLog>('/companies/admin/audit-log/', { params });
   },

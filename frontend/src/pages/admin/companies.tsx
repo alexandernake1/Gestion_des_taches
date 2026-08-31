@@ -10,7 +10,7 @@ import { useConfirmation } from '@/components/ui/confirmation'
 import { companiesService } from '@/services/companies'
 import { requirePlatformAdmin } from '@/router/auth'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Plus, Globe, Calendar, Power, ArrowLeft } from 'lucide-react'
+import { Plus, Globe, Calendar, Power, ArrowLeft, Trash2 } from 'lucide-react'
 import { useSmartBack } from '@/utils/navigation'
 
 export const Route = createFileRoute('/admin/companies')({
@@ -63,6 +63,13 @@ function AdminCompaniesPage() {
     },
   })
 
+  const deleteCompanyMutation = useMutation({
+    mutationFn: (id: string | number) => companiesService.deleteCompany(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
+    },
+  })
+
   const handleNameChange = (name: string) => {
     setFormData((current) => ({ ...current, name }))
   }
@@ -95,6 +102,25 @@ function AdminCompaniesPage() {
         id: company.id,
         is_active: !company.is_active,
       })
+    }
+  }
+
+  const handleDeleteCompany = async (company: NonNullable<typeof companies>[number]) => {
+    const { confirmed } = await confirmAction({
+      title: `Supprimer définitivement « ${company.name} » ?`,
+      description:
+        'Cette action est irréversible. Toutes les données associées à cette structure seront définitivement supprimées.',
+      confirmLabel: 'Supprimer définitivement la structure',
+      tone: 'danger',
+      impacts: [
+        'Suppression irréversible de tous les comptes utilisateurs et profils associés.',
+        'Suppression de l’ensemble des projets, équipes, tâches et historiques.',
+        'Annulation et purge des abonnements et données financières.',
+      ],
+      requireText: 'SUPPRIMER',
+    })
+    if (confirmed) {
+      deleteCompanyMutation.mutate(company.id)
     }
   }
 
@@ -186,13 +212,23 @@ function AdminCompaniesPage() {
                   )}
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex items-center gap-1.5 text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                    onClick={() => handleDeleteCompany(company)}
+                    disabled={deleteCompanyMutation.isPending || toggleCompanyStatusMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Supprimer</span>
+                  </Button>
                   <Button
                     variant={company.is_active ? 'ghost' : 'secondary'}
                     size="sm"
                     className="flex items-center gap-1.5 text-xs"
                     onClick={() => handleToggleCompanyStatus(company)}
-                    disabled={toggleCompanyStatusMutation.isPending}
+                    disabled={toggleCompanyStatusMutation.isPending || deleteCompanyMutation.isPending}
                   >
                     <Power className="h-3.5 w-3.5" />
                     <span>{company.is_active ? 'Désactiver' : 'Réactiver'}</span>
