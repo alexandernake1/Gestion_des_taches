@@ -1,8 +1,8 @@
 # Audit complet de finition et de préparation à la production
 
-Audit initial du 24 août 2026, repris et étendu les **15 et 17 septembre 2026**.
+Audit initial du 24 août 2026, repris et étendu les **15, 17 et 18 septembre 2026**.
 
-Branche examinée : `stabilisation/preproduction`.
+Branche examinée : `design/taskina-identite-visuelle`, qui contient l’instantané préproduction validé puis la refonte Taskina.
 
 Périmètre : application React/Vite, API Django/DRF, authentification, isolation des structures, abonnements, fichiers, dépendances, CI, Docker, domaine/HTTPS, exploitation, sauvegardes, conformité et dette technique.
 
@@ -10,8 +10,8 @@ Périmètre : application React/Vite, API Django/DRF, authentification, isolati
 
 ### Décision actuelle
 
-- **Préproduction privée : GO conditionnel**, après construction réelle des images sur une machine dont Docker fonctionne.
-- **Ouverture publique gratuite : NO-GO à cet instant**, jusqu’au rétablissement du VPS et à la validation du HTTPS, du SMTP, des clés Turnstile, des mentions juridiques définitives et d’une restauration de sauvegarde démontrée.
+- **Préproduction privée : GO conditionnel**, après sauvegarde puis déploiement de la nouvelle pile sur le VPS.
+- **Ouverture publique gratuite : NO-GO à cet instant**, jusqu’à la validation du HTTPS, du SMTP, des clés Turnstile, des mentions juridiques définitives et d’une restauration de sauvegarde démontrée.
 - **Ouverture commerciale avec offres payantes : NO-GO**, car aucun prestataire de paiement réel n’est intégré.
 
 Le code est sensiblement plus sûr qu’au début de l’audit. Les défauts qui permettaient d’obtenir un forfait payant sans règlement sont corrigés et couverts par des tests. Tant que le paiement reste désactivé, le catalogue public ne montre que les forfaits gratuits.
@@ -20,19 +20,19 @@ Le code est sensiblement plus sûr qu’au début de l’audit. Les défauts qui
 
 | Domaine | État | Conclusion |
 |---|---:|---|
-| Tests backend | Vert | 143 tests réussis, avertissements traités comme erreurs, couverture globale 79 %. |
+| Tests backend | Vert | 145 tests réussis, avertissements traités comme erreurs, couverture globale 79 %. |
 | Tests frontend | Vert | 14 fichiers et 37 tests réussis. |
 | Lint et typage | Vert | ESLint sans avertissement et TypeScript sans erreur. |
 | Build frontend | Vert avec réserve | Build réussi ; fragment principal de 550,83 kB minifié, à découper après stabilisation. |
 | Dépendances | Vert | `pip-audit`, `npm audit` complet et audit npm production : 0 vulnérabilité connue. |
 | Django | Vert | `check`, `check --deploy`, migrations et schéma OpenAPI valides. |
 | Compose | Vert statique | Configurations standard et `development` valides. |
-| Images/conteneurs | Images validées, runtime VPS non vérifié | Les images backend et frontend sont construites avec succès ; le backend utilise l’utilisateur `app`. La configuration Caddy est valide. La nouvelle pile n’a pas été substituée aux conteneurs locaux existants et le VPS reste inaccessible. |
-| Domaine et TLS | DNS validé, TLS bloqué | `taskina.net` et `www.taskina.net` résolvent publiquement vers `152.228.233.72`. Le VPS ne répond toutefois pas sur 22/80/443 ; aucun certificat ni service web ne peut encore être validé. |
+| Images/conteneurs | Images validées, VPS à mettre à niveau | Les images backend et frontend sont construites avec succès ; le backend utilise l’utilisateur `app`. Le VPS exécute encore l’ancienne pile HTTP sans Caddy. |
+| Domaine et TLS | Réseau prêt, certificat en attente | `taskina.net` et `www.taskina.net` résolvent vers `152.228.233.72`. SSH fonctionne et UFW autorise TCP 22/80/443 ainsi qu’UDP 443. Le certificat sera demandé lors du déploiement de Caddy. |
 | Email et anti-robot | Bloquant | SMTP externe et paire Turnstile absents de la configuration locale auditée. |
 | Paiement | Bloquant pour le payant | Aucun fournisseur réel ; simulateur strictement réservé au développement. |
 | Juridique et confidentialité | Bloquant | Identité légale, adresse, immatriculation, droit applicable, prestataires et durées précises restent à compléter. |
-| Sauvegarde/reprise | Procédure prête, preuve absente | Scripts et planification présents ; aucune preuve de copie hors site ni d’exercice de restauration du futur serveur. |
+| Sauvegarde/reprise | Procédure corrigée, preuve absente | PostgreSQL et médias sont couverts. Le service planifié utilise désormais un compte ayant accès à Docker ; aucune preuve de copie hors site ni d’exercice de restauration n’existe encore. |
 
 ## 2. Méthode et preuves
 
@@ -42,7 +42,7 @@ Contrôles exécutés :
 
 ```text
 Backend
-- pytest avec Django 5.2 et -W error                    143 réussis
+- pytest avec Django 5.2 et -W error                    145 réussis
 - pytest-cov                                            79 % global
 - django check                                          aucune anomalie
 - django check --deploy --tag security                  aucune anomalie
@@ -243,7 +243,7 @@ Réserves :
 
 ### B0 — bloquants avant ouverture publique
 
-1. **VPS et HTTPS encore inaccessibles.** Le domaine est acquis et `taskina.net` comme `www.taskina.net` résolvent publiquement vers `152.228.233.72`, mais le VPS ne répond actuellement ni sur 80, ni sur 443, ni sur SSH 22. Certificat, redirection HTTPS et cookies Secure ne sont donc pas encore éprouvés depuis Internet.
+1. **HTTPS pas encore émis.** Le VPS est accessible en SSH et son pare-feu est prêt, mais l’ancien frontend occupe encore directement le port 80. La nouvelle pile Caddy doit être déployée avant de vérifier certificat, redirection HTTPS et cookies Secure depuis Internet.
 2. **Identité légale incomplète.** Raison sociale, forme, siège, immatriculation, directeur de publication, hébergeur, droit applicable et juridiction manquent.
 3. **Politique de confidentialité provisoire.** Liste/localisation des sous-traitants, transferts, autorité compétente et durées chiffrées restent à valider.
 4. **Adresse support non confirmée.** L’interface utilise désormais `support@taskina.net`, mais la boîte doit encore être créée et sa réception vérifiée.
@@ -315,16 +315,18 @@ Cette configuration **ne doit pas être copiée en production**. Le nouveau `.en
 Commandes de contrôle :
 
 ```bash
-docker compose config --quiet
-docker compose up -d --build
-docker compose ps
-docker compose exec backend python manage.py check --deploy --tag security --fail-level WARNING
-docker compose exec backend python manage.py check_preproduction
-docker compose exec backend python manage.py check_preproduction --require-external-services
-docker compose logs --tail=200 gateway backend celery_worker celery_beat
+sudo docker compose config --quiet
+sudo ./ops/backup-all.sh /var/backups/taskina
+sudo docker compose build
+sudo docker compose up -d --remove-orphans
+sudo docker compose ps
+sudo docker compose exec -T backend python manage.py check --deploy --tag security
+sudo docker compose exec -T backend python manage.py check_preproduction
+sudo docker compose exec -T backend python manage.py check_preproduction --require-external-services
+sudo docker compose logs --tail=200 gateway backend celery_worker celery_beat
 ```
 
-Le dernier contrôle restera volontairement en échec tant qu’aucun paiement réel n’est intégré. Pour un lancement gratuit assumé, documenter cette exception et confirmer que `PAYMENT_PROVIDER=disabled`, `ALLOW_TEST_PAYMENT_SIMULATOR=False` et le catalogue sans offre payante sont tous vérifiés.
+Le dernier contrôle exige SMTP et Turnstile. Google OAuth reste facultatif. Pour le lancement gratuit prévu, confirmer que `PAYMENT_PROVIDER=disabled`, `ALLOW_TEST_PAYMENT_SIMULATOR=False` et que le catalogue public ne contient aucune offre payante activable.
 
 ## 9. Critères de GO final
 
@@ -337,7 +339,7 @@ Le GO public ne doit être donné que si toutes les cases suivantes sont vérifi
 - [ ] SMTP réel reçu sur plusieurs fournisseurs de messagerie ;
 - [ ] Turnstile réel validé et comportement de panne testé ;
 - [ ] images Docker construites et tous les services démarrés sans privilège inutile ;
-- [ ] 143 tests backend, 37 tests frontend, lint, typage, build et audits toujours verts ;
+- [x] 145 tests backend, 37 tests frontend, lint, typage, build et audits toujours verts ;
 - [ ] sauvegarde hors site et restauration réussie ;
 - [ ] supervision et alertes actives ;
 - [ ] recette propriétaire, manager, collaborateur et super-administrateur signée ;
@@ -345,4 +347,4 @@ Le GO public ne doit être donné que si toutes les cases suivantes sont vérifi
 
 ## 10. Limites de cet audit
 
-Il s’agit d’une revue de code, de configuration et de tests locaux, pas d’un pentest certifié ni d’un avis juridique. Aucun accès au VPS, au registrar, aux consoles SMTP/Cloudflare/Google, au futur stockage ou aux données de production n’a été fourni. Les résultats d’audit de dépendances reflètent les bases publiques disponibles le 15 septembre 2026 et doivent être réexécutés juste avant chaque déploiement.
+Il s’agit d’une revue de code, de configuration et de tests locaux, pas d’un pentest certifié ni d’un avis juridique. Un accès SSH opérateur au VPS a permis de confirmer l’état du pare-feu et des conteneurs, sans accès au compte OVH, au registrar ni aux consoles SMTP/Cloudflare/Google. Les résultats d’audit de dépendances doivent être réexécutés juste avant chaque déploiement.

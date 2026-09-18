@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowRight, CheckCircle2, UserRound } from 'lucide-react'
+import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 import { CaptchaWidget } from '@/components/auth/CaptchaWidget'
@@ -10,6 +10,7 @@ import { redirectAuthenticatedUser } from '@/router/auth'
 import { authService } from '@/services/auth'
 import type { RegisterRequest } from '@/domain/types'
 import { ApiError } from '@/utils/api'
+import { TaskinaWordmark } from '@/components/brand/TaskinaBrand'
 
 export const Route = createFileRoute('/register')({
   beforeLoad: redirectAuthenticatedUser,
@@ -100,19 +101,17 @@ function RegisterPage() {
     <main className="app-surface min-h-screen px-4 py-8 sm:py-12">
       <div className="mx-auto w-full max-w-4xl">
         <header className="mb-8 flex items-center justify-between">
-          <a href="/login" className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20"><UserRound className="h-5 w-5 text-white" /></span>
-            <span><strong className="block text-slate-950">Taskina</strong><span className="text-xs text-slate-500">Votre espace personnel</span></span>
-          </a>
-          <a href="/login" className="rounded-xl border border-indigo-200 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50">Se connecter</a>
+          <a href="/login"><TaskinaWordmark /></a>
+          <a href="/login" className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-extrabold text-primary hover:border-primary/40 hover:bg-primary/5">Se connecter</a>
         </header>
 
-        <div className="grid overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5 lg:grid-cols-[300px_1fr]">
-          <aside className="bg-gradient-to-b from-slate-950 to-indigo-950 p-7 text-white sm:p-9">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-300">Compte gratuit</p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight">Commencez par votre espace.</h1>
-            <p className="mt-4 text-sm leading-6 text-indigo-100">La création d'une structure est facultative. Vous pourrez choisir un forfait et configurer votre organisation ensuite.</p>
-            <div className="mt-8 space-y-4 text-sm text-indigo-50">
+        <div className="grid overflow-hidden rounded-lg border border-border bg-card shadow-float lg:grid-cols-[300px_1fr]">
+          <aside className="bg-[hsl(var(--sidebar-bg))] p-7 text-white sm:p-9">
+            <span className="mb-8 block h-2 w-10 bg-accent" />
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[hsl(var(--accent))]">Compte gratuit</p>
+            <h1 className="mt-3 text-3xl font-extrabold tracking-tight">Commencez par votre espace.</h1>
+            <p className="mt-4 text-sm leading-6 text-[hsl(var(--sidebar-text))]">La création d'une structure est facultative. Vous pourrez choisir un forfait et configurer votre organisation ensuite.</p>
+            <div className="mt-8 space-y-4 text-sm text-white/90">
               {['Compte créé immédiatement', 'Structure facultative', 'Forfait choisi dans un second temps'].map((label) => (
                 <div key={label} className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-emerald-400" />{label}</div>
               ))}
@@ -120,8 +119,8 @@ function RegisterPage() {
           </aside>
 
           <form onSubmit={submit} className="p-6 sm:p-10">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">Créer mon compte gratuitement</h2>
-            <p className="mt-2 text-sm text-slate-500">Aucune information de structure n'est demandée à cette étape.</p>
+            <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Créer mon compte gratuitement</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Aucune information de structure n'est demandée à cette étape.</p>
             {error && <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
             <div className="mt-7 grid gap-5 sm:grid-cols-2">
@@ -133,8 +132,8 @@ function RegisterPage() {
               <Field name="password_confirm" label="Confirmation" type="password" required value={form.password_confirm} error={fieldErrors.password_confirm?.[0]} onChange={(value) => update('password_confirm', value)} />
             </div>
 
-            <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 text-sm text-slate-600 hover:bg-slate-50">
-              <input type="checkbox" checked={form.accept_terms} onChange={(event) => update('accept_terms', event.target.checked)} className="mt-0.5 h-4 w-4 accent-indigo-600" />
+            <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 text-sm text-muted-foreground hover:bg-muted/40">
+              <input type="checkbox" checked={form.accept_terms} onChange={(event) => update('accept_terms', event.target.checked)} className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]" />
               <span>
                 J'accepte les{' '}
                 <a href="/terms" target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} className="font-bold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900">
@@ -148,7 +147,7 @@ function RegisterPage() {
             </label>
             <div className="mt-5"><CaptchaWidget onToken={setCaptchaToken} action="register" resetKey={captchaResetKey} /></div>
 
-            <button type="submit" disabled={loading || !form.accept_terms || (isCaptchaEnabled && !captchaToken)} className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
+            <button type="submit" disabled={loading || !form.accept_terms || (isCaptchaEnabled && !captchaToken)} className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-extrabold text-primary-foreground shadow-cta hover:bg-[hsl(var(--primary-dark))] disabled:opacity-50">
               {loading ? 'Création en cours…' : <>Créer mon compte <ArrowRight className="h-4 w-4" /></>}
             </button>
 
@@ -162,9 +161,9 @@ function RegisterPage() {
 }
 
 function Field({ name, label, type = 'text', value, required, error, onChange }: { name: string; label: string; type?: string; value: string; required?: boolean; error?: string; onChange: (value: string) => void }) {
-  const inputClassName = `mt-1.5 h-11 w-full rounded-xl border px-3 text-sm font-normal focus:ring-1 ${error ? 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-indigo-500'}`
+  const inputClassName = `mt-1.5 h-11 w-full rounded-lg border bg-background px-3 text-sm font-normal focus:ring-2 focus:ring-primary/15 ${error ? 'border-rose-400 focus:border-rose-500' : 'border-border focus:border-primary'}`
   return (
-    <label htmlFor={name} className="block text-sm font-semibold text-slate-700">{label} {required && <span className="text-rose-500">*</span>}
+    <label htmlFor={name} className="block text-sm font-semibold text-foreground">{label} {required && <span className="text-rose-500">*</span>}
       {type === 'password' ? (
         <PasswordInput id={name} name={name} required={required} value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={error ? true : undefined} autoComplete="new-password" className={inputClassName} />
       ) : (

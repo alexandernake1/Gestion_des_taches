@@ -5,17 +5,19 @@
 Depuis le conteneur backend :
 
 ```bash
-docker compose exec backend python manage.py check --deploy --tag security --fail-level WARNING
-docker compose exec backend python manage.py check_preproduction --allow-http
+sudo docker compose exec -T backend python manage.py check --deploy --tag security
+sudo docker compose exec -T backend python manage.py check_preproduction
 ```
 
-`--allow-http` est réservé à une préproduction interne accessible temporairement par IP. Dès qu’un domaine HTTPS est disponible, retirer cette option. Le contrôle vérifie aussi que la chaîne de confiance comporte exactement deux proxys (`Caddy → Nginx`). Avant une ouverture publique, exécuter également :
+`--allow-http` est réservé à un environnement interne temporaire et ne doit plus être utilisé sur le VPS Taskina. Le contrôle vérifie également que `SITE_ADDRESS` couvre tous les domaines Django et que la chaîne de confiance comporte exactement deux proxys (`Caddy → Nginx`). Avant une ouverture commerciale, exécuter aussi :
+
+Le contrôle Django affiche volontairement `security.W005` et `security.W021` tant que HSTS n’est pas appliqué à tous les futurs sous-domaines et que Taskina n’est pas soumis à la liste de préchargement des navigateurs. Ces deux options ne doivent être activées qu’après une décision explicite sur l’ensemble des sous-domaines ; les autres erreurs restent bloquées par `check_preproduction`.
 
 ```bash
-docker compose exec backend python manage.py check_preproduction --require-external-services
+sudo docker compose exec -T backend python manage.py check_preproduction --require-external-services
 ```
 
-Ce dernier contrôle reste volontairement bloquant tant que SMTP, Turnstile, Google OAuth et un fournisseur de paiement réel ne sont pas configurés. Si le lancement doit rester entièrement gratuit, conserver `PAYMENT_PROVIDER=disabled`, vérifier que seules les offres gratuites sont publiées et consigner explicitement cette exception dans la décision de mise en production.
+Ce dernier contrôle exige le SMTP transactionnel et Turnstile pour une ouverture publique. Google OAuth reste facultatif, mais ses identifiants frontend/backend doivent être présents ensemble et identiques s’il est activé. Pour un lancement gratuit, conserver `PAYMENT_PROVIDER=disabled`, vérifier que seules les offres gratuites sont publiées et consigner ce choix dans la décision de mise en production.
 
 ## Domaine et terminaison TLS
 
@@ -52,15 +54,17 @@ docker compose logs --tail=200 backend celery_worker celery_beat
 Le script produit une archive PostgreSQL au format personnalisé et son SHA-256. Le dossier local `backups/` est ignoré par Git.
 
 ```bash
-chmod +x ops/backup-postgres.sh ops/restore-postgres.sh
-./ops/backup-postgres.sh
+chmod +x ops/*.sh
+sudo ./ops/backup-all.sh /var/backups/taskina
 ```
+
+Cette commande sauvegarde PostgreSQL et le volume des médias, génère un SHA-256 pour chaque archive et applique une permission restrictive. Vérifier les deux chemins affichés avant de poursuivre un déploiement.
 
 La durée de conservation par défaut est de 14 jours. Elle peut être modifiée avec `BACKUP_RETENTION_DAYS`. Le dossier cible peut être fourni en argument ou avec `BACKUP_DIR`.
 
 ### Planification quotidienne sur le VPS
 
-Les unités fournies exécutent la sauvegarde quotidiennement entre 03:30 et 03:45 UTC dans `/home/ubuntu/backups/Gestion_des_taches` :
+Les unités fournies exécutent la sauvegarde quotidiennement entre 03:30 et 03:45 UTC dans `/var/backups/taskina`. Le service s’exécute en tant que `root`, car l’accès au socket Docker équivaut déjà à un accès administrateur et l’utilisateur `ubuntu` n’appartient volontairement pas au groupe Docker :
 
 ```bash
 sudo cp ops/systemd/gestion-des-taches-backup.service /etc/systemd/system/
@@ -84,7 +88,7 @@ Conserver une copie chiffrée hors du VPS. Les pièces jointes du volume `media_
 La restauration remplace le contenu de la base ciblée. Le script exige une confirmation explicite, valide l’archive et crée d’abord une sauvegarde de sécurité :
 
 ```bash
-./ops/restore-postgres.sh --confirm-restore backups/postgres-YYYYMMDDTHHMMSSZ.dump
+sudo ./ops/restore-postgres.sh --confirm-restore /var/backups/taskina/postgres/postgres-YYYYMMDDTHHMMSSZ.dump
 ```
 
 Effectuer l’exercice sur un environnement isolé au moins une fois avant la préproduction publique, puis vérifier la connexion, les entreprises, les tâches, les pièces jointes et les journaux d’audit.

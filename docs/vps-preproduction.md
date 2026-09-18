@@ -4,7 +4,7 @@ Cette procédure décrit l’ancien accès de test par IP et le passage actuel �
 
 ## Configuration actuelle du domaine
 
-Les serveurs DNS officiels d’OVH et la résolution publique annoncent désormais `taskina.net` et `www.taskina.net` vers `152.228.233.72`. Le VPS doit encore être rétabli : les ports 22, 80 et 443 ne répondent pas lors du contrôle du 17 septembre 2026.
+Les serveurs DNS officiels d’OVH et la résolution publique annoncent `taskina.net` et `www.taskina.net` vers `152.228.233.72`. Le 18 septembre 2026, l’accès SSH au VPS a été confirmé et UFW a été configuré pour autoriser TCP 22/80/443 et UDP 443. L’ancien déploiement publie encore directement Nginx sur le port 80 ; aucun processus n’écoute sur 443 tant que la nouvelle pile avec Caddy n’a pas été livrée.
 
 ```dotenv
 SITE_ADDRESS=taskina.net, www.taskina.net
@@ -20,15 +20,15 @@ Caddy doit recevoir les ports TCP 80/443 et UDP 443. Il obtient les certificats 
 
 ## Configuration
 
-1. Copier `.env.example` vers `.env` sur le serveur. Pour un diagnostic temporaire par IP uniquement, définir `SITE_ADDRESS=http://:80`.
+1. Sauvegarder le `.env` existant, puis le comparer à `.env.example` sans jamais l’ajouter au dépôt.
 2. Générer une clé Django longue et unique pour `SECRET_KEY`.
-3. Remplacer l'IP d'exemple dans `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` et `APP_FRONTEND_URL` par l'IP publique réelle du VPS.
-4. Renseigner la même origine dans `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` et `APP_FRONTEND_URL`.
+3. Utiliser `taskina.net,www.taskina.net` dans `ALLOWED_HOSTS` et les deux adresses dans `SITE_ADDRESS`.
+4. Utiliser l’origine canonique `https://taskina.net` dans `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` et `APP_FRONTEND_URL`.
 5. Pour activer la connexion Google, renseigner le même client OAuth Web dans `GOOGLE_OAUTH_CLIENT_ID` et `VITE_GOOGLE_CLIENT_ID`.
 6. Pour rendre la protection anti-robot obligatoire, renseigner la paire Cloudflare Turnstile dans `TURNSTILE_SECRET_KEY` et `VITE_TURNSTILE_SITE_KEY`.
 
 Les domaines de préproduction et de production doivent être autorisés dans les consoles Google et Cloudflare avant le déploiement. Sans ces clés, l'authentification email reste disponible et les intégrations externes restent masquées.
-7. Conserver temporairement `JWT_COOKIE_SECURE=False` et `SECURE_SSL_REDIRECT=False` tant que le site est servi en HTTP par IP.
+7. Conserver `JWT_COOKIE_SECURE=True` et `SECURE_SSL_REDIRECT=True` pour le déploiement par domaine.
 8. Laisser `WEBSOCKET_ALLOW_QUERY_TOKEN=False` et `USE_IN_MEMORY_CHANNEL_LAYER=False`.
 9. Laisser `PAYMENT_PROVIDER=disabled` tant qu’un prestataire réel n’est pas intégré.
 10. Choisir un mot de passe PostgreSQL long et unique pour `DB_PASSWORD` ainsi que pour le service PostgreSQL du fichier Compose.
@@ -37,12 +37,20 @@ Ne jamais ajouter le fichier `.env` au dépôt.
 
 ## Démarrage
 
+Depuis `/home/ubuntu/Gestion_des_taches`, après mise à jour du code et du `.env` :
+
 ```bash
-docker compose --profile development up -d --build
-docker compose ps
-docker compose exec backend python manage.py check_preproduction --allow-http
-docker compose logs -f backend celery_worker celery_beat
+sudo docker compose config --quiet
+sudo ./ops/backup-all.sh /var/backups/taskina
+sudo docker compose build
+sudo docker compose run --rm --no-deps --user root --entrypoint chown backend -R 10001:10001 /app/staticfiles /app/media
+sudo docker compose up -d --remove-orphans
+sudo docker compose ps
+sudo docker compose exec -T backend python manage.py check --deploy --tag security
+sudo docker compose exec -T backend python manage.py check_preproduction
 ```
+
+Ne pas utiliser le profil `development` sur le VPS : il démarrerait Mailpit. Ne pas exécuter `docker compose down -v`, qui supprimerait les volumes de données.
 
 Le conteneur backend applique les migrations et collecte les fichiers statiques avant de démarrer. Seule la passerelle Caddy publie les ports web ; Mailpit est lié à `127.0.0.1` par le profil `development`, et PostgreSQL, Redis, Nginx ainsi que Django restent sur le réseau Docker interne.
 
@@ -51,7 +59,7 @@ Le conteneur backend applique les migrations et collecte les fichiers statiques 
 Créer les comptes réels de test depuis le super-admin, ou générer un jeu de démonstration uniquement sur ce VPS de préproduction :
 
 ```bash
-docker compose exec backend python manage.py seed_demo --password "un-mot-de-passe-de-test-long"
+sudo docker compose exec backend python manage.py seed_demo --password "un-mot-de-passe-de-test-long"
 ```
 
 Le mot de passe est obligatoire afin d'éviter tout compte de démonstration avec un identifiant connu. Modifier ou supprimer les comptes de démonstration avant tout lancement public.
@@ -69,7 +77,7 @@ Le mot de passe est obligatoire afin d'éviter tout compte de démonstration ave
 
 ## Pare-feu
 
-N'autoriser que SSH et HTTP pendant cette phase. Ne pas exposer les ports 5432, 6379 ni 8000. Lors de l'ajout du domaine, faire pointer le DNS vers le VPS, ouvrir TCP 443 et UDP 443, renseigner le domaine dans `SITE_ADDRESS`, puis passer les origines en HTTPS avec `JWT_COOKIE_SECURE=True` et `SECURE_SSL_REDIRECT=True`. Caddy demandera ensuite le certificat automatiquement.
+UFW autorise uniquement SSH et les entrées web publiques : TCP 22/80/443 et UDP 443. Ne jamais exposer les ports 5432, 6379, 8000, 8025 ou 1025. Caddy demandera le certificat automatiquement dès que la nouvelle pile sera démarrée avec les valeurs HTTPS ci-dessus.
 
 ## Sauvegarde et reprise
 

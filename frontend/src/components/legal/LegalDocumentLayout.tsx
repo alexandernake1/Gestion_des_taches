@@ -1,5 +1,6 @@
-import { ArrowLeft, Building2, CalendarDays, Mail } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Mail } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { TaskinaWordmark } from '@/components/brand/TaskinaBrand'
 
 export const LEGAL_VERSION = '13 août 2026'
 
@@ -14,14 +15,9 @@ interface LegalDocumentLayoutProps {
 export function LegalDocumentLayout({ title, description, current, toc, children }: LegalDocumentLayoutProps) {
   return (
     <main className="app-surface min-h-screen text-slate-800">
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
+      <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-          <a href="/login" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
-              <Building2 className="h-5 w-5 text-white" />
-            </span>
-            <span><strong className="block text-sm text-slate-950">Taskina</strong><span className="text-xs text-slate-500">Informations juridiques</span></span>
-          </a>
+          <a href="/login"><TaskinaWordmark /></a>
           <nav aria-label="Documents juridiques" className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 text-xs font-bold sm:text-sm">
             <a href="/privacy" aria-current={current === 'privacy' ? 'page' : undefined} className={`rounded-lg px-3 py-2 ${current === 'privacy' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>Confidentialité</a>
             <a href="/terms" aria-current={current === 'terms' ? 'page' : undefined} className={`rounded-lg px-3 py-2 ${current === 'terms' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>Conditions</a>
@@ -45,7 +41,7 @@ export function LegalDocumentLayout({ title, description, current, toc, children
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 lg:sticky lg:top-6">
+          <aside className="h-fit rounded-lg border border-border bg-card p-5 lg:sticky lg:top-6">
             <p className="text-xs font-black uppercase tracking-wider text-slate-500">Sommaire</p>
             <ol className="mt-4 space-y-2.5 text-sm">
               {toc.map((item, index) => (
@@ -54,7 +50,7 @@ export function LegalDocumentLayout({ title, description, current, toc, children
             </ol>
           </aside>
 
-          <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 sm:p-9">
+          <article className="rounded-lg border border-border bg-card p-6 shadow-card sm:p-9">
             <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
               <strong>Préproduction :</strong> le nom légal, l’adresse et l’identifiant d’immatriculation de l’entité exploitante devront être complétés avant l’ouverture commerciale du service.
             </div>

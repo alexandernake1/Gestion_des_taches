@@ -109,6 +109,7 @@ def test_celery_discovers_scheduled_tasks():
     WEBSOCKET_ALLOW_QUERY_TOKEN=False,
     PAYMENT_PROVIDER='disabled',
     ALLOW_TEST_PAYMENT_SIMULATOR=False,
+    REST_FRAMEWORK={**django_settings.REST_FRAMEWORK, 'NUM_PROXIES': 2},
 )
 @patch.object(
     django_settings,
@@ -123,7 +124,8 @@ def test_celery_discovers_scheduled_tasks():
 def test_preproduction_configuration_check_accepts_secure_core_settings():
     output = StringIO()
 
-    call_command('check_preproduction', stdout=output)
+    with patch.dict('os.environ', {'SITE_ADDRESS': 'preprod.taskina.net'}):
+        call_command('check_preproduction', stdout=output)
 
     assert 'Configuration de préproduction cohérente' in output.getvalue()
 
@@ -132,3 +134,81 @@ def test_preproduction_configuration_check_accepts_secure_core_settings():
 def test_preproduction_configuration_check_rejects_debug():
     with pytest.raises(CommandError):
         call_command('check_preproduction', stderr=StringIO())
+
+
+@override_settings(
+    DEBUG=False,
+    SECRET_KEY='a-secure-preproduction-key-with-more-than-fifty-characters-123456',
+    ALLOWED_HOSTS=['taskina.net', 'www.taskina.net'],
+    APP_FRONTEND_URL='https://taskina.net',
+    CORS_ALLOWED_ORIGINS=['https://taskina.net'],
+    CSRF_TRUSTED_ORIGINS=['https://taskina.net'],
+    JWT_COOKIE_SECURE=True,
+    SESSION_COOKIE_SECURE=True,
+    CSRF_COOKIE_SECURE=True,
+    SECURE_SSL_REDIRECT=True,
+    WEBSOCKET_ALLOW_QUERY_TOKEN=False,
+    PAYMENT_PROVIDER='disabled',
+    ALLOW_TEST_PAYMENT_SIMULATOR=False,
+)
+@patch.object(
+    django_settings,
+    'DATABASES',
+    {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'PASSWORD': 'a-strong-database-password-for-tests',
+        },
+    },
+)
+def test_preproduction_configuration_check_rejects_incomplete_caddy_domains():
+    with patch.dict('os.environ', {'SITE_ADDRESS': 'taskina.net'}):
+        with pytest.raises(CommandError):
+            call_command('check_preproduction', stderr=StringIO())
+
+
+@override_settings(
+    DEBUG=False,
+    SECRET_KEY='a-secure-preproduction-key-with-more-than-fifty-characters-123456',
+    ALLOWED_HOSTS=['taskina.net', 'www.taskina.net'],
+    APP_FRONTEND_URL='https://taskina.net',
+    CORS_ALLOWED_ORIGINS=['https://taskina.net'],
+    CSRF_TRUSTED_ORIGINS=['https://taskina.net'],
+    JWT_COOKIE_SECURE=True,
+    SESSION_COOKIE_SECURE=True,
+    CSRF_COOKIE_SECURE=True,
+    SECURE_SSL_REDIRECT=True,
+    WEBSOCKET_ALLOW_QUERY_TOKEN=False,
+    PAYMENT_PROVIDER='disabled',
+    ALLOW_TEST_PAYMENT_SIMULATOR=False,
+    EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend',
+    EMAIL_HOST='smtp.taskina-mail.test',
+    EMAIL_HOST_USER='taskina-smtp-user',
+    EMAIL_HOST_PASSWORD='taskina-smtp-password',
+    DEFAULT_FROM_EMAIL='Taskina <no-reply@taskina.net>',
+    TURNSTILE_SECRET_KEY='turnstile-secret-for-tests',
+    GOOGLE_OAUTH_CLIENT_ID='',
+    REST_FRAMEWORK={**django_settings.REST_FRAMEWORK, 'NUM_PROXIES': 2},
+)
+@patch.object(
+    django_settings,
+    'DATABASES',
+    {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'PASSWORD': 'a-strong-database-password-for-tests',
+        },
+    },
+)
+def test_public_free_launch_accepts_smtp_turnstile_and_optional_google():
+    output = StringIO()
+    environment = {
+        'SITE_ADDRESS': 'taskina.net, www.taskina.net',
+        'VITE_TURNSTILE_SITE_KEY': 'turnstile-site-key-for-tests',
+        'VITE_GOOGLE_CLIENT_ID': '',
+    }
+
+    with patch.dict('os.environ', environment):
+        call_command('check_preproduction', '--require-external-services', stdout=output)
+
+    assert 'Configuration de préproduction cohérente' in output.getvalue()

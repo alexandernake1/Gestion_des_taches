@@ -2,7 +2,7 @@
 
 Plateforme SaaS de pilotage d’activité : espaces personnels ou de structure, projets, tâches, validations, équipes, notifications, rapports et abonnements.
 
-> État au 17 septembre 2026 : le domaine final est `taskina.net` et ses deux noms publics pointent vers le VPS. Le VPS ne répond toutefois pas encore sur les ports 22, 80 et 443 ; le déploiement et l’émission du certificat restent donc à effectuer. L’ouverture commerciale reste bloquée tant que les informations juridiques, le SMTP transactionnel, les clés anti-robot et la restauration de sauvegarde ne sont pas validés. Aucun paiement réel n’est intégré ; les offres payantes sont donc masquées et inactivables.
+> État au 18 septembre 2026 : `taskina.net` et `www.taskina.net` pointent vers le VPS. L’accès SSH est confirmé et le pare-feu autorise TCP 22/80/443 ainsi qu’UDP 443. Le serveur exécute encore l’ancien frontend HTTP sur le port 80 ; la livraison de cette version ajoutera Caddy et déclenchera l’émission du certificat. L’ouverture commerciale reste bloquée tant que les informations juridiques, le SMTP transactionnel, les clés anti-robot et un exercice de restauration ne sont pas validés. Aucun paiement réel n’est intégré ; les offres payantes restent donc masquées et inactivables.
 
 ## Architecture
 

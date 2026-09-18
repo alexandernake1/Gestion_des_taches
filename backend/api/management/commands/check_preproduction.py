@@ -17,7 +17,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--require-external-services',
             action='store_true',
-            help='Require production SMTP, Turnstile, Google OAuth and a real payment provider.',
+            help='Require production SMTP and Turnstile for a public launch.',
         )
 
     def handle(self, *args, **options):
@@ -49,6 +49,25 @@ class Command(BaseCommand):
             errors.append('ALLOWED_HOSTS doit contenir uniquement les hôtes attendus, sans joker.')
         if any(_is_placeholder_host(host) for host in allowed_hosts):
             errors.append('ALLOWED_HOSTS contient encore un domaine d’exemple.')
+        if not allow_http and any(_is_local_host(host) for host in allowed_hosts):
+            errors.append('ALLOWED_HOSTS ne doit pas contenir une adresse locale sous HTTPS public.')
+
+        site_addresses = [value.strip() for value in os.getenv('SITE_ADDRESS', '').split(',') if value.strip()]
+        site_hosts = {_site_host(value) for value in site_addresses}
+        site_hosts.discard('')
+        if not site_addresses:
+            errors.append('SITE_ADDRESS doit déclarer le ou les domaines servis par Caddy.')
+        elif any(_is_placeholder_host(host) for host in site_hosts):
+            errors.append('SITE_ADDRESS contient encore un domaine d’exemple.')
+        elif not allow_http:
+            if any(value.lower().startswith('http://') for value in site_addresses):
+                errors.append('SITE_ADDRESS doit activer le HTTPS automatique de Caddy.')
+            missing_hosts = set(allowed_hosts) - site_hosts
+            if missing_hosts:
+                errors.append(
+                    'SITE_ADDRESS ne couvre pas tous les domaines de ALLOWED_HOSTS: '
+                    + ', '.join(sorted(missing_hosts))
+                )
 
         frontend_url = settings.APP_FRONTEND_URL.rstrip('/')
         frontend_origin = _origin(frontend_url)
@@ -56,8 +75,12 @@ class Command(BaseCommand):
             errors.append('APP_FRONTEND_URL doit être une URL HTTP(S) valide.')
         elif _is_placeholder_host(urlparse(frontend_origin).hostname or ''):
             errors.append('APP_FRONTEND_URL contient encore un domaine d’exemple.')
+        elif not allow_http and _is_local_host(urlparse(frontend_origin).hostname or ''):
+            errors.append('APP_FRONTEND_URL ne doit pas utiliser une adresse locale sous HTTPS public.')
         elif not allow_http and not frontend_origin.startswith('https://'):
             errors.append('APP_FRONTEND_URL doit utiliser HTTPS.')
+        elif not allow_http and (urlparse(frontend_origin).hostname or '') not in site_hosts:
+            errors.append('Le domaine de APP_FRONTEND_URL doit être déclaré dans SITE_ADDRESS.')
 
         cors_origins = [origin.rstrip('/') for origin in settings.CORS_ALLOWED_ORIGINS]
         if not cors_origins or '*' in cors_origins:
@@ -123,18 +146,19 @@ class Command(BaseCommand):
             report('La paire Turnstile frontend/backend est incomplète.')
 
         google_frontend_id = os.getenv('VITE_GOOGLE_CLIENT_ID', '')
-        if not settings.GOOGLE_OAUTH_CLIENT_ID or not google_frontend_id:
-            report('La configuration Google OAuth frontend/backend est incomplète.')
-        elif settings.GOOGLE_OAUTH_CLIENT_ID != google_frontend_id:
+        google_backend_id = settings.GOOGLE_OAUTH_CLIENT_ID
+        if bool(google_backend_id) != bool(google_frontend_id):
+            errors.append('La configuration Google OAuth doit être renseignée à la fois côté frontend et backend.')
+        elif google_backend_id and google_backend_id != google_frontend_id:
             errors.append('Les Client ID Google OAuth frontend et backend doivent être identiques.')
+        elif not google_backend_id:
+            warnings.append('Google OAuth reste désactivé ; la connexion email demeure disponible.')
 
         payment_provider = settings.PAYMENT_PROVIDER.lower()
         if payment_provider not in {'disabled', 'test'}:
             errors.append(f'PAYMENT_PROVIDER={payment_provider!r} n’est pas pris en charge par cette version.')
-        elif required:
-            errors.append('Aucun fournisseur de paiement réel n’est encore intégré.')
         elif payment_provider == 'test' and not settings.DEBUG:
-            warnings.append('Le fournisseur de test ne doit pas être présenté comme un paiement réel.')
+            errors.append('PAYMENT_PROVIDER=test est interdit hors développement.')
         else:
             warnings.append('Les paiements réels restent désactivés.')
 
@@ -149,3 +173,17 @@ def _origin(value):
 def _is_placeholder_host(host):
     normalized = host.lower().split(':', 1)[0]
     return normalized == 'example.com' or normalized.endswith(('.example.com', '.example.test'))
+
+
+def _is_local_host(host):
+    normalized = host.lower().strip()
+    if normalized.startswith('[') and ']' in normalized:
+        normalized = normalized[1:normalized.index(']')]
+    elif normalized.count(':') == 1:
+        normalized = normalized.split(':', 1)[0]
+    return normalized in {'localhost', '127.0.0.1', '::1'}
+
+
+def _site_host(value):
+    parsed = urlparse(value if '://' in value else f'//{value}')
+    return (parsed.hostname or '').lower()

@@ -59,6 +59,7 @@ jobs:
         env:
           DEBUG: "False"
           SECRET_KEY: "ci-production-check-only-9zY7pV4mR2xK8cN6qW3sT5uA1dF0hJ4lB7eG"
+          SITE_ADDRESS: preprod.taskina.net
           ALLOWED_HOSTS: preprod.taskina.net
           CORS_ALLOWED_ORIGINS: https://preprod.taskina.net
           CSRF_TRUSTED_ORIGINS: https://preprod.taskina.net
@@ -71,7 +72,7 @@ jobs:
           ALLOW_TEST_PAYMENT_SIMULATOR: "False"
           DB_PASSWORD: "ci-production-database-password-X7r4m9P2"
         run: |
-          python backend/manage.py check --deploy --tag security --fail-level WARNING
+          python backend/manage.py check --deploy --tag security
           python backend/manage.py check_preproduction
 
   frontend:

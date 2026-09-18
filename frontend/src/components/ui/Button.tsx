@@ -29,27 +29,27 @@ export function Button({
 
   const variants = {
     primary: [
-      'rounded-xl text-white shadow-cta',
-      'hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110',
+      'rounded-lg bg-primary text-primary-foreground shadow-cta',
+      'hover:bg-[hsl(var(--primary-dark))]',
     ].join(' '),
     secondary: [
-      'rounded-xl border border-border bg-card text-card-foreground shadow-xs',
-      'hover:border-primary/40 hover:bg-primary/5 hover:text-primary hover:-translate-y-0.5 hover:shadow-card',
+      'rounded-lg border border-border bg-card text-card-foreground shadow-xs',
+      'hover:border-primary/40 hover:bg-primary/5 hover:text-primary',
     ].join(' '),
     outline: [
-      'rounded-xl border-2 border-primary/60 text-primary bg-transparent',
-      'hover:bg-primary hover:text-white hover:-translate-y-0.5 hover:shadow-cta',
+      'rounded-lg border border-primary/60 text-primary bg-transparent',
+      'hover:bg-primary hover:text-primary-foreground hover:shadow-cta',
     ].join(' '),
     danger: [
-      'rounded-xl text-white',
-      'hover:-translate-y-0.5 hover:brightness-110',
+      'rounded-lg text-white',
+      'hover:brightness-105',
     ].join(' '),
     success: [
-      'rounded-xl text-white',
-      'hover:-translate-y-0.5 hover:brightness-110',
+      'rounded-lg text-white',
+      'hover:brightness-105',
     ].join(' '),
     ghost: [
-      'rounded-xl bg-transparent text-muted-foreground',
+      'rounded-lg bg-transparent text-muted-foreground',
       'hover:bg-muted/70 hover:text-foreground',
     ].join(' '),
   }
@@ -62,9 +62,7 @@ export function Button({
   }
 
   const variantStyles: Record<string, React.CSSProperties> = {
-    primary: {
-      background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
-    },
+    primary: {},
     danger: {
       background: 'hsl(var(--destructive))',
       boxShadow: '0 4px 14px -2px hsl(var(--destructive) / 0.40)',

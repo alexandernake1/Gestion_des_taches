@@ -41,10 +41,10 @@ function ChangePasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-      <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-900/5">
-        <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100">
-          <KeyRound className="h-6 w-6 text-indigo-700" />
+    <div className="app-surface flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="w-full max-w-lg rounded-lg border border-border bg-card p-8 shadow-float">
+        <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <KeyRound className="h-6 w-6" />
         </div>
         <h1 className="text-2xl font-bold text-slate-950">Choisissez votre mot de passe</h1>
         <p className="mt-2 text-sm leading-6 text-slate-500">
