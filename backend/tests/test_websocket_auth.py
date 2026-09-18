@@ -44,6 +44,7 @@ def test_websocket_authenticates_http_only_access_cookie(db):
     assert asyncio.run(connect_and_disconnect()) is True
 
 
+@pytest.mark.django_db(transaction=True)
 def test_websocket_rejects_a_connection_without_access_cookie():
     communicator = WebsocketCommunicator(
         application,

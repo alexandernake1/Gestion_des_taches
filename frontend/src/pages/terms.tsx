@@ -23,18 +23,18 @@ function TermsPage() {
   return (
     <LegalDocumentLayout
       title="Conditions générales d’utilisation"
-      description="Ces conditions définissent les règles applicables à la création d’un compte et à l’utilisation d’Activity Control, en espace personnel comme en structure."
+      description="Ces conditions définissent les règles applicables à la création d’un compte et à l’utilisation de Taskina, en espace personnel comme en structure."
       current="terms"
       toc={toc}
     >
       <LegalSection id="objet" title="1. Objet du service">
-        <p>Activity Control est une application SaaS de gestion d’activité permettant notamment de gérer des tâches, projets, échéances, validations, équipes, notifications, rapports et abonnements.</p>
+        <p>Taskina est une application SaaS de gestion d’activité permettant notamment de gérer des tâches, projets, échéances, validations, équipes, notifications, rapports et abonnements.</p>
         <p>Le service propose des espaces personnels et des espaces de structure. Certaines fonctions dépendent du forfait et du type d’espace sélectionnés.</p>
       </LegalSection>
 
       <LegalSection id="editeur" title="2. Éditeur et contact">
-        <p><strong>Activity Control</strong> est le nom commercial du service en préproduction. La raison sociale, la forme juridique, le siège, l’identifiant d’immatriculation et les coordonnées complètes de l’entité exploitante devront être publiés avant son ouverture commerciale.</p>
-        <p>Contact : <a href="mailto:support@activity-tracker.com">support@activity-tracker.com</a>.</p>
+        <p><strong>Taskina</strong> est le nom commercial du service en préproduction. La raison sociale, la forme juridique, le siège, l’identifiant d’immatriculation et les coordonnées complètes de l’entité exploitante devront être publiés avant son ouverture commerciale.</p>
+        <p>Contact : <a href="mailto:support@taskina.net">support@taskina.net</a>.</p>
       </LegalSection>
 
       <LegalSection id="acceptation" title="3. Acceptation des conditions">
@@ -69,7 +69,7 @@ function TermsPage() {
       </LegalSection>
 
       <LegalSection id="contenus" title="7. Contenus et données de l’utilisateur">
-        <p>L’utilisateur ou la structure conserve ses droits sur les contenus saisis. Il accorde à Activity Control les autorisations techniques strictement nécessaires pour les héberger, sauvegarder, afficher et traiter afin de fournir le service.</p>
+        <p>L’utilisateur ou la structure conserve ses droits sur les contenus saisis. Il accorde à Taskina les autorisations techniques strictement nécessaires pour les héberger, sauvegarder, afficher et traiter afin de fournir le service.</p>
         <p>Le client garantit disposer des droits et autorisations nécessaires sur les données importées, notamment celles de ses salariés, prestataires ou clients. Il est responsable de ses propres obligations d’information et de conformité.</p>
       </LegalSection>
 
@@ -79,7 +79,7 @@ function TermsPage() {
       </LegalSection>
 
       <LegalSection id="disponibilite" title="9. Disponibilité et maintenance">
-        <p>Activity Control vise une disponibilité raisonnable, sans garantir un fonctionnement continu et sans erreur. Des interruptions peuvent intervenir pour maintenance, mise à jour, sécurité, incident d’un prestataire ou cas de force majeure.</p>
+        <p>Taskina vise une disponibilité raisonnable, sans garantir un fonctionnement continu et sans erreur. Des interruptions peuvent intervenir pour maintenance, mise à jour, sécurité, incident d’un prestataire ou cas de force majeure.</p>
         <p>L’utilisateur reste responsable de vérifier les échéances critiques et de conserver une copie externe des informations dont l’indisponibilité pourrait avoir des conséquences importantes.</p>
       </LegalSection>
 
@@ -89,7 +89,7 @@ function TermsPage() {
       </LegalSection>
 
       <LegalSection id="responsabilite" title="11. Responsabilité">
-        <p>Activity Control fournit un outil d’organisation et ne remplace pas le jugement, les contrôles internes ou les obligations professionnelles de l’utilisateur. Les tableaux, alertes et statistiques doivent être vérifiés avant toute décision importante.</p>
+        <p>Taskina fournit un outil d’organisation et ne remplace pas le jugement, les contrôles internes ou les obligations professionnelles de l’utilisateur. Les tableaux, alertes et statistiques doivent être vérifiés avant toute décision importante.</p>
         <p>Dans les limites autorisées par la loi applicable, l’exploitant ne répond pas des dommages résultant d’informations inexactes saisies par l’utilisateur, d’un usage non conforme, du partage d’identifiants ou d’un service tiers hors de son contrôle.</p>
       </LegalSection>
 

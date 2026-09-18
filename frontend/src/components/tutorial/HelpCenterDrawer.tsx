@@ -327,7 +327,7 @@ export function HelpCenterDrawer() {
             {/* Share / Recommend Card */}
             <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground truncate">Recommander Activity Control</p>
+                <p className="text-xs font-bold text-foreground truncate">Recommander Taskina</p>
                 <p className="text-[11px] text-muted-foreground truncate">Partagez l'application avec vos collègues</p>
               </div>
               <Button

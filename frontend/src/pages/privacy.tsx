@@ -21,14 +21,14 @@ function PrivacyPage() {
   return (
     <LegalDocumentLayout
       title="Politique de confidentialité"
-      description="Cette politique explique de façon claire quelles données Activity Control traite, pourquoi elles sont nécessaires et comment exercer vos droits."
+      description="Cette politique explique de façon claire quelles données Taskina traite, pourquoi elles sont nécessaires et comment exercer vos droits."
       current="privacy"
       toc={toc}
     >
       <LegalSection id="responsable" title="1. Responsable du traitement">
-        <p><strong>Activity Control</strong> est le nom du service. L’entité qui l’exploitera commercialement sera responsable des traitements liés aux comptes, à la sécurité et à la fourniture du SaaS.</p>
-        <p>Pour une structure cliente, celle-ci reste responsable des contenus et données professionnelles qu’elle fait saisir par ses collaborateurs. Activity Control agit alors comme prestataire technique selon les instructions de la structure.</p>
-        <p>Contact relatif aux données personnelles : <a href="mailto:support@activity-tracker.com">support@activity-tracker.com</a>.</p>
+        <p><strong>Taskina</strong> est le nom du service. L’entité qui l’exploitera commercialement sera responsable des traitements liés aux comptes, à la sécurité et à la fourniture du SaaS.</p>
+        <p>Pour une structure cliente, celle-ci reste responsable des contenus et données professionnelles qu’elle fait saisir par ses collaborateurs. Taskina agit alors comme prestataire technique selon les instructions de la structure.</p>
+        <p>Contact relatif aux données personnelles : <a href="mailto:support@taskina.net">support@taskina.net</a>.</p>
       </LegalSection>
 
       <LegalSection id="donnees" title="2. Données que nous traitons">
@@ -51,7 +51,7 @@ function PrivacyPage() {
           <li><strong>Envoyer les notifications fonctionnelles :</strong> exécution du service. Les notifications facultatives peuvent être désactivées dans les paramètres.</li>
           <li><strong>Respecter une obligation légale ou répondre à une autorité habilitée :</strong> obligation légale.</li>
         </ul>
-        <p>Activity Control n’utilise actuellement aucun traceur publicitaire et ne vend pas les données personnelles.</p>
+        <p>Taskina n’utilise actuellement aucun traceur publicitaire et ne vend pas les données personnelles.</p>
       </LegalSection>
 
       <LegalSection id="visibilite" title="4. Visibilité dans les espaces de travail">
@@ -87,18 +87,18 @@ function PrivacyPage() {
       </LegalSection>
 
       <LegalSection id="securite" title="8. Sécurité des données">
-        <p>Activity Control met en œuvre des mesures proportionnées aux risques : séparation des espaces clients, contrôle des rôles, mots de passe hachés, cookies d’authentification protégés, limitation des tentatives, protection anti-robot, journalisation administrative et sauvegardes.</p>
-        <p>Aucun système n’étant totalement invulnérable, tout incident suspect peut être signalé à <a href="mailto:support@activity-tracker.com">support@activity-tracker.com</a>. En production, les échanges devront être chiffrés par HTTPS.</p>
+        <p>Taskina met en œuvre des mesures proportionnées aux risques : séparation des espaces clients, contrôle des rôles, mots de passe hachés, cookies d’authentification protégés, limitation des tentatives, protection anti-robot, journalisation administrative et sauvegardes.</p>
+        <p>Aucun système n’étant totalement invulnérable, tout incident suspect peut être signalé à <a href="mailto:support@taskina.net">support@taskina.net</a>. En production, les échanges devront être chiffrés par HTTPS.</p>
       </LegalSection>
 
       <LegalSection id="droits" title="9. Vos droits">
         <p>Selon la réglementation applicable, vous pouvez demander l’accès à vos données, leur rectification, leur effacement, leur portabilité, la limitation du traitement ou vous opposer à certains traitements.</p>
-        <p>La demande doit être envoyée à <a href="mailto:support@activity-tracker.com">support@activity-tracker.com</a>. Une vérification raisonnable de l’identité pourra être demandée. Vous pouvez également saisir l’autorité de protection des données compétente dans votre pays.</p>
+        <p>La demande doit être envoyée à <a href="mailto:support@taskina.net">support@taskina.net</a>. Une vérification raisonnable de l’identité pourra être demandée. Vous pouvez également saisir l’autorité de protection des données compétente dans votre pays.</p>
       </LegalSection>
 
       <LegalSection id="modifications" title="10. Modifications et contact">
         <p>Cette politique peut évoluer avec les fonctionnalités, les prestataires ou les obligations applicables. Une modification importante sera signalée dans le service et une nouvelle acceptation pourra être demandée lorsque cela est nécessaire.</p>
-        <p>Questions : <a href="mailto:support@activity-tracker.com">support@activity-tracker.com</a>.</p>
+        <p>Questions : <a href="mailto:support@taskina.net">support@taskina.net</a>.</p>
       </LegalSection>
     </LegalDocumentLayout>
   )

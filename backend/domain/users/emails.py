@@ -16,13 +16,13 @@ def send_password_reset_link_email(user, reset_url: str) -> bool:
 
     plain_message = (
         f"{greeting}\n\n"
-        "Une demande de réinitialisation a été effectuée pour votre compte Activity Control.\n\n"
+        "Une demande de réinitialisation a été effectuée pour votre compte Taskina.\n\n"
         "Choisissez un nouveau mot de passe en ouvrant ce lien :\n"
         f"{reset_url}\n\n"
         "Ce lien est personnel, utilisable une seule fois et expire dans une heure. "
         "Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email : "
         "votre mot de passe actuel reste inchangé.\n\n"
-        "L'équipe Activity Control"
+        "L'équipe Taskina"
     )
     html_message = f"""
     <!doctype html>
@@ -31,7 +31,7 @@ def send_password_reset_link_email(user, reset_url: str) -> bool:
       <body style="margin:0;background:#f4f6fb;color:#101828;font-family:Arial,sans-serif;padding:32px 16px">
         <div style="max-width:600px;margin:auto;background:#fff;border:1px solid #e4e7ec;border-radius:18px;overflow:hidden">
           <div style="background:#0b102b;padding:24px 32px;color:#fff">
-            <div style="font-size:20px;font-weight:800;letter-spacing:.2px">Activity Control</div>
+            <div style="font-size:20px;font-weight:800;letter-spacing:.2px">Taskina</div>
             <div style="margin-top:5px;color:#b8c0ff;font-size:13px">Sécurité du compte</div>
           </div>
           <div style="padding:32px">
@@ -54,7 +54,7 @@ def send_password_reset_link_email(user, reset_url: str) -> bool:
 
     try:
         send_mail(
-            subject="[Activity Control] Réinitialisez votre mot de passe",
+            subject="[Taskina] Réinitialisez votre mot de passe",
             message=plain_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
@@ -74,14 +74,14 @@ def send_user_invitation_email(user, temp_password: str) -> bool:
     Includes login credentials and password change directive.
     """
     try:
-        company_name = user.company.name if user.company else "Gestion des Tâches"
+        company_name = user.company.name if user.company else "Taskina"
         login_url = f"{getattr(settings, 'APP_FRONTEND_URL', 'http://localhost:5173')}/login"
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'Gestion des Tâches <noreply@gestiontaches.com>')
-        subject = f"[Gestion des Tâches] Bienvenue chez {company_name} - Vos identifiants de connexion"
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'Taskina <no-reply@taskina.net>')
+        subject = f"[Taskina] Bienvenue chez {company_name} - Vos identifiants de connexion"
 
         plain_message = (
             f"Bonjour {user.first_name},\n\n"
-            f"Un compte utilisateur vous a été créé au sein de l'organisation « {company_name} » sur la plateforme Gestion des Tâches.\n\n"
+            f"Un compte utilisateur vous a été créé au sein de l'organisation « {company_name} » sur la plateforme Taskina.\n\n"
             f"Voici vos identifiants de connexion :\n"
             f"  - Adresse e-mail : {user.email}\n"
             f"  - Mot de passe temporaire : {temp_password}\n"
@@ -112,7 +112,7 @@ def send_user_invitation_email(user, temp_password: str) -> bool:
         <body>
           <div class="container">
             <div class="header">
-              <div class="brand">Gestion des Tâches</div>
+              <div class="brand">Taskina</div>
               <div class="badge">{company_name}</div>
             </div>
             <h2>Bienvenue, {user.first_name} !</h2>
@@ -134,7 +134,7 @@ def send_user_invitation_email(user, temp_password: str) -> bool:
             </div>
 
             <div class="footer">
-              <p>Cet e-mail automatique a été envoyé par la plateforme Gestion des Tâches pour l'organisation {company_name}.</p>
+              <p>Cet e-mail automatique a été envoyé par Taskina pour l'organisation {company_name}.</p>
             </div>
           </div>
         </body>
@@ -161,10 +161,10 @@ def send_password_reset_email(user, temp_password: str) -> bool:
     Sends a password reset email to a user account with their new temporary password.
     """
     try:
-        company_name = user.company.name if user.company else "Gestion des Tâches"
+        company_name = user.company.name if user.company else "Taskina"
         login_url = f"{getattr(settings, 'APP_FRONTEND_URL', 'http://localhost:5173')}/login"
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'Gestion des Tâches <noreply@gestiontaches.com>')
-        subject = f"[Gestion des Tâches] Réinitialisation de votre mot de passe"
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'Taskina <no-reply@taskina.net>')
+        subject = f"[Taskina] Réinitialisation de votre mot de passe"
 
         plain_message = (
             f"Bonjour {user.first_name},\n\n"

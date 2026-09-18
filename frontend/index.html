@@ -3,33 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="google" content="notranslate" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <title>Activity Control</title>
+    <meta name="description" content="Taskina centralise les tâches, projets, validations et échéances de votre activité." />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta property="og:title" content="Taskina" />
+    <meta property="og:description" content="Pilotez vos activités, projets et équipes depuis un espace clair et sécurisé." />
+    <meta property="og:url" content="https://taskina.net/" />
+    <meta property="og:type" content="website" />
+    <link rel="canonical" href="https://taskina.net/" />
+    <title>Taskina — Pilotage d’activité</title>
   </head>
   <body>
-    <script>
-      // Monkey patch to prevent React crashes caused by browser extensions (e.g. Google Translate)
-      if (typeof Node === 'function' && Node.prototype) {
-        const originalRemoveChild = Node.prototype.removeChild;
-        Node.prototype.removeChild = function(child) {
-          if (child.parentNode !== this) {
-            return child;
-          }
-          return originalRemoveChild.apply(this, arguments);
-        };
-        const originalInsertBefore = Node.prototype.insertBefore;
-        Node.prototype.insertBefore = function(newNode, referenceNode) {
-          if (referenceNode && referenceNode.parentNode !== this) {
-            return newNode;
-          }
-          return originalInsertBefore.apply(this, arguments);
-        };
-      }
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -1,0 +1,11 @@
+{$SITE_ADDRESS} {
+	@www host www.taskina.net
+	redir @www https://taskina.net{uri} permanent
+
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy frontend:80
+}

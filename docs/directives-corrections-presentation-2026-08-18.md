@@ -1,7 +1,7 @@
 # Directives de consolidation après présentation
 
 Date de rédaction : 18 août 2026  
-Projet : Activity Control — plateforme SaaS de pilotage d’activité  
+Projet : Taskina — plateforme SaaS de pilotage d’activité
 Branche de travail : `stabilisation/preproduction`  
 Destinataire principal : agent Antigravity  
 Statut : spécification de référence pour la prochaine vague de corrections

@@ -79,6 +79,16 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   params?: object;
 }
 
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const prefix = `${encodeURIComponent(name)}=`
+  const cookie = document.cookie
+    .split(';')
+    .map((value) => value.trim())
+    .find((value) => value.startsWith(prefix))
+  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null
+}
+
 interface PaginatedResponse<T> {
   count: number;
   next: string | null;
@@ -116,6 +126,11 @@ async function request<T>(
 
   if (!(body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
+  }
+  const method = (fetchOptions.method || 'GET').toUpperCase()
+  if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method) && !headers['X-CSRFToken']) {
+    const csrfToken = getCookie('csrftoken')
+    if (csrfToken) headers['X-CSRFToken'] = csrfToken
   }
   const impersonatedCompanyId = localStorage.getItem('impersonated_company_id');
   if (impersonatedCompanyId) {
@@ -164,7 +179,10 @@ async function request<T>(
       const refreshResponse = await safeFetch(`${API_BASE_URL}/auth/refresh/`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(getCookie('csrftoken') ? { 'X-CSRFToken': getCookie('csrftoken')! } : {}),
+        },
       });
       if (refreshResponse.ok) {
         return request<T>(endpoint, options, true);
@@ -255,9 +273,7 @@ export const api = {
     }),
 
   download: async (endpoint: string) => {
-    const token = localStorage.getItem('access_token');
     const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
     const impersonatedCompanyId = localStorage.getItem('impersonated_company_id');
     if (impersonatedCompanyId) headers['X-Company-ID'] = impersonatedCompanyId;
     const response = await safeFetch(`${API_BASE_URL}${endpoint}`, {

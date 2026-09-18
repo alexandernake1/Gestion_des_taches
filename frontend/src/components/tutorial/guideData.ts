@@ -89,7 +89,7 @@ export function getAdaptiveTourSteps(context: GuideUserContext): AdaptiveTourSte
         badge: 'Étape 1 sur 4 • Bienvenue',
         title: 'Bienvenue dans votre espace personnel',
         description:
-          'Activity Control vous offre un espace individuel clair, rapide et sans superflu pour gérer toutes vos activités personnelles en toute autonomie.',
+          'Taskina vous offre un espace individuel clair, rapide et sans superflu pour gérer toutes vos activités personnelles en toute autonomie.',
         highlights: [
           'Espace personnel dédié et sécurisé',
           'Gestion sans friction ni hiérarchie',

@@ -9,20 +9,36 @@ docker compose exec backend python manage.py check --deploy --tag security --fai
 docker compose exec backend python manage.py check_preproduction --allow-http
 ```
 
-`--allow-http` est réservé à une préproduction interne accessible temporairement par IP. Dès qu’un domaine HTTPS est disponible, retirer cette option. Avant une ouverture publique, exécuter également :
+`--allow-http` est réservé à une préproduction interne accessible temporairement par IP. Dès qu’un domaine HTTPS est disponible, retirer cette option. Le contrôle vérifie aussi que la chaîne de confiance comporte exactement deux proxys (`Caddy → Nginx`). Avant une ouverture publique, exécuter également :
 
 ```bash
 docker compose exec backend python manage.py check_preproduction --require-external-services
 ```
 
-Ce dernier contrôle reste volontairement bloquant tant que SMTP, Turnstile, Google OAuth et un fournisseur de paiement réel ne sont pas configurés.
+Ce dernier contrôle reste volontairement bloquant tant que SMTP, Turnstile, Google OAuth et un fournisseur de paiement réel ne sont pas configurés. Si le lancement doit rester entièrement gratuit, conserver `PAYMENT_PROVIDER=disabled`, vérifier que seules les offres gratuites sont publiées et consigner explicitement cette exception dans la décision de mise en production.
+
+## Domaine et terminaison TLS
+
+Caddy est l’unique service qui publie les ports 80 et 443. Avec les deux noms renseignés dans `SITE_ADDRESS`, il demande et renouvelle automatiquement leurs certificats, redirige `www.taskina.net` vers `taskina.net`, puis relaie vers Nginx. Le DNS doit déjà pointer vers le VPS et les ports TCP 80/443 ainsi que UDP 443 doivent être autorisés.
+
+La configuration de production Taskina est :
+
+```dotenv
+SITE_ADDRESS=taskina.net, www.taskina.net
+ALLOWED_HOSTS=taskina.net,www.taskina.net
+CORS_ALLOWED_ORIGINS=https://taskina.net
+CSRF_TRUSTED_ORIGINS=https://taskina.net
+APP_FRONTEND_URL=https://taskina.net
+```
+
+Conserver `TRUSTED_PROXY_COUNT=2`, `JWT_COOKIE_SECURE=True` et `SECURE_SSL_REDIRECT=True`. Commencer avec `SECURE_HSTS_PRELOAD=False`; le préchargement HSTS est un engagement durable qui ne doit être activé qu’après validation de tous les sous-domaines.
 
 ## Santé et supervision
 
 - `/api/health/live/` confirme que le processus HTTP répond.
 - `/api/health/ready/` vérifie PostgreSQL et Redis et renvoie HTTP 503 si une dépendance est indisponible.
 - `/api/health/` reste disponible comme sonde de compatibilité.
-- `docker compose ps` doit indiquer `healthy` pour PostgreSQL, Redis, le backend, le frontend et le worker Celery.
+- `docker compose ps` doit indiquer `healthy` pour PostgreSQL, Redis, le backend, le frontend et le worker Celery, et `running` pour Caddy et Celery Beat.
 - `celery_worker` et `celery_beat` doivent rester démarrés pour les notifications intelligentes et le cycle des abonnements.
 
 Une sonde externe doit surveiller l’URL de disponibilité. Les journaux à consulter en priorité sont :
@@ -80,6 +96,12 @@ Effectuer l’exercice sur un environnement isolé au moins une fois avant la pr
 3. Construire les images et exécuter les contrôles de configuration.
 4. Appliquer les migrations puis vérifier `/api/health/ready/`.
 5. Exécuter la recette propriétaire, manager et employé.
+
+Le backend s’exécute désormais avec l’UID non privilégié `10001`. Lors d’une première mise à niveau d’un serveur qui possède déjà les volumes `static_data` et `media_data`, corriger une fois leur propriétaire avant le redémarrage normal :
+
+```bash
+docker compose run --rm --user root backend chown -R 10001:10001 /app/staticfiles /app/media
+```
 
 En cas d’échec, redéployer le tag précédent. Ne restaurer la base que si une migration destructive ou une écriture incompatible l’impose ; une simple erreur applicative doit être corrigée par retour d’image.
 

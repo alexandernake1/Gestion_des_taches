@@ -6,12 +6,19 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin app
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 ARG SOURCE_CACHE_BUST=default
-COPY . .
-RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+COPY --chown=app:app . .
+RUN mkdir -p /app/staticfiles /app/media \
+    && chown -R app:app /app/staticfiles /app/media \
+    && sed -i 's/\r$//' /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh
+
+USER app
 
 EXPOSE 8000
 

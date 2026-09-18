@@ -12,11 +12,13 @@ from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import update_last_login
 from django.contrib.auth.tokens import default_token_generator
+from django.middleware.csrf import get_token
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
 from common.permissions.permissions import IsAdministrator, IsManagerOrAdministrator, IsSameCompany, IsCompanyOperational
+from common.auth import enforce_csrf
 from common.utils import get_requested_company
 from domain.companies.models import Company
 from .models import User, Role, UserAuditLog
@@ -65,11 +67,11 @@ def _set_auth_cookie(response, key, value, lifetime, *, persistent):
 
 
 def authentication_response(
+    request,
     user,
     payload=None,
     *,
     status_code=status.HTTP_200_OK,
-    include_tokens=False,
     remember_me=False,
 ):
     """Return an authenticated response and store JWTs in HttpOnly cookies."""
@@ -80,11 +82,10 @@ def authentication_response(
     data = {'user': UserSerializer(user).data}
     if payload:
         data.update(payload)
-    if include_tokens:
-        # Backward compatibility for clients of the original company endpoint.
-        data.update({'access': str(refresh.access_token), 'refresh': str(refresh)})
-
     response = Response(data, status=status_code)
+    # Ensure the browser receives a CSRF cookie alongside JWT cookies. The
+    # frontend mirrors it in X-CSRFToken for every unsafe request.
+    get_token(request)
     _set_auth_cookie(
         response,
         getattr(settings, 'JWT_COOKIE_NAME', 'access_token'),
@@ -124,14 +125,14 @@ def register_company(request):
         PaymentTransactionSerializer,
     )
 
-    return authentication_response(result['user'], {
+    return authentication_response(request, result['user'], {
         'company': CompanySerializer(result['company']).data,
         'subscription': CompanySubscriptionSerializer(result['subscription']).data,
         'payment': (
             PaymentTransactionSerializer(result['payment']).data
             if result['payment'] else None
         ),
-    }, status_code=status.HTTP_201_CREATED, include_tokens=True)
+    }, status_code=status.HTTP_201_CREATED)
 
 
 @extend_schema(
@@ -254,8 +255,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             200: inline_serializer(
                 name='LoginResponse',
                 fields={
-                    'access': serializers.CharField(),
-                    'refresh': serializers.CharField(),
                     'user': UserSerializer(),
                 },
             )
@@ -289,6 +288,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     )
                 
                 return authentication_response(
+                    request,
                     user,
                     remember_me=serializer.validated_data.get('remember_me', False),
                 )
@@ -317,7 +317,7 @@ def logout(request):
     if refresh_token:
         try:
             RefreshToken(refresh_token).blacklist()
-        except Exception:
+        except TokenError:
             pass
     response = Response(status=status.HTTP_204_NO_CONTENT)
     response.delete_cookie(getattr(settings, 'JWT_COOKIE_NAME', 'access_token'))
@@ -330,6 +330,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         from django.conf import settings
+        enforce_csrf(request)
         refresh_token = request.COOKIES.get(getattr(settings, 'JWT_REFRESH_COOKIE_NAME', 'refresh_token'))
         if not refresh_token:
             raise InvalidToken('No refresh token found in cookies')
@@ -385,7 +386,7 @@ class RegisterView(generics.CreateAPIView):
             request.META.get('REMOTE_ADDR'),
         )
         user = serializer.save()
-        return authentication_response(user, status_code=status.HTTP_201_CREATED)
+        return authentication_response(request, user, status_code=status.HTTP_201_CREATED)
 
 
 @extend_schema(
@@ -459,6 +460,7 @@ def google_login(request):
             **legal_acceptance_fields(),
         )
     return authentication_response(
+        request,
         user,
         remember_me=serializer.validated_data.get('remember_me', False),
     )
@@ -552,18 +554,23 @@ def change_password(request):
 
     # Invalidate the current refresh token so existing sessions are terminated.
     # The user will need to log in again with the new password.
-    refresh_token = request.data.get('refresh')
+    refresh_token = (
+        request.COOKIES.get(getattr(settings, 'JWT_REFRESH_COOKIE_NAME', 'refresh_token'))
+        or request.data.get('refresh')
+    )
     if refresh_token:
         try:
-            from rest_framework_simplejwt.tokens import RefreshToken as JWT_RefreshToken
-            JWT_RefreshToken(refresh_token).blacklist()
-        except Exception:
-            pass  # Token already invalid or blacklist not enabled — not critical
+            RefreshToken(refresh_token).blacklist()
+        except TokenError:
+            pass  # The password hash already invalidates malformed or stale tokens.
 
-    return Response(
-        {"detail": "Password changed successfully. Please log in again."},
-        status=status.HTTP_200_OK
+    response = Response(
+        {"detail": "Mot de passe modifié. Veuillez vous reconnecter."},
+        status=status.HTTP_200_OK,
     )
+    response.delete_cookie(getattr(settings, 'JWT_COOKIE_NAME', 'access_token'))
+    response.delete_cookie(getattr(settings, 'JWT_REFRESH_COOKIE_NAME', 'refresh_token'))
+    return response
 
 
 @extend_schema(

@@ -192,3 +192,38 @@ class TestLot3BillingAndQuotes:
         assert response.status_code == 201
         assert response.data['amount'] == '40000.00'
         assert response.data['status'] == 'pending'
+        subscription.refresh_from_db()
+        assert subscription.plan == current_plan
+        assert subscription.status == SubscriptionStatus.ACTIVE
+
+    def test_direct_paid_plan_switch_cannot_bypass_payment(self, api_client, tenant_data):
+        company = tenant_data['company_a']
+        free_plan = SubscriptionPlan.objects.create(
+            name='Gratuit protégé',
+            code='free-protected-switch',
+            price=Decimal('0.00'),
+            audience=WorkspaceType.COMPANY,
+        )
+        paid_plan = SubscriptionPlan.objects.create(
+            name='Payant protégé',
+            code='paid-protected-switch',
+            price=Decimal('50000.00'),
+            audience=WorkspaceType.COMPANY,
+        )
+        subscription = CompanySubscription.objects.create(
+            company=company,
+            plan=free_plan,
+            status=SubscriptionStatus.ACTIVE,
+        )
+        api_client.force_authenticate(tenant_data['owner_a'])
+
+        response = api_client.post(
+            '/api/companies/subscription/change-plan/',
+            {'plan_code': paid_plan.code},
+            format='json',
+        )
+
+        assert response.status_code == 402
+        subscription.refresh_from_db()
+        assert subscription.plan == free_plan
+        assert subscription.status == SubscriptionStatus.ACTIVE

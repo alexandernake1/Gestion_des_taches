@@ -23,4 +23,14 @@ CHANNEL_LAYERS = {
 PAYMENT_PROVIDER = 'test'
 ALLOW_TEST_PAYMENT_SIMULATOR = True
 
+# Throttling is verified at view level; a shared in-memory counter must not make
+# otherwise independent authentication tests order-dependent.
+REST_FRAMEWORK = {
+    **REST_FRAMEWORK,  # noqa: F405
+    'DEFAULT_THROTTLE_RATES': {
+        **REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'],  # noqa: F405
+        'login': '10000/minute',
+    },
+}
+
 

@@ -5,12 +5,12 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => ({
   // Vitest 4 embeds Vite 8, which already transforms JSX through Oxc. Keeping
-  // the Vite 5 React plugin active in test mode emits deprecated esbuild
+  // the React plugin active in test mode emits deprecated esbuild
   // options and does not provide any test-time capability.
   plugins: mode === 'test' ? [] : [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
   build: {

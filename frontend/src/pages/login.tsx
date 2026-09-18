@@ -132,7 +132,7 @@ function LoginPage() {
             <Building2 className="h-5 w-5 text-white" strokeWidth={2} />
           </div>
           <div>
-            <p className="text-[15px] font-bold text-white leading-tight">Activity Control</p>
+            <p className="text-[15px] font-bold text-white leading-tight">Taskina</p>
             <p className="text-[11px] font-medium" style={{ color: 'hsl(228 20% 55%)' }}>
               Centre de pilotage des activités
             </p>
@@ -206,7 +206,7 @@ function LoginPage() {
             >
               <Building2 className="h-4.5 w-4.5 text-white" />
             </div>
-            <span className="text-[15px] font-bold text-foreground">Activity Control</span>
+            <span className="text-[15px] font-bold text-foreground">Taskina</span>
           </div>
 
           {/* Heading */}

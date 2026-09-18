@@ -150,9 +150,9 @@ def start_test_payment(company, plan: SubscriptionPlan, custom_amount: Decimal =
             pending.save(update_fields=['amount', 'provider_payload', 'updated_at'])
         return pending
 
-    subscription.plan = plan
-    subscription.status = SubscriptionStatus.PENDING_VERIFICATION
-    subscription.save(update_fields=['plan', 'status', 'updated_at'])
+    # An existing active subscription keeps its current plan and entitlements
+    # until the provider confirms the new payment. A brand-new subscription
+    # necessarily starts pending on the requested plan through the defaults.
     return PaymentTransaction.objects.create(
         company=company,
         subscription=subscription,

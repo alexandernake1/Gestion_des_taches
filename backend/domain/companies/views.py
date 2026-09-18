@@ -213,6 +213,8 @@ class SubscriptionPlanListView(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = SubscriptionPlan.objects.filter(is_active=True)
+        if settings.PAYMENT_PROVIDER != 'test' or not settings.ALLOW_TEST_PAYMENT_SIMULATOR:
+            queryset = queryset.filter(price=0)
         audience = self.request.query_params.get('audience')
         if audience in WorkspaceType.values:
             queryset = queryset.filter(audience=audience)
@@ -364,6 +366,17 @@ def change_subscription_plan(request):
     now = timezone.now()
     quote = calculate_subscription_quote(company, new_plan, now=now)
 
+    if new_plan.price > 0 and quote['net_amount_due'] > 0:
+        return Response(
+            {
+                'detail': (
+                    "Le forfait payant ne peut être activé qu'après "
+                    "confirmation du paiement."
+                )
+            },
+            status=status.HTTP_402_PAYMENT_REQUIRED,
+        )
+
     subscription, _ = CompanySubscription.objects.get_or_create(
         company=company,
         defaults={'plan': new_plan, 'status': SubscriptionStatus.ACTIVE if new_plan.price == 0 else SubscriptionStatus.PENDING_VERIFICATION}
@@ -388,12 +401,6 @@ def change_subscription_plan(request):
                 paid_at=now,
                 provider_payload={'mode': 'prorata_credit', 'quote': quote},
             )
-    else:
-        if subscription.plan != new_plan:
-            subscription.plan = new_plan
-            subscription.status = SubscriptionStatus.PENDING_VERIFICATION
-            subscription.save(update_fields=['plan', 'status', 'updated_at'])
-
     return Response(CompanySubscriptionSerializer(subscription).data)
 
 
@@ -523,7 +530,7 @@ def start_payment(request):
             {'detail': "Seul le propriétaire peut démarrer un paiement."},
             status=status.HTTP_403_FORBIDDEN,
         )
-    if settings.PAYMENT_PROVIDER != 'test':
+    if settings.PAYMENT_PROVIDER != 'test' or not settings.ALLOW_TEST_PAYMENT_SIMULATOR:
         return Response(
             {'detail': 'Le paiement en ligne n’est pas encore activé sur cet environnement.'},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -584,7 +591,7 @@ def simulate_payment(request, reference):
 
 class SystemAnnouncementListView(generics.ListAPIView):
     """Public endpoint to fetch active system announcements."""
-    permission_classes = []
+    permission_classes = [AllowAny]
     serializer_class = SystemAnnouncementSerializer
     
     def get_queryset(self):

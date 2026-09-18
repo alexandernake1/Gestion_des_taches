@@ -755,7 +755,7 @@ def test_password_reset_is_non_enumerating_and_changes_password(api_client):
     assert known.data == unknown.data
     assert len(mail.outbox) == 1
     message = mail.outbox[0]
-    assert message.subject == '[Activity Control] Réinitialisez votre mot de passe'
+    assert message.subject == '[Taskina] Réinitialisez votre mot de passe'
     assert '/reset-password?uid=' in message.body
     assert len(message.alternatives) == 1
     assert 'Choisir un nouveau mot de passe' in message.alternatives[0][0]
@@ -833,7 +833,8 @@ def test_company_registration_creates_owner_and_free_subscription(api_client):
     assert owner.terms_version == '2026-08-13'
     assert owner.company.contact_phone == '+22670000000'
     assert owner.company.subscription.status == 'active'
-    assert response.data['access']
+    assert 'access' not in response.data
+    assert 'refresh' not in response.data
     assert response.data['payment'] is None
 
 
@@ -2035,6 +2036,25 @@ def test_deactivated_company_member_cannot_login(api_client, tenant_data):
 
 
 @pytest.mark.django_db
+def test_existing_company_session_is_rejected_after_company_deactivation(api_client, tenant_data):
+    login = api_client.post(
+        '/api/auth/login/',
+        {
+            'email': tenant_data['employee_a'].email,
+            'password': 'StrongPass123!',
+        },
+        format='json',
+    )
+    assert login.status_code == 200
+
+    tenant_data['company_a'].is_active = False
+    tenant_data['company_a'].save(update_fields=['is_active'])
+
+    response = api_client.get('/api/auth/me/')
+    assert response.status_code == 401
+
+
+@pytest.mark.django_db
 def test_login_returns_targeted_french_error_without_exposing_accounts(api_client, tenant_data):
     wrong_password = api_client.post(
         '/api/auth/login/',
@@ -2107,6 +2127,63 @@ def test_refresh_preserves_remember_me_cookie_policy(api_client, tenant_data):
     assert response.status_code == 200
     assert response.cookies['access_token']['max-age'] == 3600
     assert response.cookies['refresh_token']['max-age'] == 604800
+
+
+@pytest.mark.django_db
+def test_cookie_authenticated_refresh_requires_csrf(tenant_data):
+    client = APIClient(enforce_csrf_checks=True)
+    login = client.post(
+        '/api/auth/login/',
+        {
+            'email': tenant_data['employee_a'].email,
+            'password': 'StrongPass123!',
+        },
+        format='json',
+    )
+    assert login.status_code == 200
+    csrf_token = login.cookies['csrftoken'].value
+
+    rejected = client.post('/api/auth/refresh/', {}, format='json')
+    assert rejected.status_code == 403
+
+    accepted = client.post(
+        '/api/auth/refresh/',
+        {},
+        format='json',
+        HTTP_X_CSRFTOKEN=csrf_token,
+    )
+    assert accepted.status_code == 200
+
+
+@pytest.mark.django_db
+def test_password_change_revokes_tokens_and_clears_auth_cookies(api_client, tenant_data):
+    user = tenant_data['employee_a']
+    login = api_client.post(
+        '/api/auth/login/',
+        {'email': user.email, 'password': 'StrongPass123!'},
+        format='json',
+    )
+    old_access = login.cookies['access_token'].value
+    old_refresh = RefreshToken(login.cookies['refresh_token'].value)
+
+    changed = api_client.post(
+        '/api/auth/change-password/',
+        {
+            'old_password': 'StrongPass123!',
+            'new_password': 'NewStrongPass456!',
+            'new_password_confirm': 'NewStrongPass456!',
+        },
+        format='json',
+    )
+
+    assert changed.status_code == 200
+    assert changed.cookies['access_token']['max-age'] == 0
+    assert changed.cookies['refresh_token']['max-age'] == 0
+    assert BlacklistedToken.objects.filter(token__jti=old_refresh['jti']).exists()
+
+    stale_client = APIClient()
+    stale_client.credentials(HTTP_AUTHORIZATION=f'Bearer {old_access}')
+    assert stale_client.get('/api/auth/me/').status_code == 401
 
 
 @pytest.mark.django_db
@@ -2252,14 +2329,25 @@ def test_subscription_team_limit_enforced(api_client, tenant_data):
 
 @pytest.mark.django_db
 def test_owner_can_change_subscription_plan(api_client, tenant_data):
+    from domain.companies.models import SubscriptionPlan
+
+    free_plan = SubscriptionPlan.objects.create(
+        name='Plan gratuit de test',
+        code='free-switch-test',
+        price=0,
+    )
     api_client.force_authenticate(tenant_data['owner_a'])
 
     get_sub = api_client.get('/api/companies/subscription/')
     assert get_sub.status_code == 200
 
-    change = api_client.post('/api/companies/subscription/change-plan/', {'plan_code': 'starter'}, format='json')
+    change = api_client.post(
+        '/api/companies/subscription/change-plan/',
+        {'plan_code': free_plan.code},
+        format='json',
+    )
     assert change.status_code == 200
-    assert change.data['plan_details']['code'] == 'starter'
+    assert change.data['plan_details']['code'] == free_plan.code
 
 
 @pytest.mark.django_db

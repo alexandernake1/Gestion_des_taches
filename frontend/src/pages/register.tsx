@@ -102,7 +102,7 @@ function RegisterPage() {
         <header className="mb-8 flex items-center justify-between">
           <a href="/login" className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20"><UserRound className="h-5 w-5 text-white" /></span>
-            <span><strong className="block text-slate-950">Activity Control</strong><span className="text-xs text-slate-500">Votre espace personnel</span></span>
+            <span><strong className="block text-slate-950">Taskina</strong><span className="text-xs text-slate-500">Votre espace personnel</span></span>
           </a>
           <a href="/login" className="rounded-xl border border-indigo-200 px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50">Se connecter</a>
         </header>

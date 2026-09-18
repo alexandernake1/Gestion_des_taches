@@ -72,6 +72,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+ENABLE_API_DOCS = DEBUG or os.getenv('ENABLE_API_DOCS', 'False').lower() == 'true'
 
 TEMPLATES = [
     {
@@ -181,11 +182,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Client -> Caddy -> Nginx -> Django. Pinning the trusted proxy count keeps
+    # rate-limit keys from being controlled through a forged X-Forwarded-For.
+    'NUM_PROXIES': int(os.getenv('TRUSTED_PROXY_COUNT', '0' if DEBUG else '2')),
     # Rate-limiting: protect sensitive endpoints (login) explicitly in views against brute-force.
     'DEFAULT_THROTTLE_RATES': {
         'anon': '10000/day',
         'user': '100000/day',
-        'login': '30/minute',   # Applied explicitly on the login view
+        'login': '10/minute',   # Applied explicitly on authentication views
         'registration': '100/hour',
     },
 }
@@ -196,6 +200,9 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
+    # Embed the password hash in JWTs so password changes immediately revoke
+    # every access and refresh token issued with the previous password.
+    'CHECK_REVOKE_TOKEN': True,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -228,8 +235,11 @@ if not DEBUG:
     # redirect loops behind proxies that have not forwarded the scheme yet.
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
     SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv(
+        'SECURE_HSTS_INCLUDE_SUBDOMAINS',
+        'False',
+    ).lower() == 'true'
+    SECURE_HSTS_PRELOAD = os.getenv('SECURE_HSTS_PRELOAD', 'False').lower() == 'true'
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -244,8 +254,8 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Spectacular Settings
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Activity Tracking API',
-    'DESCRIPTION': 'Enterprise activity tracking platform API',
+    'TITLE': 'Taskina API',
+    'DESCRIPTION': "API de la plateforme de pilotage d'activité Taskina",
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'ENUM_NAME_OVERRIDES': {
@@ -286,9 +296,22 @@ AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')
 AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = True
+AWS_S3_FILE_OVERWRITE = False
 
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
 if AWS_STORAGE_BUCKET_NAME:
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    STORAGES['default'] = {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+    }
 
 # Email Configuration
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
@@ -298,7 +321,7 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 10))
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Activity Control <noreply@gestiontaches.com>')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Taskina <no-reply@taskina.net>')
 PASSWORD_RESET_TIMEOUT = int(os.getenv('PASSWORD_RESET_TIMEOUT', 3600))
 APP_FRONTEND_URL = os.getenv('APP_FRONTEND_URL', 'http://localhost:5173')
 GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
@@ -308,3 +331,27 @@ ALLOW_TEST_PAYMENT_SIMULATOR = os.getenv(
     'ALLOW_TEST_PAYMENT_SIMULATOR',
     'True' if DEBUG else 'False',
 ).lower() in ('true', '1', 'yes')
+
+
+# Console logs are collected by Docker and can be forwarded by the host.
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '{asctime} {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': LOG_LEVEL,
+    },
+}

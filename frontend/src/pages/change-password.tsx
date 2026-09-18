@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { KeyRound } from 'lucide-react'
 import { authService } from '@/services/auth'
@@ -15,13 +15,11 @@ export const Route = createFileRoute('/change-password')({
 
 function ChangePasswordPage() {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [error, setError] = useState('')
   const mutation = useMutation({
     mutationFn: authService.changePassword,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['current-user'] })
-      navigate({ to: '/dashboard' })
+    onSuccess: () => {
+      navigate({ to: '/login', replace: true })
     },
   })
 
@@ -50,7 +48,7 @@ function ChangePasswordPage() {
         </div>
         <h1 className="text-2xl font-bold text-slate-950">Choisissez votre mot de passe</h1>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          Pour sécuriser votre compte, le mot de passe temporaire doit être remplacé avant d’accéder à la plateforme.
+          Pour sécuriser votre compte, le mot de passe temporaire doit être remplacé. Vous devrez ensuite vous reconnecter.
         </p>
         <form onSubmit={handleSubmit} className="mt-7 space-y-4">
           <label className="block text-sm font-medium text-slate-700">Mot de passe temporaire

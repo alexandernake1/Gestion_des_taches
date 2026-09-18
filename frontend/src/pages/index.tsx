@@ -68,13 +68,13 @@ function LandingPage() {
       {/* ── NAVBAR ────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-          <a href="/" className="flex items-center gap-3 group" aria-label="Accueil Activity Control">
+          <a href="/" className="flex items-center gap-3 group" aria-label="Accueil Taskina">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/30 transition-transform group-hover:scale-105">
               <Building2 className="h-5 w-5" />
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <span className="whitespace-nowrap text-base font-extrabold tracking-tight text-white">Activity Control</span>
+                <span className="whitespace-nowrap text-base font-extrabold tracking-tight text-white">Taskina</span>
                 <span className="hidden rounded-full bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-bold text-indigo-300 sm:inline-flex">
                   PRO
                 </span>
@@ -212,7 +212,7 @@ function LandingPage() {
                   <span className="h-3 w-3 rounded-full bg-rose-500/80" />
                   <span className="h-3 w-3 rounded-full bg-amber-500/80" />
                   <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
-                  <span className="ml-3 text-xs font-bold text-slate-400">Aperçu Activity Control</span>
+                  <span className="ml-3 text-xs font-bold text-slate-400">Aperçu Taskina</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="rounded-lg bg-indigo-500/15 border border-indigo-500/30 px-2.5 py-1 text-[11px] font-bold text-indigo-300">
@@ -578,7 +578,7 @@ function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="text-center max-w-2xl mx-auto">
             <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Un cycle fluide</p>
-            <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">Comment fonctionne Activity Control ?</h2>
+            <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">Comment fonctionne Taskina ?</h2>
             <p className="mt-3 text-sm text-slate-400">Trois étapes limpides pour passer de l’intention au résultat certifié.</p>
           </div>
 
@@ -706,7 +706,7 @@ function LandingPage() {
               <Building2 className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-sm font-extrabold text-white">Activity Control</p>
+              <p className="text-sm font-extrabold text-white">Taskina</p>
               <p className="text-xs text-slate-500">Plateforme de pilotage et de suivi d’activité</p>
             </div>
           </div>

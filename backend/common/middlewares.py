@@ -14,7 +14,10 @@ def get_user_from_token(token_key):
     try:
         access_token = AccessToken(token_key)
         user_id = access_token['user_id']
-        return User.objects.get(id=user_id)
+        user = User.objects.select_related('company').get(id=user_id, is_active=True)
+        if user.company_id and not user.is_superuser and not user.company.is_active:
+            return AnonymousUser()
+        return user
     except (TokenError, InvalidToken, User.DoesNotExist):
         return AnonymousUser()
 

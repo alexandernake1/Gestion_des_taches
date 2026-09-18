@@ -98,21 +98,27 @@ def test_celery_discovers_scheduled_tasks():
 @override_settings(
     DEBUG=False,
     SECRET_KEY='a-secure-preproduction-key-with-more-than-fifty-characters-123456',
-    ALLOWED_HOSTS=['preprod.example.test'],
-    APP_FRONTEND_URL='https://preprod.example.test',
-    CORS_ALLOWED_ORIGINS=['https://preprod.example.test'],
-    CSRF_TRUSTED_ORIGINS=['https://preprod.example.test'],
+    ALLOWED_HOSTS=['preprod.taskina.net'],
+    APP_FRONTEND_URL='https://preprod.taskina.net',
+    CORS_ALLOWED_ORIGINS=['https://preprod.taskina.net'],
+    CSRF_TRUSTED_ORIGINS=['https://preprod.taskina.net'],
     JWT_COOKIE_SECURE=True,
     SESSION_COOKIE_SECURE=True,
     CSRF_COOKIE_SECURE=True,
     SECURE_SSL_REDIRECT=True,
     WEBSOCKET_ALLOW_QUERY_TOKEN=False,
     PAYMENT_PROVIDER='disabled',
+    ALLOW_TEST_PAYMENT_SIMULATOR=False,
 )
 @patch.object(
     django_settings,
     'DATABASES',
-    {'default': {'ENGINE': 'django.db.backends.postgresql'}},
+    {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'PASSWORD': 'a-strong-database-password-for-tests',
+        },
+    },
 )
 def test_preproduction_configuration_check_accepts_secure_core_settings():
     output = StringIO()

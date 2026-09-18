@@ -20,7 +20,7 @@ export function LegalDocumentLayout({ title, description, current, toc, children
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
               <Building2 className="h-5 w-5 text-white" />
             </span>
-            <span><strong className="block text-sm text-slate-950">Activity Control</strong><span className="text-xs text-slate-500">Informations juridiques</span></span>
+            <span><strong className="block text-sm text-slate-950">Taskina</strong><span className="text-xs text-slate-500">Informations juridiques</span></span>
           </a>
           <nav aria-label="Documents juridiques" className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 text-xs font-bold sm:text-sm">
             <a href="/privacy" aria-current={current === 'privacy' ? 'page' : undefined} className={`rounded-lg px-3 py-2 ${current === 'privacy' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>Confidentialité</a>
@@ -40,7 +40,7 @@ export function LegalDocumentLayout({ title, description, current, toc, children
           <p className="mt-4 text-base leading-7 text-slate-600">{description}</p>
           <div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold text-slate-500">
             <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-4 w-4" /> Version du {LEGAL_VERSION}</span>
-            <a href="mailto:support@activity-tracker.com" className="inline-flex items-center gap-1.5 text-indigo-700 hover:underline"><Mail className="h-4 w-4" /> support@activity-tracker.com</a>
+            <a href="mailto:support@taskina.net" className="inline-flex items-center gap-1.5 text-indigo-700 hover:underline"><Mail className="h-4 w-4" /> support@taskina.net</a>
           </div>
         </div>
 

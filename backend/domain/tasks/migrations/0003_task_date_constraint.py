@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='task',
             constraint=models.CheckConstraint(
-                check=(
+                condition=(
                     models.Q(start_date__isnull=True)
                     | models.Q(due_date__isnull=True)
                     | models.Q(due_date__gte=models.F('start_date'))

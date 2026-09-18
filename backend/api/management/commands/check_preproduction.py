@@ -29,19 +29,33 @@ class Command(BaseCommand):
         if settings.DEBUG:
             errors.append('DEBUG doit être désactivé.')
         secret = settings.SECRET_KEY or ''
-        if len(secret) < 50 or 'your-secret' in secret or 'insecure' in secret:
+        if (
+            len(secret) < 50
+            or any(marker in secret.lower() for marker in ('your-secret', 'insecure', 'replace-', 'change-this'))
+        ):
             errors.append('SECRET_KEY doit être unique, non factice et contenir au moins 50 caractères.')
         if 'postgresql' not in settings.DATABASES['default']['ENGINE']:
             errors.append('La préproduction doit utiliser PostgreSQL, pas SQLite.')
+        database_password = settings.DATABASES['default'].get('PASSWORD') or ''
+        if (
+            len(database_password) < 16
+            or database_password.lower() in {'postgres', 'password', 'changeme'}
+            or 'change-this' in database_password.lower()
+        ):
+            errors.append('DB_PASSWORD doit être unique et contenir au moins 16 caractères.')
 
         allowed_hosts = [host for host in settings.ALLOWED_HOSTS if host]
         if not allowed_hosts or '*' in allowed_hosts:
             errors.append('ALLOWED_HOSTS doit contenir uniquement les hôtes attendus, sans joker.')
+        if any(_is_placeholder_host(host) for host in allowed_hosts):
+            errors.append('ALLOWED_HOSTS contient encore un domaine d’exemple.')
 
         frontend_url = settings.APP_FRONTEND_URL.rstrip('/')
         frontend_origin = _origin(frontend_url)
         if not frontend_origin:
             errors.append('APP_FRONTEND_URL doit être une URL HTTP(S) valide.')
+        elif _is_placeholder_host(urlparse(frontend_origin).hostname or ''):
+            errors.append('APP_FRONTEND_URL contient encore un domaine d’exemple.')
         elif not allow_http and not frontend_origin.startswith('https://'):
             errors.append('APP_FRONTEND_URL doit utiliser HTTPS.')
 
@@ -54,8 +68,12 @@ class Command(BaseCommand):
             errors.append('Toutes les origines CORS doivent utiliser HTTPS.')
 
         trusted_origins = [origin.rstrip('/') for origin in settings.CSRF_TRUSTED_ORIGINS]
+        if not trusted_origins or '*' in trusted_origins:
+            errors.append('CSRF_TRUSTED_ORIGINS doit être explicite et ne peut pas contenir de joker.')
         if frontend_origin and frontend_origin not in trusted_origins:
             errors.append('L’origine de APP_FRONTEND_URL doit figurer dans CSRF_TRUSTED_ORIGINS.')
+        if not allow_http and any(not origin.startswith('https://') for origin in trusted_origins):
+            errors.append('Toutes les origines CSRF doivent utiliser HTTPS.')
 
         if not allow_http:
             if not settings.JWT_COOKIE_SECURE:
@@ -71,6 +89,10 @@ class Command(BaseCommand):
 
         if settings.WEBSOCKET_ALLOW_QUERY_TOKEN:
             errors.append('WEBSOCKET_ALLOW_QUERY_TOKEN doit rester désactivé pour éviter les jetons dans les journaux.')
+        if settings.REST_FRAMEWORK.get('NUM_PROXIES') != 2:
+            errors.append('TRUSTED_PROXY_COUNT doit valoir 2 pour la chaîne Caddy → Nginx.')
+        if not settings.DEBUG and settings.ALLOW_TEST_PAYMENT_SIMULATOR:
+            errors.append('ALLOW_TEST_PAYMENT_SIMULATOR doit être désactivé hors développement.')
 
         self._check_external_services(errors, warnings, require_external)
 
@@ -93,8 +115,8 @@ class Command(BaseCommand):
             report('Un service SMTP transactionnel externe doit remplacer la console ou Mailpit.')
         if required and (not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD):
             errors.append('Les identifiants SMTP externes sont incomplets.')
-        if '.local' in settings.DEFAULT_FROM_EMAIL.lower():
-            report('DEFAULT_FROM_EMAIL doit utiliser un domaine vérifié, non un domaine .local.')
+        if any(marker in settings.DEFAULT_FROM_EMAIL.lower() for marker in ('.local', 'example.com', 'example.test')):
+            report('DEFAULT_FROM_EMAIL doit utiliser un domaine d’envoi vérifié, non une valeur d’exemple.')
 
         turnstile_site_key = os.getenv('VITE_TURNSTILE_SITE_KEY', '')
         if not settings.TURNSTILE_SECRET_KEY or not turnstile_site_key:
@@ -122,3 +144,8 @@ def _origin(value):
     if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
         return ''
     return f'{parsed.scheme}://{parsed.netloc}'
+
+
+def _is_placeholder_host(host):
+    normalized = host.lower().split(':', 1)[0]
+    return normalized == 'example.com' or normalized.endswith(('.example.com', '.example.test'))

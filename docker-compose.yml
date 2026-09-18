@@ -3,7 +3,13 @@ x-backend-image: &backend-image
   build:
     context: ./backend
     args:
-      SOURCE_CACHE_BUST: 20260813-legal-pages
+      SOURCE_CACHE_BUST: 20260915-production-audit
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "5"
 
 services:
   postgres:
@@ -16,6 +22,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -27,6 +34,7 @@ services:
     container_name: activity_tracker_redis
     command: redis-server --appendonly yes --appendfsync everysec
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - redis_data:/data
     healthcheck:
@@ -39,6 +47,8 @@ services:
     image: axllent/mailpit:v1.27
     container_name: activity_tracker_mailpit
     restart: unless-stopped
+    profiles: [development]
+    logging: *default-logging
     environment:
       MP_MAX_MESSAGES: 500
     ports:
@@ -53,13 +63,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      mailpit:
-        condition: service_started
     env_file:
       - .env
     volumes:
       - static_data:/app/staticfiles
       - media_data:/app/media
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready/', timeout=3)"]
       interval: 15s
@@ -71,7 +80,7 @@ services:
     <<: *backend-image
     container_name: activity_tracker_celery_worker
     restart: unless-stopped
-    command: celery -A config worker --loglevel=INFO --concurrency=2 --hostname=worker@%h --uid=nobody --gid=nogroup
+    command: celery -A config worker --loglevel=INFO --concurrency=2 --hostname=worker@%h
     depends_on:
       backend:
         condition: service_healthy
@@ -79,6 +88,7 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "celery -A config inspect ping -d worker@$$HOSTNAME --timeout=5 | grep -q pong"]
       interval: 60s
@@ -90,7 +100,7 @@ services:
     <<: *backend-image
     container_name: activity_tracker_celery_beat
     restart: unless-stopped
-    command: celery -A config beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule --uid=nobody --gid=nogroup
+    command: celery -A config beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
     depends_on:
       backend:
         condition: service_healthy
@@ -98,6 +108,7 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    logging: *default-logging
 
   frontend:
     build:
@@ -106,7 +117,7 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
         VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
-        SOURCE_CACHE_BUST: 20260813-legal-pages
+        SOURCE_CACHE_BUST: 20260915-production-audit
     container_name: activity_tracker_frontend
     restart: unless-stopped
     depends_on:
@@ -115,8 +126,7 @@ services:
     volumes:
       - static_data:/usr/share/nginx/html/static:ro
       - media_data:/usr/share/nginx/html/media:ro
-    ports:
-      - "80:80"
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
       interval: 15s
@@ -124,8 +134,29 @@ services:
       retries: 5
       start_period: 10s
 
+  gateway:
+    image: caddy:2.11.4-alpine
+    container_name: activity_tracker_gateway
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://:80}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging: *default-logging
+
 volumes:
   postgres_data:
   redis_data:
   static_data:
   media_data:
+  caddy_data:
+  caddy_config:

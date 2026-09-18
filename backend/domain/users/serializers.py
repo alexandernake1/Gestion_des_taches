@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.utils import timezone
@@ -38,6 +39,17 @@ def provision_workspace_subscription(company, plan):
 
     now = timezone.now()
     is_free = plan.price == 0
+    test_payment_enabled = (
+        settings.PAYMENT_PROVIDER == 'test'
+        and settings.ALLOW_TEST_PAYMENT_SIMULATOR
+    )
+    if not is_free and not test_payment_enabled:
+        raise serializers.ValidationError({
+            'plan_code': (
+                "Les offres payantes seront disponibles après l'activation "
+                "du prestataire de paiement."
+            )
+        })
     quote = calculate_subscription_quote(company, plan, now=now)
     net_amount = Decimal(str(quote['net_amount_due']))
 

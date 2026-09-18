@@ -85,17 +85,14 @@ export const authService = {
   },
 
   async changePassword(data: ChangePasswordRequest): Promise<void> {
-    return api.post<void>('/auth/change-password/', data);
+    await api.post<void>('/auth/change-password/', data);
+    forgetAuthentication();
+    localStorage.removeItem('impersonated_company_id');
   },
 
   isAuthenticated(): boolean {
     return localStorage.getItem(AUTHENTICATION_KEY) === 'true'
       || sessionStorage.getItem(AUTHENTICATION_KEY) === 'true';
-  },
-
-  getToken(): string | null {
-    // JWT is now stored in HttpOnly cookie, so we can't return it to JS.
-    return null;
   },
 
   async list(params?: { search?: string; role?: string; is_active?: boolean }) {

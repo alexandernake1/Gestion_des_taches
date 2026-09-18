@@ -1,4 +1,6 @@
 .venv/
+.venv-audit/
+.uv-cache-audit/
 .pytest_cache/
 __pycache__/
 *.py[cod]
@@ -8,3 +10,6 @@ db.sqlite3
 media/
 staticfiles/
 openapi.generated.yml
+requirements-dev.txt
+pytest.ini
+tests/

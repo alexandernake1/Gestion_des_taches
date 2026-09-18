@@ -21,9 +21,9 @@ export function SharePlatformModal() {
   if (!isShareModalOpen) return null
 
   const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
-  const shareTitle = 'Activity Control — Pilotage d’activités, validations et projets d’équipe'
+  const shareTitle = 'Taskina — Pilotage d’activités, validations et projets d’équipe'
   const shareMessage =
-    'Découvrez Activity Control, la solution moderne pour structurer vos tâches, automatiser le circuit de validation et piloter les délais d’équipe en toute transparence.'
+    'Découvrez Taskina, la solution moderne pour structurer vos tâches, automatiser le circuit de validation et piloter les délais d’équipe en toute transparence.'
 
   const handleCopy = async () => {
     try {
@@ -65,9 +65,9 @@ export function SharePlatformModal() {
   )}&url=${encodeURIComponent(shareUrl)}`
 
   const emailUrl = `mailto:?subject=${encodeURIComponent(
-    `Recommandation : Découvrez Activity Control`
+    `Recommandation : Découvrez Taskina`
   )}&body=${encodeURIComponent(
-    `Bonjour,\n\nJe te recommande Activity Control pour simplifier la gestion de nos activités et livrables d'équipe :\n\n${shareMessage}\n\nLien d'accès : ${shareUrl}\n\nÀ bientôt !`
+    `Bonjour,\n\nJe te recommande Taskina pour simplifier la gestion de nos activités et livrables d'équipe :\n\n${shareMessage}\n\nLien d'accès : ${shareUrl}\n\nÀ bientôt !`
   )}`
 
   return (
@@ -91,7 +91,7 @@ export function SharePlatformModal() {
             </span>
             <div>
               <h3 className="font-black text-base text-foreground">Partager la plateforme</h3>
-              <p className="text-xs text-muted-foreground">Faites découvrir Activity Control à votre réseau</p>
+              <p className="text-xs text-muted-foreground">Faites découvrir Taskina à votre réseau</p>
             </div>
           </div>
 

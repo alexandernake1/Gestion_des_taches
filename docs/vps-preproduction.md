@@ -1,10 +1,26 @@
-# Préproduction VPS sans domaine
+# Préproduction VPS et passage à Taskina
 
-Cette procédure prépare une version de test accessible par l'IP du VPS. Elle est destinée aux essais internes ; l'HTTPS doit être activé dès qu'un domaine est disponible.
+Cette procédure décrit l’ancien accès de test par IP et le passage actuel à `taskina.net`. L’accès public final doit utiliser HTTPS ; le mode HTTP par IP ne sert plus qu’au diagnostic.
+
+## Configuration actuelle du domaine
+
+Les serveurs DNS officiels d’OVH et la résolution publique annoncent désormais `taskina.net` et `www.taskina.net` vers `152.228.233.72`. Le VPS doit encore être rétabli : les ports 22, 80 et 443 ne répondent pas lors du contrôle du 17 septembre 2026.
+
+```dotenv
+SITE_ADDRESS=taskina.net, www.taskina.net
+ALLOWED_HOSTS=taskina.net,www.taskina.net
+CORS_ALLOWED_ORIGINS=https://taskina.net
+CSRF_TRUSTED_ORIGINS=https://taskina.net
+APP_FRONTEND_URL=https://taskina.net
+JWT_COOKIE_SECURE=True
+SECURE_SSL_REDIRECT=True
+```
+
+Caddy doit recevoir les ports TCP 80/443 et UDP 443. Il obtient les certificats des deux noms et redirige `www.taskina.net` vers `https://taskina.net`.
 
 ## Configuration
 
-1. Copier `.env.example` vers `.env` sur le serveur.
+1. Copier `.env.example` vers `.env` sur le serveur. Pour un diagnostic temporaire par IP uniquement, définir `SITE_ADDRESS=http://:80`.
 2. Générer une clé Django longue et unique pour `SECRET_KEY`.
 3. Remplacer l'IP d'exemple dans `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` et `APP_FRONTEND_URL` par l'IP publique réelle du VPS.
 4. Renseigner la même origine dans `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` et `APP_FRONTEND_URL`.
@@ -22,13 +38,13 @@ Ne jamais ajouter le fichier `.env` au dépôt.
 ## Démarrage
 
 ```bash
-docker compose up -d --build
+docker compose --profile development up -d --build
 docker compose ps
 docker compose exec backend python manage.py check_preproduction --allow-http
 docker compose logs -f backend celery_worker celery_beat
 ```
 
-Le conteneur backend applique les migrations et collecte les fichiers statiques avant de démarrer. Seul le port HTTP 80 est publié publiquement ; Mailpit est lié à `127.0.0.1` et PostgreSQL, Redis ainsi que Django restent sur le réseau Docker interne.
+Le conteneur backend applique les migrations et collecte les fichiers statiques avant de démarrer. Seule la passerelle Caddy publie les ports web ; Mailpit est lié à `127.0.0.1` par le profil `development`, et PostgreSQL, Redis, Nginx ainsi que Django restent sur le réseau Docker interne.
 
 ## Données de recette
 
@@ -53,7 +69,7 @@ Le mot de passe est obligatoire afin d'éviter tout compte de démonstration ave
 
 ## Pare-feu
 
-N'autoriser que SSH et HTTP pendant cette phase. Ne pas exposer les ports 5432, 6379 ni 8000. Lors de l'ajout du domaine, ouvrir 443, configurer HTTPS, puis passer `JWT_COOKIE_SECURE=True` et `SECURE_SSL_REDIRECT=True`.
+N'autoriser que SSH et HTTP pendant cette phase. Ne pas exposer les ports 5432, 6379 ni 8000. Lors de l'ajout du domaine, faire pointer le DNS vers le VPS, ouvrir TCP 443 et UDP 443, renseigner le domaine dans `SITE_ADDRESS`, puis passer les origines en HTTPS avec `JWT_COOKIE_SECURE=True` et `SECURE_SSL_REDIRECT=True`. Caddy demandera ensuite le certificat automatiquement.
 
 ## Sauvegarde et reprise
 

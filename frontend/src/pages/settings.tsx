@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Layout } from '@/components/layout/Layout'
@@ -35,12 +35,12 @@ function SettingsPage() {
   const goBack = useSmartBack('/dashboard')
   const { startTour, openHelpDrawer, resetOnboarding, openShareModal } = useTutorial()
   const [profileSaved, setProfileSaved] = useState(false)
-  const [passwordSaved, setPasswordSaved] = useState(false)
   const [notificationsSaved, setNotificationsSaved] = useState(false)
   const [resetMessage, setResetMessage] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'help'>('profile')
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   
   const { data: currentUser, isLoading: isUserLoading } = useQuery({
     queryKey: ['current-user'],
@@ -63,7 +63,7 @@ function SettingsPage() {
   
   const changePassword = useMutation({
     mutationFn: authService.changePassword,
-    onSuccess: () => setPasswordSaved(true),
+    onSuccess: () => navigate({ to: '/login', replace: true }),
   })
 
   const updateNotifications = useMutation({
@@ -87,7 +87,6 @@ function SettingsPage() {
 
   const savePassword = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setPasswordSaved(false)
     setPasswordError('')
     const data = new FormData(event.currentTarget)
     const newPassword = data.get('new_password') as string
@@ -286,7 +285,6 @@ function SettingsPage() {
                 {passwordError && <p className="text-sm font-medium text-destructive">{passwordError}</p>}
 
                 <div className="flex items-center justify-between border-t border-border pt-6">
-                  {passwordSaved && <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"><Check className="h-4 w-4" /> Mot de passe modifié</p>}
                   <div className="ml-auto">
                     <Button type="submit" disabled={changePassword.isPending} size="lg">
                       {changePassword.isPending ? 'Modification…' : 'Modifier le mot de passe'}
@@ -344,7 +342,7 @@ function SettingsPage() {
                 <div>
                   <h3 className="text-lg font-bold text-foreground">Guide & Prise en main</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Retrouvez tous les outils pour découvrir et maîtriser l’ensemble des fonctionnalités d’Activity Control.
+                    Retrouvez tous les outils pour découvrir et maîtriser l’ensemble des fonctionnalités de Taskina.
                   </p>
                 </div>
 
@@ -393,7 +391,7 @@ function SettingsPage() {
                       <Share2 className="h-4 w-4" />
                       <span>Recommandation</span>
                     </div>
-                    <h4 className="font-bold text-sm text-foreground">Faites découvrir Activity Control</h4>
+                    <h4 className="font-bold text-sm text-foreground">Faites découvrir Taskina</h4>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Partagez la plateforme avec vos collègues par WhatsApp, LinkedIn, X, Email ou lien direct.
                     </p>
