@@ -22,7 +22,7 @@ export function Layout({ children, title }: LayoutProps) {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-72">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
         <Header title={title} onMenuClick={() => setIsSidebarOpen(true)} />
         <SystemAnnouncementsBanner />
         <main className="flex-1 overflow-x-hidden animate-fade-in">

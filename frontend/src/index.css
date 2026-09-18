@@ -1,6 +1,6 @@
 /* ============================================================
    Taskina — Design System
-   Palette : Midnight Indigo | Mode : Light & Dark
+   Direction : Atelier Signal | Mode : Light & Dark
    ============================================================ */
 
 @tailwind base;
@@ -13,98 +13,98 @@
 @layer base {
   :root {
     /* ── Background & Foreground ─────────────────────────── */
-    --background:      225 25% 97%;      /* Blanc bleuté froid */
-    --foreground:      228 35% 12%;      /* Bleu nuit texte */
+    --background:      42 30% 96%;       /* Papier chaud */
+    --foreground:      164 25% 13%;      /* Encre végétale */
 
     /* ── Surface & Card ──────────────────────────────────── */
-    --card:            0 0% 100%;
-    --card-foreground: 228 35% 12%;
-    --popover:         0 0% 100%;
-    --popover-foreground: 228 35% 12%;
+    --card:            42 38% 99%;
+    --card-foreground: 164 25% 13%;
+    --popover:         42 38% 99%;
+    --popover-foreground: 164 25% 13%;
 
-    /* ── Primary — Indigo saturé ─────────────────────────── */
-    --primary:         243 75% 59%;      /* #5B5CF6 ajusté */
+    /* ── Primary — Vert pin Taskina ─────────────────────── */
+    --primary:         161 48% 28%;
     --primary-foreground: 0 0% 100%;
-    --primary-light:   243 100% 96%;
-    --primary-dark:    243 75% 48%;
+    --primary-light:   155 32% 92%;
+    --primary-dark:    164 53% 20%;
 
-    /* ── Accent — Violet ─────────────────────────────────── */
-    --accent:          265 70% 62%;
+    /* ── Accent — Signal terre cuite ────────────────────── */
+    --accent:          18 76% 54%;
     --accent-foreground: 0 0% 100%;
-    --accent-light:    265 100% 96%;
+    --accent-light:    18 75% 94%;
 
     /* ── Secondary ───────────────────────────────────────── */
-    --secondary:       225 20% 94%;
-    --secondary-foreground: 228 35% 20%;
+    --secondary:       42 22% 90%;
+    --secondary-foreground: 164 24% 18%;
 
     /* ── Muted ───────────────────────────────────────────── */
-    --muted:           225 20% 93%;
-    --muted-foreground: 228 15% 48%;
+    --muted:           40 20% 91%;
+    --muted-foreground: 157 9% 43%;
 
     /* ── Status Colors ───────────────────────────────────── */
-    --success:         160 60% 40%;
-    --success-light:   160 60% 96%;
-    --warning:         38 92% 48%;
-    --warning-light:   38 100% 95%;
-    --destructive:     351 85% 55%;
-    --destructive-light: 351 100% 96%;
+    --success:         151 49% 34%;
+    --success-light:   148 34% 93%;
+    --warning:         38 88% 46%;
+    --warning-light:   39 78% 93%;
+    --destructive:     2 66% 50%;
+    --destructive-light: 3 66% 94%;
     --destructive-foreground: 0 0% 100%;
-    --info:            213 94% 55%;
-    --info-light:      213 100% 96%;
+    --info:            196 57% 38%;
+    --info-light:      193 42% 93%;
 
     /* ── Borders & Inputs ────────────────────────────────── */
-    --border:          225 20% 88%;
-    --border-subtle:   225 20% 93%;
-    --input:           225 20% 88%;
-    --ring:            243 75% 59%;
-    --radius:          0.75rem;
+    --border:          43 17% 81%;
+    --border-subtle:   42 19% 89%;
+    --input:           43 17% 78%;
+    --ring:            161 48% 28%;
+    --radius:          0.625rem;
 
     /* ── Sidebar ─────────────────────────────────────────── */
-    --sidebar-bg:             228 40% 8%;
-    --sidebar-border:         228 30% 14%;
-    --sidebar-text:           228 20% 65%;
-    --sidebar-text-muted:     228 20% 40%;
-    --sidebar-active-bg:      243 75% 59%;
-    --sidebar-active-text:    0 0% 100%;
-    --sidebar-hover-bg:       228 30% 14%;
+    --sidebar-bg:             164 30% 13%;
+    --sidebar-border:         161 18% 23%;
+    --sidebar-text:           48 17% 78%;
+    --sidebar-text-muted:     154 9% 54%;
+    --sidebar-active-bg:      158 32% 24%;
+    --sidebar-active-text:    42 35% 96%;
+    --sidebar-hover-bg:       162 25% 18%;
 
     /* ── Shadow scale ────────────────────────────────────── */
-    --shadow-sm:    0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
-    --shadow-md:    0 4px 12px 0 rgb(0 0 0 / 0.08), 0 2px 4px -1px rgb(0 0 0 / 0.04);
-    --shadow-lg:    0 10px 30px 0 rgb(0 0 0 / 0.10), 0 4px 8px -2px rgb(0 0 0 / 0.06);
-    --shadow-xl:    0 20px 50px 0 rgb(0 0 0 / 0.14), 0 8px 16px -4px rgb(0 0 0 / 0.08);
-    --shadow-primary: 0 8px 24px -4px hsl(243 75% 59% / 0.35);
+    --shadow-sm:    0 1px 2px rgb(24 45 38 / 0.05);
+    --shadow-md:    0 5px 16px rgb(24 45 38 / 0.07);
+    --shadow-lg:    0 14px 32px rgb(24 45 38 / 0.10);
+    --shadow-xl:    0 24px 55px rgb(24 45 38 / 0.15);
+    --shadow-primary: 0 8px 18px -6px hsl(161 48% 28% / 0.38);
   }
 
   .dark {
     /* ── Background & Foreground ─────────────────────────── */
-    --background:      228 35% 8%;
-    --foreground:      228 20% 92%;
+    --background:      164 25% 8%;
+    --foreground:      42 24% 91%;
 
     /* ── Surface & Card ──────────────────────────────────── */
-    --card:            228 35% 11%;
-    --card-foreground: 228 20% 92%;
-    --popover:         228 35% 11%;
-    --popover-foreground: 228 20% 92%;
+    --card:            164 23% 11%;
+    --card-foreground: 42 24% 91%;
+    --popover:         164 23% 11%;
+    --popover-foreground: 42 24% 91%;
 
     /* ── Primary ─────────────────────────────────────────── */
-    --primary:         243 80% 67%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light:   243 75% 15%;
-    --primary-dark:    243 80% 55%;
+    --primary:         154 46% 52%;
+    --primary-foreground: 164 30% 8%;
+    --primary-light:   160 28% 16%;
+    --primary-dark:    154 44% 42%;
 
     /* ── Accent ──────────────────────────────────────────── */
-    --accent:          265 70% 68%;
+    --accent:          20 79% 61%;
     --accent-foreground: 0 0% 100%;
-    --accent-light:    265 70% 14%;
+    --accent-light:    18 38% 16%;
 
     /* ── Secondary ───────────────────────────────────────── */
-    --secondary:       228 30% 16%;
-    --secondary-foreground: 228 20% 88%;
+    --secondary:       164 18% 17%;
+    --secondary-foreground: 42 22% 88%;
 
     /* ── Muted ───────────────────────────────────────────── */
-    --muted:           228 30% 15%;
-    --muted-foreground: 228 15% 52%;
+    --muted:           164 17% 16%;
+    --muted-foreground: 154 8% 60%;
 
     /* ── Status Colors ───────────────────────────────────── */
     --success:         160 55% 48%;
@@ -118,26 +118,26 @@
     --info-light:      213 90% 10%;
 
     /* ── Borders & Inputs ────────────────────────────────── */
-    --border:          228 25% 18%;
-    --border-subtle:   228 25% 14%;
-    --input:           228 25% 18%;
-    --ring:            243 80% 67%;
+    --border:          160 15% 22%;
+    --border-subtle:   162 16% 16%;
+    --input:           160 15% 25%;
+    --ring:            154 46% 52%;
 
     /* ── Sidebar (identique dark) ────────────────────────── */
-    --sidebar-bg:             228 40% 6%;
-    --sidebar-border:         228 30% 12%;
-    --sidebar-text:           228 20% 60%;
-    --sidebar-text-muted:     228 20% 35%;
-    --sidebar-active-bg:      243 80% 67%;
-    --sidebar-active-text:    0 0% 100%;
-    --sidebar-hover-bg:       228 30% 12%;
+    --sidebar-bg:             164 30% 7%;
+    --sidebar-border:         161 17% 17%;
+    --sidebar-text:           48 13% 72%;
+    --sidebar-text-muted:     154 8% 48%;
+    --sidebar-active-bg:      159 27% 18%;
+    --sidebar-active-text:    42 30% 94%;
+    --sidebar-hover-bg:       163 22% 13%;
 
     /* ── Shadow scale dark ───────────────────────────────── */
     --shadow-sm:    0 1px 3px 0 rgb(0 0 0 / 0.20), 0 1px 2px -1px rgb(0 0 0 / 0.15);
     --shadow-md:    0 4px 12px 0 rgb(0 0 0 / 0.30), 0 2px 4px -1px rgb(0 0 0 / 0.20);
     --shadow-lg:    0 10px 30px 0 rgb(0 0 0 / 0.40), 0 4px 8px -2px rgb(0 0 0 / 0.25);
     --shadow-xl:    0 20px 50px 0 rgb(0 0 0 / 0.50), 0 8px 16px -4px rgb(0 0 0 / 0.30);
-    --shadow-primary: 0 8px 24px -4px hsl(243 80% 67% / 0.40);
+    --shadow-primary: 0 8px 22px -5px hsl(154 46% 52% / 0.30);
   }
 }
 
@@ -159,14 +159,14 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
     min-width: 320px;
     line-height: 1.6;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-weight: 700;
+    font-family: "Aptos Display", "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 750;
     line-height: 1.25;
     letter-spacing: -0.02em;
   }
@@ -217,51 +217,43 @@
    ============================================================ */
 @layer utilities {
 
-  /* ── App background with ambient gradients ─────────────── */
+  /* ── App background: warm paper + subtle planning grid ─── */
   .app-surface {
     background-color: hsl(var(--background));
     background-image:
-      radial-gradient(ellipse at 0% 0%,   hsl(var(--primary) / 0.06) 0%, transparent 50%),
-      radial-gradient(ellipse at 100% 0%,  hsl(var(--accent)  / 0.05) 0%, transparent 50%),
-      radial-gradient(ellipse at 100% 100%, hsl(var(--info)   / 0.04) 0%, transparent 50%),
-      radial-gradient(ellipse at 0% 100%,  hsl(var(--success) / 0.03) 0%, transparent 50%);
+      linear-gradient(hsl(var(--foreground) / 0.022) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.022) 1px, transparent 1px);
+    background-size: 32px 32px;
     background-attachment: fixed;
   }
   .dark .app-surface {
     background-color: hsl(var(--background));
     background-image:
-      radial-gradient(ellipse at 0% 0%,   hsl(var(--primary) / 0.14) 0%, transparent 55%),
-      radial-gradient(ellipse at 100% 0%,  hsl(var(--accent)  / 0.10) 0%, transparent 55%),
-      radial-gradient(ellipse at 100% 100%, hsl(var(--info)   / 0.06) 0%, transparent 45%),
-      radial-gradient(ellipse at 0% 100%,  hsl(var(--success) / 0.04) 0%, transparent 45%);
+      linear-gradient(hsl(var(--foreground) / 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
     background-attachment: fixed;
   }
 
   /* ── Glass surfaces ──────────────────────────────────────── */
   .glass {
-    background: hsl(var(--card) / 0.85);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border: 1px solid hsl(var(--border) / 0.8);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
   }
   .dark .glass {
-    background: hsl(var(--card) / 0.75);
-    border-color: hsl(var(--border) / 0.5);
+    background: hsl(var(--card));
+    border-color: hsl(var(--border));
   }
 
   .glass-heavy {
-    background: hsl(var(--card) / 0.95);
-    backdrop-filter: blur(24px) saturate(200%);
-    -webkit-backdrop-filter: blur(24px) saturate(200%);
-    border: 1px solid hsl(var(--border) / 0.9);
+    background: hsl(var(--card));
+    border: 0;
+    border-bottom: 1px solid hsl(var(--border));
   }
 
   /* ── Primary gradient ─────────────────────────────────────── */
   .gradient-primary {
-    background: linear-gradient(135deg,
-      hsl(var(--primary)) 0%,
-      hsl(var(--accent))  100%
-    );
+    background: hsl(var(--primary));
   }
   .gradient-primary-subtle {
     background: linear-gradient(135deg,
@@ -294,10 +286,11 @@
 
   /* ── Text gradients ───────────────────────────────────────── */
   .text-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: hsl(var(--accent));
+  }
+
+  .brand-wordmark {
+    font-family: "Aptos Display", "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   }
 
   /* ── Animations ───────────────────────────────────────────── */

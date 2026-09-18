@@ -6,6 +6,7 @@ import { tasksService } from '@/services/tasks'
 import { useQuery } from '@tanstack/react-query'
 import { ROLE_LABELS } from '@/constants/labels'
 import { useTutorial } from '@/context/TutorialContext'
+import { TaskinaWordmark } from '@/components/brand/TaskinaBrand'
 
 interface NavigationItem {
   name: string
@@ -127,7 +128,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col transition-transform duration-300 ease-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col transition-transform duration-300 ease-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ background: 'hsl(var(--sidebar-bg))' }}
@@ -138,40 +139,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           style={{ background: 'hsl(var(--sidebar-border))' }}
         />
 
-        {/* Ambient glow top */}
-        <div
-          className="pointer-events-none absolute -top-32 -left-16 h-64 w-64 rounded-full blur-3xl opacity-20"
-          style={{ background: 'hsl(var(--primary))' }}
-        />
-
         {/* ── Header ──────────────────────────────────── */}
         <div
-          className="relative flex h-[72px] shrink-0 items-center justify-between px-5"
+          className="relative flex h-[68px] shrink-0 items-center justify-between px-5"
           style={{ borderBottom: '1px solid hsl(var(--sidebar-border))' }}
         >
-          <div className="flex items-center gap-3">
-            {/* Logo mark */}
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-cta"
-              style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
-              }}
-            >
-              <CheckSquare2 className="h-5 w-5 text-white" />
-            </div>
-
-            <div>
-              <span className="text-[15px] font-black tracking-tight text-white">
-                Activity<span style={{ color: 'hsl(var(--primary))' }}>Control</span>
-              </span>
-              <p
-                className="text-[10px] font-semibold tracking-wider uppercase"
-                style={{ color: 'hsl(var(--sidebar-text-muted))' }}
-              >
-                Pilotage d'activité
-              </p>
-            </div>
-          </div>
+          <TaskinaWordmark inverted />
 
           <button
             type="button"
@@ -255,10 +228,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             style={{ background: 'hsl(var(--sidebar-hover-bg))' }}
           >
             <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold text-white shadow-cta"
-              style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
-              }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent text-[12px] font-extrabold text-white"
             >
               {getInitials(displayName)}
             </div>
@@ -363,8 +333,8 @@ function NavItem({
   delay: number
   variant: 'default' | 'admin'
 }) {
-  const activeColor = variant === 'admin' ? 'hsl(38 92% 52%)' : 'hsl(var(--primary))'
-  const activeBg = variant === 'admin' ? 'hsl(38 92% 52% / 0.12)' : 'hsl(var(--primary) / 0.14)'
+  const activeColor = variant === 'admin' ? 'hsl(var(--warning))' : 'hsl(var(--sidebar-active-text))'
+  const activeBg = variant === 'admin' ? 'hsl(var(--warning) / 0.12)' : 'hsl(var(--sidebar-active-bg))'
 
   return (
     <li
@@ -374,7 +344,7 @@ function NavItem({
       <Link
         to={item.href}
         onClick={onClose}
-        className="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200"
+        className="group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-semibold transition-all duration-200"
         style={{
           background: isActive ? activeBg : 'transparent',
           color: isActive ? activeColor : 'hsl(var(--sidebar-text))',
@@ -396,7 +366,7 @@ function NavItem({
         {isActive && (
           <span
             className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full"
-            style={{ background: activeColor, boxShadow: `0 0 8px ${activeColor}` }}
+            style={{ background: 'hsl(var(--accent))' }}
           />
         )}
 

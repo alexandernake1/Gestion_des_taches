@@ -50,7 +50,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
   const displayName = currentUser?.full_name || currentUser?.email || 'Mon compte'
 
   return (
-    <header className="glass-heavy sticky top-0 z-30 flex h-[72px] items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="glass-heavy sticky top-0 z-30 flex h-[68px] items-center justify-between px-4 sm:px-6 lg:px-8">
 
       {/* ── Left: menu + title ─────────────────────────── */}
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
@@ -139,12 +139,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           className="flex items-center gap-2.5 rounded-xl border border-transparent p-1 pr-3 text-left transition-all hover:bg-muted/50 hover:border-border"
         >
           {/* Avatar */}
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold text-white shadow-cta"
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
-            }}
-          >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-[12px] font-extrabold text-primary-foreground">
             {getInitials(displayName)}
           </div>
 

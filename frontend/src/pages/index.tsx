@@ -1,734 +1,298 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
 import {
   ArrowRight,
-  BarChart3,
   BellRing,
-  Building2,
+  Check,
   CheckCircle2,
-  ChevronDown,
-  Clock,
-  FileCheck2,
-  FolderGit2,
-  Kanban,
-  Layers,
-  MessageSquare,
-  Play,
-  Rocket,
-  Shield,
+  Clock3,
+  FolderKanban,
+  Gauge,
+  ListChecks,
   ShieldCheck,
-  Sparkles,
-  TrendingUp,
-  Zap,
-  Share2,
+  UsersRound,
 } from 'lucide-react'
-import { redirectAuthenticatedUser } from '@/router/auth'
-import { useTutorial } from '@/context/TutorialContext'
-import { SharePlatformModal } from '@/components/common/SharePlatformModal'
+import { TaskinaWordmark } from '@/components/brand/TaskinaBrand'
 
 export const Route = createFileRoute('/')({
-  beforeLoad: redirectAuthenticatedUser,
   component: LandingPage,
 })
 
+const pillars = [
+  {
+    number: '01',
+    icon: ListChecks,
+    title: 'Le travail devient lisible',
+    description: 'Une seule vue pour savoir quoi faire, qui s’en charge et ce qui mérite votre attention aujourd’hui.',
+    note: 'Tâches · priorités · échéances',
+  },
+  {
+    number: '02',
+    icon: ShieldCheck,
+    title: 'Les décisions sont tracées',
+    description: 'Les demandes, validations et refus suivent un circuit clair, avec un historique consultable.',
+    note: 'Validation · motifs · historique',
+  },
+  {
+    number: '03',
+    icon: Gauge,
+    title: 'Le pilotage devient concret',
+    description: 'Des indicateurs utiles révèlent les retards, les charges et les points de blocage sans ajouter de bruit.',
+    note: 'Délais · charge · progression',
+  },
+]
+
+const workflow = [
+  ['Cadrer', 'Créez la tâche, la priorité et le résultat attendu.'],
+  ['Attribuer', 'Confiez le travail à la bonne personne ou à la bonne équipe.'],
+  ['Suivre', 'Visualisez l’avancement et les blocages au fil de l’eau.'],
+  ['Valider', 'Décidez, commentez et gardez une trace exploitable.'],
+]
+
 function LandingPage() {
-  const { openShareModal } = useTutorial()
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'approvals' | 'kanban' | 'collab'>('dashboard')
-  const [openFaq, setOpenFaq] = useState<number | null>(0)
-
-  const faqs = [
-    {
-      q: 'Quelle est la différence entre un espace personnel et une structure ?',
-      a: 'L’espace personnel vous permet de gérer vos tâches individuelles en toute autonomie et gratuitement. Dès que vous créez une organisation, vous débloquez la collaboration avec des équipes, des rôles hiérarchiques (managers et collaborateurs), des circuits de validation et un tableau de bord exécutif.',
-    },
-    {
-      q: 'Comment fonctionnent les validations et reports d’échéance ?',
-      a: 'Lorsqu’un collaborateur termine une tâche sensible ou nécessite un délai supplémentaire, il déclenche une demande de validation ou un report d’échéance motivé. Les managers sont instantanément notifiés et peuvent approuver ou refuser en un clic.',
-    },
-    {
-      q: 'Comment fonctionne la facturation au prorata et le crédit ?',
-      a: 'Si vous changez d’offre ou passez à un plan supérieur, le temps non consommé sur votre période actuelle est automatiquement crédité sur votre solde. Cet excédent est déduit de vos prochains règlements.',
-    },
-    {
-      q: 'Les notifications sont-elles transmises en temps réel ?',
-      a: 'Oui. Grâce aux notifications en temps réel, toute attribution, tout rappel d’échéance ou toute validation apparaît instantanément avec un signal sonore discret et un bouton d’action rapide « Commencer la tâche ».',
-    },
-  ]
-
   return (
-    <main className="min-h-screen overflow-hidden bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white">
-      {/* ── BACKGROUND AMBIENT GLOWS ───────────────────────────── */}
-      <div className="fixed inset-0 pointer-events-none -z-10">
-        <div className="absolute top-[-10%] left-[-10%] h-[600px] w-[600px] rounded-full bg-indigo-600/20 blur-[130px]" />
-        <div className="absolute top-[25%] right-[-10%] h-[650px] w-[650px] rounded-full bg-violet-600/15 blur-[140px]" />
-        <div className="absolute bottom-[-10%] left-[20%] h-[500px] w-[500px] rounded-full bg-blue-600/10 blur-[120px]" />
-        <div className="absolute inset-0 opacity-[0.03] [background-image:linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] [background-size:48px_48px]" />
-      </div>
-
-      {/* ── NAVBAR ────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-          <a href="/" className="flex items-center gap-3 group" aria-label="Accueil Taskina">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/30 transition-transform group-hover:scale-105">
-              <Building2 className="h-5 w-5" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="whitespace-nowrap text-base font-extrabold tracking-tight text-white">Taskina</span>
-                <span className="hidden rounded-full bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-bold text-indigo-300 sm:inline-flex">
-                  PRO
-                </span>
-              </div>
-              <span className="hidden text-[11px] font-medium text-slate-400 sm:block">Pilotage d’activité et projets</span>
-            </div>
+    <main className="min-h-screen overflow-hidden bg-background text-foreground selection:bg-accent/20">
+      <header className="sticky top-0 z-40 border-b border-border bg-[hsl(var(--background)/0.96)]">
+        <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">
+          <a href="/" aria-label="Accueil Taskina">
+            <TaskinaWordmark compact />
           </a>
-
-          <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-300 md:flex">
-            <a href="#apercu" className="hover:text-white transition-colors">Aperçu interactif</a>
-            <a href="#fonctionnalites" className="hover:text-white transition-colors">Fonctionnalités</a>
-            <a href="#methode" className="hover:text-white transition-colors">Méthode</a>
-            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+          <nav className="hidden items-center gap-8 md:flex" aria-label="Navigation principale">
+            <a href="#produit" className="text-sm font-bold text-muted-foreground hover:text-foreground">Produit</a>
+            <a href="#methode" className="text-sm font-bold text-muted-foreground hover:text-foreground">Méthode</a>
+            <a href="#equipes" className="text-sm font-bold text-muted-foreground hover:text-foreground">Pour qui ?</a>
           </nav>
-
-          <div className="flex items-center gap-1.5 sm:gap-3">
-            <a
-              href="/login"
-              className="rounded-xl px-2 py-2 text-sm font-bold text-slate-300 transition-colors hover:bg-white/10 hover:text-white sm:px-4"
-            >
+          <div className="flex items-center gap-2 sm:gap-3">
+            <a href="/login" className="hidden px-3 py-2 text-sm font-extrabold text-foreground hover:text-primary sm:inline-flex">
               Se connecter
             </a>
-            <a
-              href="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:scale-105 hover:shadow-indigo-500/40 sm:px-4"
-            >
-              <span className="sm:hidden">S’inscrire</span>
-              <span className="hidden sm:inline">Démarrer l’expérience</span>
-              <ArrowRight className="hidden h-4 w-4 sm:block" />
+            <a href="/register" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-extrabold text-primary-foreground shadow-cta hover:bg-[hsl(var(--primary-dark))]">
+              Essayer Taskina <ArrowRight className="h-4 w-4" />
             </a>
           </div>
         </div>
       </header>
 
-      {/* ── HERO SECTION ───────────────────────────────────────── */}
-      <section className="relative px-5 pt-14 pb-20 sm:px-8 sm:pt-24 sm:pb-32 lg:px-10">
-        <div className="mx-auto max-w-5xl text-center">
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-bold text-indigo-300 backdrop-blur-md shadow-inner">
-            <Sparkles className="h-4 w-4 text-indigo-400 animate-pulse" />
-            <span>Pilotage opérationnel et gouvernance collaborative</span>
-          </div>
-
-          <h1 className="mt-8 text-4xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl lg:leading-[1.1]">
-            Pilotez vos activités avec une <br className="hidden sm:inline" />
-            <span className="bg-gradient-to-r from-indigo-400 via-violet-300 to-cyan-300 bg-clip-text text-transparent">
-              clarté absolue.
-            </span>
-          </h1>
-
-          <p className="mx-auto mt-6 max-w-2xl text-base text-slate-300 sm:text-lg sm:leading-relaxed">
-            Centralisez vos projets, fluidifiez les validations hiérarchiques et éliminez les retards dans un espace de travail moderne, structuré et performant.
-          </p>
-
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
-            <a
-              href="/register"
-              className="inline-flex h-13 w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-violet-600 px-8 text-base font-bold text-white shadow-xl shadow-indigo-600/35 transition-all hover:scale-[1.02] hover:shadow-indigo-600/50 sm:w-auto"
-            >
-              <span>Commencer gratuitement</span>
-              <ArrowRight className="h-5 w-5" />
-            </a>
-            <a
-              href="#apercu"
-              className="inline-flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-6 text-sm font-bold text-slate-200 backdrop-blur transition-colors hover:bg-white/10 sm:w-auto"
-            >
-              <Play className="h-4 w-4 fill-current text-indigo-400" />
-              <span>Explorer la démo interactive</span>
-            </a>
-            <button
-              type="button"
-              onClick={openShareModal}
-              className="inline-flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 px-5 text-sm font-bold text-indigo-300 backdrop-blur transition-all hover:bg-indigo-500/20 sm:w-auto"
-            >
-              <Share2 className="h-4 w-4" />
-              <span>Partager</span>
-            </button>
-          </div>
-
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-xs font-semibold text-slate-400">
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              Espace personnel et organisation
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              Validations et reports en un clic
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              Notifications en direct
-            </span>
-          </div>
-        </div>
-
-        {/* ── INTERACTIVE PRODUCT PREVIEW ──────────────────────── */}
-        <div id="apercu" className="mx-auto mt-16 max-w-6xl scroll-mt-24">
-          {/* Tabs Selector */}
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-6">
-            {[
-              { id: 'dashboard', label: 'Tableau de bord et indicateurs', icon: BarChart3 },
-              { id: 'approvals', label: 'Validations et reports', icon: ShieldCheck },
-              { id: 'kanban', label: 'Flux de tâches et priorités', icon: Kanban },
-              { id: 'collab', label: 'Collaboration et alertes', icon: BellRing },
-            ].map((tab) => {
-              const Icon = tab.icon
-              const isCurrent = activeTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all ${
-                    isCurrent
-                      ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 ring-2 ring-indigo-400/50'
-                      : 'border border-white/10 bg-slate-900/60 text-slate-400 hover:border-white/20 hover:text-white'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Screen Showcase Container */}
-          <div className="relative rounded-[2rem] border border-white/15 bg-gradient-to-b from-slate-900/90 to-slate-950/90 p-3 shadow-2xl shadow-black/80 backdrop-blur-2xl sm:p-4">
-            <div className="absolute -top-3 right-6 hidden sm:flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-bold text-emerald-300 backdrop-blur-md">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>Système synchronisé en temps réel</span>
+      <section className="relative border-b border-border">
+        <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--foreground)/0.025)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--foreground)/0.025)_1px,transparent_1px)] bg-[size:32px_32px]" aria-hidden="true" />
+        <div className="relative mx-auto grid max-w-[1440px] gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[minmax(0,0.95fr)_minmax(520px,1.05fr)] lg:items-center lg:px-12 lg:py-28">
+          <div>
+            <div className="mb-8 flex items-center gap-3 text-[11px] font-extrabold uppercase tracking-[0.2em] text-primary">
+              <span className="h-2.5 w-2.5 bg-accent" />
+              Pilotage d’activité, sans brouillard
             </div>
-
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
-              {/* Window Bar */}
-              <div className="flex items-center justify-between border-b border-white/10 bg-slate-900/80 px-4 py-3 sm:px-6">
-                <div className="flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full bg-rose-500/80" />
-                  <span className="h-3 w-3 rounded-full bg-amber-500/80" />
-                  <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
-                  <span className="ml-3 text-xs font-bold text-slate-400">Aperçu Taskina</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="rounded-lg bg-indigo-500/15 border border-indigo-500/30 px-2.5 py-1 text-[11px] font-bold text-indigo-300">
-                    Mode Organisation
-                  </span>
-                </div>
-              </div>
-
-              {/* Dynamic View based on Tab */}
-              <div className="p-5 sm:p-8">
-                {activeTab === 'dashboard' && (
-                  <div className="space-y-6">
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-                        <p className="text-xs font-semibold text-slate-400">Tâches en cours</p>
-                        <p className="mt-2 text-2xl font-black text-white">24</p>
-                        <span className="mt-2 inline-flex items-center text-[11px] font-bold text-emerald-400">
-                          <TrendingUp className="h-3 w-3 mr-1" /> +12% cette semaine
-                        </span>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-                        <p className="text-xs font-semibold text-slate-400">Validations en attente</p>
-                        <p className="mt-2 text-2xl font-black text-amber-400">3</p>
-                        <span className="mt-2 inline-block text-[11px] font-medium text-slate-400">Délai moyen : 1.4 jour</span>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-                        <p className="text-xs font-semibold text-slate-400">Taux de complétion</p>
-                        <p className="mt-2 text-2xl font-black text-indigo-400">96.8%</p>
-                        <span className="mt-2 inline-block text-[11px] font-medium text-emerald-400">Excellente cadence</span>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-                        <p className="text-xs font-semibold text-slate-400">Collaborateurs actifs</p>
-                        <p className="mt-2 text-2xl font-black text-white">18</p>
-                        <span className="mt-2 inline-block text-[11px] font-medium text-slate-400">4 équipes synchronisées</span>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-                      <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-5">
-                        <h4 className="text-sm font-bold text-white mb-4 flex items-center justify-between">
-                          <span>Progression des projets clés</span>
-                          <span className="text-xs text-indigo-400 font-normal">4 actifs</span>
-                        </h4>
-                        <div className="space-y-4">
-                          {[
-                            { name: 'Refonte Plateforme Client', progress: 85, color: 'from-indigo-500 to-cyan-400', manager: 'Marc K.' },
-                            { name: 'Audit Financier Trimestriel', progress: 60, color: 'from-violet-500 to-indigo-500', manager: 'Sarah D.' },
-                            { name: 'Déploiement API Mobile', progress: 42, color: 'from-emerald-500 to-teal-400', manager: 'Alex N.' },
-                          ].map((proj) => (
-                            <div key={proj.name} className="space-y-1.5">
-                              <div className="flex justify-between text-xs">
-                                <span className="font-semibold text-slate-200">{proj.name}</span>
-                                <span className="font-bold text-white">{proj.progress}%</span>
-                              </div>
-                              <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-                                <div className={`h-full rounded-full bg-gradient-to-r ${proj.color}`} style={{ width: `${proj.progress}%` }} />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-5">
-                        <h4 className="text-sm font-bold text-white mb-4">Flux des activités récentes</h4>
-                        <div className="space-y-3">
-                          {[
-                            { user: 'Sarah D.', action: 'a validé la tâche', task: 'Rapport annuel 2026', time: 'Il y a 10 min' },
-                            { user: 'Marc K.', action: 'a demandé un report sur', task: 'Maquettes du tableau de bord', time: 'Il y a 35 min' },
-                            { user: 'Alex N.', action: 'a terminé la sous-tâche', task: 'Tests d’intégration', time: 'Il y a 1h' },
-                          ].map((act, i) => (
-                            <div key={i} className="flex items-start gap-3 rounded-xl bg-white/[0.03] p-2.5">
-                              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20 text-[10px] font-bold text-indigo-300">
-                                {act.user.substring(0, 2)}
-                              </div>
-                              <div className="min-w-0 flex-1 text-xs">
-                                <p className="text-slate-300">
-                                  <span className="font-bold text-white">{act.user}</span> {act.action} <span className="text-indigo-300 font-semibold">{act.task}</span>
-                                </p>
-                                <p className="text-[10px] text-slate-500 mt-0.5">{act.time}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'approvals' && (
-                  <div className="space-y-5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-base font-bold text-white">Circuit de validation et reports</h3>
-                        <p className="text-xs text-slate-400">Validez les livrables avant clôture ou approuvez les reports d’échéances motivés.</p>
-                      </div>
-                      <span className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-400">
-                        2 approbations requises
-                      </span>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/5 p-5 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="rounded-lg bg-indigo-500/20 px-2 py-0.5 text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
-                            Validation de fin
-                          </span>
-                          <span className="text-xs text-slate-400">Aujourd’hui 14:30</span>
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-white text-sm">Clôture Audit Sécurité Q3</h4>
-                          <p className="text-xs text-slate-400 mt-1">Soumis par Michel T. avec 2 pièces jointes (rapport_final.pdf)</p>
-                        </div>
-                        <div className="flex gap-2 pt-2 border-t border-white/10">
-                          <button type="button" className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2 text-xs font-bold text-white transition-colors">
-                            Approuver la tâche
-                          </button>
-                          <button type="button" className="flex-1 rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-bold text-slate-300 hover:bg-white/10 transition-colors">
-                            Refuser / Corriger
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="rounded-lg bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300 uppercase tracking-wider">
-                            Demande de report
-                          </span>
-                          <span className="text-xs text-slate-400">Hier 17:15</span>
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-white text-sm">Intégration Passerelle Mobile Money</h4>
-                          <p className="text-xs text-amber-200/90 mt-1 italic">« Attente des clés de production côté opérateur télécom. »</p>
-                        </div>
-                        <div className="flex gap-2 pt-2 border-t border-white/10">
-                          <button type="button" className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 text-xs font-bold text-white transition-colors">
-                            Reporter au 25 Août
-                          </button>
-                          <button type="button" className="flex-1 rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-bold text-slate-300 hover:bg-white/10 transition-colors">
-                            Refuser
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'kanban' && (
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    {[
-                      {
-                        title: 'À faire',
-                        count: 4,
-                        tasks: [
-                          { title: 'Définir la charte graphique V2', tag: 'Design', priority: 'Haute', color: 'bg-rose-500/20 text-rose-300' },
-                          { title: 'Préparer contrat prestataire', tag: 'Juridique', priority: 'Normale', color: 'bg-indigo-500/20 text-indigo-300' },
-                        ],
-                      },
-                      {
-                        title: 'En cours',
-                        count: 3,
-                        tasks: [
-                          { title: 'Déployer les notifications en temps réel', tag: 'Technique', priority: 'Urgent', color: 'bg-rose-500/20 text-rose-300', startBtn: true },
-                          { title: 'Revue budgétaire trimestrielle', tag: 'Finance', priority: 'Normale', color: 'bg-indigo-500/20 text-indigo-300' },
-                        ],
-                      },
-                      {
-                        title: 'Validé et terminé',
-                        count: 8,
-                        tasks: [
-                          { title: 'Validation architecture serveur', tag: 'DevOps', priority: 'Terminée', color: 'bg-emerald-500/20 text-emerald-300' },
-                          { title: 'Intégration de 5 nouveaux collaborateurs', tag: 'RH', priority: 'Terminée', color: 'bg-emerald-500/20 text-emerald-300' },
-                        ],
-                      },
-                    ].map((col) => (
-                      <div key={col.title} className="rounded-2xl border border-white/10 bg-slate-900/50 p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs font-bold text-white uppercase tracking-wider">{col.title}</span>
-                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-slate-400">{col.count}</span>
-                        </div>
-                        <div className="space-y-3">
-                          {col.tasks.map((task, idx) => (
-                            <div key={idx} className="rounded-xl border border-white/10 bg-slate-950/80 p-3.5 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className={`rounded-md px-2 py-0.5 text-[9px] font-bold ${task.color}`}>
-                                  {task.tag}
-                                </span>
-                                <span className="text-[10px] font-semibold text-slate-400">{task.priority}</span>
-                              </div>
-                              <p className="text-xs font-bold text-slate-200">{task.title}</p>
-                              {task.startBtn && (
-                                <div className="pt-1">
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400">
-                                    <Play className="h-3 w-3 fill-current" /> Commencée en 1 clic
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {activeTab === 'collab' && (
-                  <div className="grid gap-5 sm:grid-cols-2 items-center">
-                    <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-5 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400">
-                          <BellRing className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-white">Alertes instantanées et signal sonore</h4>
-                          <p className="text-xs text-slate-400">Notification en direct dès qu’une action vous concerne.</p>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-indigo-500/30 bg-slate-950 p-4 space-y-2 shadow-lg">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-indigo-400" />
-                            Rappel d’échéance
-                          </span>
-                          <span className="text-[10px] text-slate-500">À l’instant</span>
-                        </div>
-                        <p className="text-xs text-slate-300">
-                          La tâche « Validation rapport audit » arrive à échéance aujourd’hui à 18h00.
-                        </p>
-                        <div className="pt-1 flex gap-2">
-                          <button type="button" className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white">
-                            Commencer la tâche
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 flex items-center gap-4">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/20 text-violet-300">
-                          <MessageSquare className="h-5 w-5" />
-                        </span>
-                        <div>
-                          <h4 className="text-sm font-bold text-white">Fils de discussion contextualisés</h4>
-                          <p className="text-xs text-slate-400">Tous les échanges restent attachés à la tâche concernée.</p>
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 flex items-center gap-4">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-300">
-                          <Shield className="h-5 w-5" />
-                        </span>
-                        <div>
-                          <h4 className="text-sm font-bold text-white">Rôles stricts et sécurité des données</h4>
-                          <p className="text-xs text-slate-400">Droits spécifiques pour les managers, collaborateurs et administrateurs.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── KEY METRICS / IMPACT BAR ───────────────────────────── */}
-      <section className="border-y border-white/10 bg-slate-900/40 py-12 px-5 sm:px-8">
-        <div className="mx-auto max-w-7xl grid grid-cols-2 gap-8 lg:grid-cols-4 text-center">
-          <div>
-            <p className="text-3xl font-black text-white sm:text-4xl">99.4%</p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-indigo-400">Respect des délais</p>
-          </div>
-          <div>
-            <p className="text-3xl font-black text-white sm:text-4xl">3.5x</p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-violet-400">Validations accélérées</p>
-          </div>
-          <div>
-            <p className="text-3xl font-black text-white sm:text-4xl">100%</p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">Traçabilité des actions</p>
-          </div>
-          <div>
-            <p className="text-3xl font-black text-white sm:text-4xl">0</p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-cyan-400">Tâche oubliée</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── BENTO FEATURES GRID ────────────────────────────────── */}
-      <section id="fonctionnalites" className="scroll-mt-24 px-5 py-24 sm:px-8 lg:px-10">
-        <div className="mx-auto max-w-7xl">
-          <div className="max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Fonctionnalités avancées</p>
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
-              Tout ce dont une organisation moderne a besoin.
-            </h2>
-            <p className="mt-4 text-base text-slate-400 leading-relaxed">
-              Une suite d’outils intégrés pensée pour simplifier la vie des managers et donner aux collaborateurs les moyens d’exceller.
+            <h1 className="max-w-3xl text-[clamp(3.5rem,6.7vw,7rem)] font-extrabold leading-[0.88] tracking-[-0.065em]">
+              Le travail
+              <br />
+              ne devrait
+              <br />
+              jamais être <span className="text-primary">flou.</span>
+            </h1>
+            <p className="mt-8 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Taskina donne à chaque équipe un cadre simple pour organiser le travail, tenir les délais et prendre les bonnes décisions.
             </p>
-          </div>
-
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
-            {/* Big Card 1 */}
-            <div className="md:col-span-2 rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-8 shadow-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 h-48 w-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-colors" />
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/20 text-indigo-400 mb-6">
-                <ShieldCheck className="h-6 w-6" />
-              </span>
-              <h3 className="text-xl font-extrabold text-white">Circuit d’approbation et validation hiérarchique</h3>
-              <p className="mt-3 text-sm text-slate-400 max-w-xl leading-relaxed">
-                Ne laissez plus les livrables être clôturés sans confirmation. Les managers examinent les pièces jointes, formulent des retours et approuvent ou refusent directement.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold text-indigo-300">
-                <span className="rounded-lg bg-indigo-500/15 px-3 py-1.5">Historique certifié</span>
-                <span className="rounded-lg bg-indigo-500/15 px-3 py-1.5">Motif obligatoire en cas de refus</span>
-                <span className="rounded-lg bg-indigo-500/15 px-3 py-1.5">Mise à jour instantanée</span>
-              </div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-8 shadow-xl relative overflow-hidden group">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/20 text-violet-400 mb-6">
-                <Clock className="h-6 w-6" />
-              </span>
-              <h3 className="text-xl font-extrabold text-white">Demandes de report motivées</h3>
-              <p className="mt-3 text-sm text-slate-400 leading-relaxed">
-                Un imprévu ? Les collaborateurs peuvent solliciter un report d’échéance avec justification pour un pilotage sans zones d’ombre.
-              </p>
-            </div>
-
-            {/* Card 3 */}
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-8 shadow-xl relative overflow-hidden group">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 text-cyan-400 mb-6">
-                <Zap className="h-6 w-6" />
-              </span>
-              <h3 className="text-xl font-extrabold text-white">Action « Commencer la tâche »</h3>
-              <p className="mt-3 text-sm text-slate-400 leading-relaxed">
-                À la réception d’une notification ou d’un rappel, un clic direct sur « Commencer la tâche » change son statut en cours sans délai.
-              </p>
-            </div>
-
-            {/* Big Card 4 */}
-            <div className="md:col-span-2 rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-8 shadow-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 h-48 w-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-emerald-500/20 transition-colors" />
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 mb-6">
-                <BarChart3 className="h-6 w-6" />
-              </span>
-              <h3 className="text-xl font-extrabold text-white">Indicateurs de performance et charge d’équipe</h3>
-              <p className="mt-3 text-sm text-slate-400 max-w-xl leading-relaxed">
-                Visualisez la répartition du travail par collaborateur, les délais moyens d’exécution, les taux de complétion et anticipez les goulets d’étranglement.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold text-emerald-300">
-                <span className="rounded-lg bg-emerald-500/15 px-3 py-1.5">Délais moyens par équipe</span>
-                <span className="rounded-lg bg-emerald-500/15 px-3 py-1.5">Charge par collaborateur</span>
-                <span className="rounded-lg bg-emerald-500/15 px-3 py-1.5">Rapports exportables</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── WORKFLOW METHOD ────────────────────────────────────── */}
-      <section id="methode" className="scroll-mt-24 border-y border-white/10 bg-slate-900/30 px-5 py-24 sm:px-8 lg:px-10">
-        <div className="mx-auto max-w-7xl">
-          <div className="text-center max-w-2xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Un cycle fluide</p>
-            <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">Comment fonctionne Taskina ?</h2>
-            <p className="mt-3 text-sm text-slate-400">Trois étapes limpides pour passer de l’intention au résultat certifié.</p>
-          </div>
-
-          <div className="mt-16 grid gap-8 md:grid-cols-3 relative">
-            {[
-              {
-                num: '01',
-                title: 'Créez vos tâches',
-                desc: 'Définissez les tâches, échéances, priorités et dépendances, puis confiez-les aux membres concernés si nécessaire.',
-                icon: FolderGit2,
-              },
-              {
-                num: '02',
-                title: 'Exécutez et échangez',
-                desc: 'Commencez les tâches en un clic, commentez dans le contexte et recevez des alertes instantanées avec un signal sonore.',
-                icon: Layers,
-              },
-              {
-                num: '03',
-                title: 'Validez et clôturez',
-                desc: 'Soumettez pour validation hiérarchique, consolidez les rapports et alimentez votre tableau de bord stratégique.',
-                icon: FileCheck2,
-              },
-            ].map((step) => {
-              const Icon = step.icon
-              return (
-                <div
-                  key={step.num}
-                  className="rounded-3xl border border-white/10 bg-slate-950/70 p-8 relative flex flex-col justify-between hover:border-indigo-500/40 transition-colors"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-6">
-                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-400 font-black">
-                        <Icon className="h-6 w-6" />
-                      </span>
-                      <span className="text-3xl font-black text-slate-700">{step.num}</span>
-                    </div>
-                    <h3 className="text-lg font-bold text-white">{step.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-400">{step.desc}</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FAQ SECTION ────────────────────────────────────────── */}
-      <section id="faq" className="scroll-mt-24 px-5 py-24 sm:px-8 lg:px-10">
-        <div className="mx-auto max-w-4xl">
-          <div className="text-center max-w-xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-400">Questions courantes</p>
-            <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">Tout ce que vous devez savoir</h2>
-          </div>
-
-          <div className="mt-12 space-y-4">
-            {faqs.map((faq, index) => {
-              const isOpen = openFaq === index
-              return (
-                <div
-                  key={index}
-                  className="rounded-2xl border border-white/10 bg-slate-900/60 overflow-hidden transition-colors hover:border-white/20"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(isOpen ? null : index)}
-                    className="flex w-full items-center justify-between p-5 text-left text-sm font-bold text-white"
-                  >
-                    <span>{faq.q}</span>
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-indigo-400' : ''}`} />
-                  </button>
-                  {isOpen && (
-                    <div className="px-5 pb-5 text-sm leading-relaxed text-slate-400 border-t border-white/5 pt-3">
-                      {faq.a}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA BANNER ─────────────────────────────────────────── */}
-      <section className="px-5 pb-24 sm:px-8 lg:px-10">
-        <div className="mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] border border-indigo-500/30 bg-gradient-to-br from-indigo-900/60 via-slate-900 to-slate-950 p-8 sm:p-14 relative shadow-2xl shadow-indigo-950/50">
-          <div className="absolute top-0 right-0 h-96 w-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-xs font-bold text-indigo-300">
-              <Rocket className="h-3.5 w-3.5" />
-              <span>Passez à la vitesse supérieure</span>
-            </div>
-            <h2 className="mt-5 text-3xl font-black tracking-tight text-white sm:text-5xl">
-              Donnez à votre organisation les moyens de ses ambitions.
-            </h2>
-            <p className="mt-4 text-base text-slate-300 leading-relaxed">
-              Rejoignez les équipes qui ont fait le choix de la clarté, de la fluidité et de la responsabilité opérationnelle.
-            </p>
-
-            <div className="mt-8 flex flex-col sm:flex-row gap-4 items-center">
-              <a
-                href="/register"
-                className="inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-7 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-105"
-              >
-                <span>Démarrer maintenant</span>
-                <ArrowRight className="h-4 w-4" />
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <a href="/register" className="group inline-flex h-12 items-center justify-between gap-8 rounded-lg bg-primary px-5 text-sm font-extrabold text-primary-foreground shadow-cta hover:bg-[hsl(var(--primary-dark))]">
+                Créer mon espace <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </a>
-              <a
-                href="/login"
-                className="text-sm font-bold text-slate-300 hover:text-white transition-colors"
-              >
-                Déjà membre ? Se connecter →
+              <a href="#produit" className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-border bg-card px-5 text-sm font-extrabold hover:border-primary/40 hover:text-primary">
+                Découvrir le produit
               </a>
             </div>
+            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-muted-foreground">
+              {['Espace personnel gratuit', 'Installation immédiate', 'Données cloisonnées'].map((item) => (
+                <span key={item} className="inline-flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent" />{item}</span>
+              ))}
+            </div>
+          </div>
+
+          <ProductPreview />
+        </div>
+      </section>
+
+      <section className="border-b border-border bg-primary text-primary-foreground">
+        <div className="mx-auto grid max-w-[1440px] grid-cols-2 divide-x divide-white/15 px-5 sm:px-8 md:grid-cols-4 lg:px-12">
+          {[
+            ['1 espace', 'pour toute l’activité'],
+            ['4 étapes', 'du cadrage à la validation'],
+            ['Temps réel', 'pour suivre sans relancer'],
+            ['Traçable', 'pour décider avec confiance'],
+          ].map(([value, label]) => (
+            <div key={label} className="px-4 py-7 first:pl-0 md:px-8">
+              <p className="text-xl font-extrabold tracking-tight sm:text-2xl">{value}</p>
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-white/60">{label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="produit" className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 sm:py-28 lg:px-12">
+        <SectionHeading
+          eyebrow="Ce que Taskina met au clair"
+          title="Moins d’interface. Plus de maîtrise."
+          text="Chaque écran sert une décision ou une action. L’information reste dense, lisible et directement exploitable."
+        />
+        <div className="mt-14 grid border-y border-border lg:grid-cols-3 lg:divide-x lg:divide-border">
+          {pillars.map(({ number, icon: Icon, title, description, note }) => (
+            <article key={number} className="group border-b border-border py-8 last:border-b-0 lg:border-b-0 lg:px-8 lg:first:pl-0 lg:last:pr-0">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold tracking-[0.18em] text-accent">{number}</span>
+                <Icon className="h-6 w-6 text-primary transition-transform group-hover:-translate-y-1" />
+              </div>
+              <h3 className="mt-10 max-w-xs text-2xl font-extrabold leading-tight tracking-[-0.035em]">{title}</h3>
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>
+              <p className="mt-8 border-l-2 border-accent pl-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">{note}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="methode" className="bg-[hsl(var(--primary-light))] py-20 sm:py-28">
+        <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
+          <SectionHeading
+            eyebrow="Un rythme simple"
+            title="Quatre gestes. Une équipe alignée."
+            text="Taskina accompagne le travail du besoin initial jusqu’à la décision finale, sans multiplier les outils."
+          />
+          <ol className="mt-14 grid gap-px overflow-hidden border border-primary/15 bg-primary/15 md:grid-cols-2 xl:grid-cols-4">
+            {workflow.map(([title, text], index) => (
+              <li key={title} className="relative min-h-[230px] bg-[hsl(var(--primary-light))] p-7">
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-accent">Étape {index + 1}</span>
+                <h3 className="mt-12 text-2xl font-extrabold tracking-[-0.035em]">{title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{text}</p>
+                {index < workflow.length - 1 && <ArrowRight className="absolute bottom-7 right-7 h-5 w-5 text-primary/40" />}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section id="equipes" className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 sm:py-28 lg:px-12">
+        <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+          <SectionHeading
+            eyebrow="Pensé pour le terrain"
+            title="La même vérité, adaptée à chaque rôle."
+            text="Les collaborateurs se concentrent sur l’action. Les responsables voient l’ensemble et interviennent au bon moment."
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <AudienceCard icon={UsersRound} title="Pour les équipes" items={['Priorités du jour', 'Responsabilités explicites', 'Notifications utiles']} />
+            <AudienceCard icon={FolderKanban} title="Pour les managers" items={['Charge et avancement', 'Validations centralisées', 'Retards visibles']} featured />
+            <AudienceCard icon={BellRing} title="Pour les opérations" items={['Échéances maîtrisées', 'Historique consultable', 'Actions relancées']} />
+            <AudienceCard icon={ShieldCheck} title="Pour les dirigeants" items={['Indicateurs consolidés', 'Décisions traçables', 'Accès sécurisés']} />
           </div>
         </div>
       </section>
 
-      {/* ── FOOTER ─────────────────────────────────────────────── */}
-      <footer className="border-t border-white/10 bg-slate-950 py-12 px-5 sm:px-8">
-        <div className="mx-auto max-w-7xl flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md">
-              <Building2 className="h-4 w-4" />
-            </span>
-            <div>
-              <p className="text-sm font-extrabold text-white">Taskina</p>
-              <p className="text-xs text-slate-500">Plateforme de pilotage et de suivi d’activité</p>
-            </div>
+      <section className="mx-5 mb-5 overflow-hidden bg-[hsl(var(--sidebar-bg))] text-white sm:mx-8 sm:mb-8 lg:mx-12 lg:mb-12">
+        <div className="mx-auto flex max-w-[1344px] flex-col justify-between gap-10 px-7 py-14 sm:px-12 lg:flex-row lg:items-end lg:py-16">
+          <div>
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[hsl(var(--accent))]">Prêt à clarifier le travail ?</p>
+            <h2 className="mt-5 max-w-3xl text-4xl font-extrabold leading-[0.98] tracking-[-0.05em] sm:text-6xl">Votre équipe sait enfin où elle va.</h2>
           </div>
+          <a href="/register" className="group inline-flex h-12 shrink-0 items-center justify-between gap-10 rounded-lg bg-accent px-5 text-sm font-extrabold text-white hover:brightness-105">
+            Commencer gratuitement <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </a>
+        </div>
+      </section>
 
-          <div className="flex flex-wrap gap-6 text-xs font-semibold text-slate-400">
-            <button type="button" onClick={openShareModal} className="hover:text-white transition-colors flex items-center gap-1.5 text-indigo-300">
-              <Share2 className="h-3.5 w-3.5" />
-              <span>Partager</span>
-            </button>
-            <a href="/privacy" className="hover:text-white transition-colors">Politique de confidentialité</a>
-            <a href="/terms" className="hover:text-white transition-colors">Conditions d’utilisation</a>
-            <a href="/login" className="hover:text-white transition-colors">Espace Connexion</a>
-            <a href="/register" className="hover:text-white transition-colors">Inscription</a>
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-6 px-5 py-8 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12">
+          <TaskinaWordmark compact />
+          <div className="flex flex-wrap gap-5 text-xs font-bold text-muted-foreground">
+            <a href="/privacy" className="hover:text-primary">Confidentialité</a>
+            <a href="/terms" className="hover:text-primary">Conditions d’utilisation</a>
+            <a href="/login" className="hover:text-primary">Connexion</a>
           </div>
-
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            <span>Tous les services sont opérationnels</span>
-          </div>
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Taskina</p>
         </div>
       </footer>
-      <SharePlatformModal />
     </main>
+  )
+}
+
+function ProductPreview() {
+  const tasks = [
+    ['Finaliser la proposition commerciale', 'Aujourd’hui', 'Prioritaire', 72],
+    ['Valider le budget de campagne', 'Demain', 'En validation', 48],
+    ['Préparer le point hebdomadaire', 'Vendredi', 'En cours', 31],
+  ] as const
+
+  return (
+    <div className="relative lg:pl-8">
+      <div className="absolute -left-2 top-12 hidden h-[72%] w-3 bg-accent lg:block" aria-hidden="true" />
+      <div className="border border-border bg-card shadow-[0_24px_60px_rgba(24,45,38,0.13)]">
+        <div className="flex h-12 items-center justify-between border-b border-border px-4 sm:px-5">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 bg-accent" />
+            <span className="text-[11px] font-extrabold uppercase tracking-[0.14em]">Aujourd’hui</span>
+          </div>
+          <span className="text-[10px] font-bold text-muted-foreground">Jeudi · 18 septembre</span>
+        </div>
+        <div className="grid border-b border-border sm:grid-cols-3 sm:divide-x sm:divide-border">
+          {[
+            ['12', 'tâches actives'],
+            ['04', 'à valider'],
+            ['86%', 'dans les délais'],
+          ].map(([value, label]) => (
+            <div key={label} className="border-b border-border px-5 py-5 last:border-b-0 sm:border-b-0">
+              <p className="text-3xl font-extrabold tracking-[-0.05em] text-primary">{value}</p>
+              <p className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+            </div>
+          ))}
+        </div>
+        <div className="p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-extrabold">Mon plan de travail</h2>
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-primary">Vue d’ensemble</span>
+          </div>
+          <div className="space-y-2">
+            {tasks.map(([title, due, status, progress], index) => (
+              <div key={title} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border border-border bg-background/55 p-3.5">
+                <span className={`flex h-7 w-7 items-center justify-center ${index === 0 ? 'bg-accent text-white' : 'bg-primary/10 text-primary'}`}>
+                  {index === 0 ? <Clock3 className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-extrabold sm:text-sm">{title}</p>
+                  <div className="mt-2 h-1.5 bg-muted">
+                    <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-extrabold text-foreground">{due}</p>
+                  <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">{status}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between border-t border-border bg-[hsl(var(--primary-light))] px-5 py-3 text-[10px] font-bold text-muted-foreground">
+          <span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[hsl(var(--success))]" />Synchronisé à l’instant</span>
+          <span>taskina.net</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SectionHeading({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) {
+  return (
+    <div className="max-w-3xl">
+      <p className="flex items-center gap-3 text-[11px] font-extrabold uppercase tracking-[0.2em] text-accent">
+        <span className="h-px w-10 bg-accent" />{eyebrow}
+      </p>
+      <h2 className="mt-6 text-4xl font-extrabold leading-[0.98] tracking-[-0.05em] sm:text-6xl">{title}</h2>
+      <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">{text}</p>
+    </div>
+  )
+}
+
+function AudienceCard({ icon: Icon, title, items, featured = false }: { icon: typeof UsersRound; title: string; items: string[]; featured?: boolean }) {
+  return (
+    <article className={`border p-6 ${featured ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card'}`}>
+      <Icon className={`h-6 w-6 ${featured ? 'text-[hsl(var(--accent))]' : 'text-primary'}`} />
+      <h3 className="mt-8 text-xl font-extrabold tracking-[-0.025em]">{title}</h3>
+      <ul className={`mt-5 space-y-3 text-sm ${featured ? 'text-white/75' : 'text-muted-foreground'}`}>
+        {items.map((item) => <li key={item} className="flex items-center gap-2"><Check className={`h-4 w-4 ${featured ? 'text-[hsl(var(--accent))]' : 'text-accent'}`} />{item}</li>)}
+      </ul>
+    </article>
   )
 }

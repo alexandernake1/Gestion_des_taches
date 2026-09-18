@@ -1,14 +1,14 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
-import { Building2, ArrowRight, Zap, BarChart3, Users } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { ArrowRight, Check, Clock3, ShieldCheck, UsersRound } from 'lucide-react'
 import { authService } from '@/services/auth'
 import { redirectAuthenticatedUser } from '@/router/auth'
-import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
 import { CaptchaWidget } from '@/components/auth/CaptchaWidget'
 import { isCaptchaEnabled } from '@/components/auth/config'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { PasswordInput } from '@/components/auth/PasswordInput'
+import { TaskinaWordmark } from '@/components/brand/TaskinaBrand'
 import { ApiError } from '@/utils/api'
 
 export const Route = createFileRoute('/login')({
@@ -16,21 +16,21 @@ export const Route = createFileRoute('/login')({
   component: LoginPage,
 })
 
-const features = [
+const promises = [
   {
-    icon: Zap,
-    title: 'Suivi en temps réel',
-    description: 'Suivez l\'avancement de toutes vos tâches instantanément.',
+    icon: Clock3,
+    title: 'Le bon travail, au bon moment',
+    description: 'Priorités, échéances et responsabilités restent lisibles.',
   },
   {
-    icon: Users,
-    title: 'Collaboration d\'équipe',
-    description: 'Responsabilités clairement définies pour chaque membre.',
+    icon: UsersRound,
+    title: 'Une équipe vraiment alignée',
+    description: 'Chacun sait ce qui avance, ce qui bloque et qui décide.',
   },
   {
-    icon: BarChart3,
-    title: 'Décisions éclairées',
-    description: 'Analytics et métriques de performance intégrées.',
+    icon: ShieldCheck,
+    title: 'Des validations qui laissent une trace',
+    description: 'Les décisions importantes ne se perdent plus dans les messages.',
   },
 ]
 
@@ -53,8 +53,8 @@ function LoginPage() {
     else navigate({ to: '/dashboard' })
   }, [navigate])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     setError('')
     setCredentialError(false)
     if (isCaptchaEnabled && !captchaToken) {
@@ -65,7 +65,7 @@ function LoginPage() {
 
     try {
       const response = await authService.login({ email, password, remember_me: rememberMe, captcha_token: captchaToken })
-      queryClient.clear() // Clear cache from any previous sessions
+      queryClient.clear()
       redirectAfterLogin(response.user)
     } catch (err) {
       setCredentialError(err instanceof ApiError && err.code === 'invalid_credentials')
@@ -95,203 +95,123 @@ function LoginPage() {
   }, [captchaToken, queryClient, redirectAfterLogin, rememberMe])
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2" style={{ background: 'hsl(var(--background))' }}>
+    <main className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(480px,0.92fr)]">
+      <section className="relative hidden min-h-screen overflow-hidden border-r border-border bg-[hsl(var(--primary-light))] px-10 py-9 lg:flex lg:flex-col xl:px-16 xl:py-12">
+        <div className="absolute inset-y-0 right-[18%] w-px bg-primary/10" aria-hidden="true" />
+        <div className="absolute inset-y-0 right-[18%] w-2 -translate-x-1/2 bg-accent/80" aria-hidden="true" />
 
-      {/* ── Left panel ─────────────────────────────────────── */}
-      <div
-        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between p-10 xl:p-14"
-        style={{ background: 'hsl(228 40% 7%)' }}
-      >
-        {/* Ambient orbs */}
-        <div
-          className="pointer-events-none absolute -top-40 -left-20 h-96 w-96 rounded-full blur-3xl opacity-30"
-          style={{ background: 'hsl(var(--primary))' }}
-        />
-        <div
-          className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full blur-3xl opacity-20"
-          style={{ background: 'hsl(var(--accent))' }}
-        />
+        <TaskinaWordmark className="relative z-10" />
 
-        {/* Grid pattern overlay */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `linear-gradient(hsl(0 0% 100%) 1px, transparent 1px), linear-gradient(90deg, hsl(0 0% 100%) 1px, transparent 1px)`,
-            backgroundSize: '48px 48px',
-          }}
-        />
-
-        {/* Logo */}
-        <div className="relative flex items-center gap-3 animate-slide-up">
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl shadow-cta"
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
-            }}
-          >
-            <Building2 className="h-5 w-5 text-white" strokeWidth={2} />
+        <div className="relative z-10 my-auto max-w-[680px] py-16">
+          <div className="mb-8 flex items-center gap-3 text-xs font-extrabold uppercase tracking-[0.22em] text-primary">
+            <span className="h-2.5 w-2.5 bg-accent" />
+            Le centre de travail de votre équipe
           </div>
-          <div>
-            <p className="text-[15px] font-bold text-white leading-tight">Taskina</p>
-            <p className="text-[11px] font-medium" style={{ color: 'hsl(228 20% 55%)' }}>
-              Centre de pilotage des activités
-            </p>
-          </div>
-        </div>
-
-        {/* Hero text */}
-        <div className="relative animate-slide-up" style={{ animationDelay: '80ms' }}>
-          <div
-            className="mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-            style={{
-              borderColor: 'hsl(var(--primary) / 0.30)',
-              background: 'hsl(var(--primary) / 0.10)',
-              color: 'hsl(var(--primary))',
-            }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: 'hsl(var(--primary))' }} />
-            Travaillez avec clarté
-          </div>
-
-          <h1 className="mb-6 text-4xl font-bold leading-[1.15] tracking-tight text-white xl:text-5xl">
-            Toute l'activité de votre équipe,{' '}
-            <span className="text-gradient-primary">enfin au même endroit.</span>
+          <h1 className="max-w-[620px] text-[clamp(3.2rem,5vw,5.5rem)] font-extrabold leading-[0.94] tracking-[-0.055em] text-foreground">
+            Voir clair.
+            <br />
+            Décider vite.
+            <br />
+            <span className="text-primary">Avancer ensemble.</span>
           </h1>
+          <p className="mt-7 max-w-xl text-lg leading-relaxed text-muted-foreground">
+            Taskina transforme les tâches dispersées en un rythme de travail simple, lisible et partagé.
+          </p>
 
-          {/* Feature items */}
-          <div className="space-y-4">
-            {features.map((f, i) => (
-              <div
-                key={f.title}
-                className="flex items-start gap-4 animate-slide-up"
-                style={{ animationDelay: `${160 + i * 60}ms` }}
-              >
-                <div
-                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                  style={{ background: 'hsl(var(--primary) / 0.15)' }}
-                >
-                  <f.icon className="h-4 w-4" style={{ color: 'hsl(var(--primary))' }} />
-                </div>
-                <div>
-                  <p className="text-[14px] font-semibold text-white">{f.title}</p>
-                  <p className="text-[13px] leading-relaxed" style={{ color: 'hsl(228 15% 55%)' }}>
-                    {f.description}
-                  </p>
-                </div>
-              </div>
+          <div className="mt-12 grid max-w-2xl gap-px overflow-hidden border-y border-primary/20 bg-primary/20 sm:grid-cols-3">
+            {promises.map(({ icon: Icon, title, description }) => (
+              <article key={title} className="bg-[hsl(var(--primary-light))] px-5 py-6 first:pl-0 sm:last:pr-0">
+                <Icon className="mb-5 h-5 w-5 text-accent" strokeWidth={2.2} />
+                <h2 className="text-sm font-extrabold leading-snug text-foreground">{title}</h2>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{description}</p>
+              </article>
             ))}
           </div>
         </div>
 
-        {/* Footer */}
-        <p
-          className="relative text-xs animate-fade-in"
-          style={{ color: 'hsl(228 15% 40%)', animationDelay: '400ms' }}
-        >
-          Une plateforme simple pour des équipes performantes.
-        </p>
-      </div>
+        <div className="relative z-10 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+          <span>taskina.net</span>
+          <span>Organiser · suivre · valider</span>
+        </div>
+      </section>
 
-      {/* ── Right panel — Form ──────────────────────────────── */}
-      <div className="flex items-center justify-center px-5 py-12 sm:px-8 xl:px-12">
-        <div className="w-full max-w-[400px] animate-slide-up">
+      <section className="flex min-h-screen items-center justify-center bg-card px-5 py-10 sm:px-10">
+        <div className="w-full max-w-[410px] animate-slide-up">
+          <TaskinaWordmark className="mb-14 lg:hidden" />
 
-          {/* Mobile logo */}
-          <div className="mb-10 flex items-center gap-3 lg:hidden">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl"
-              style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
-              }}
-            >
-              <Building2 className="h-4.5 w-4.5 text-white" />
+          <div className="mb-9">
+            <div className="mb-5 flex items-center gap-3">
+              <span className="h-px w-10 bg-accent" />
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-accent">Espace sécurisé</span>
             </div>
-            <span className="text-[15px] font-bold text-foreground">Taskina</span>
+            <h2 className="text-[34px] font-extrabold leading-none tracking-[-0.04em] text-foreground">Bon retour.</h2>
+            <p className="mt-3 text-sm text-muted-foreground">Connectez-vous pour reprendre là où vous vous êtes arrêté.</p>
           </div>
 
-          {/* Heading */}
-          <div className="mb-8">
-            <p
-              className="mb-1.5 text-[13px] font-semibold"
-              style={{ color: 'hsl(var(--primary))' }}
-            >
-              Heureux de vous revoir 👋
-            </p>
-            <h2 className="text-[28px] font-bold tracking-tight text-foreground leading-tight">
-              Connectez-vous
-            </h2>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Accédez à votre espace de pilotage.
-            </p>
-          </div>
-
-          {/* Form */}
           <form className="space-y-5" onSubmit={handleSubmit}>
             {error && (
-              <div id="login-error" role="alert" aria-live="assertive" className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3">
-                <div className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
-                <p className="text-[13px] font-medium text-destructive">{error}</p>
+              <div id="login-error" role="alert" aria-live="assertive" className="flex items-start gap-3 border-l-4 border-destructive bg-destructive/5 px-4 py-3">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 bg-destructive" />
+                <p className="text-[13px] font-semibold text-destructive">{error}</p>
               </div>
             )}
 
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="login-email" className="mb-1.5 block text-[13px] font-semibold text-foreground">
-                  Adresse email
-                </label>
-                <input
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  autoComplete="username"
-                  required
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-                    setError('')
-                    setCredentialError(false)
-                  }}
-                  aria-invalid={credentialError || undefined}
-                  aria-describedby={credentialError ? 'login-error' : undefined}
-                  placeholder="vous@organisation.com"
-                  className={`h-11 w-full rounded-xl border bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:outline-none focus:ring-2 ${credentialError ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/20' : 'border-border/80 focus:border-primary/60 focus:ring-primary/25 hover:border-border'}`}
-                />
-              </div>
-
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <label htmlFor="login-password" className="block text-[13px] font-semibold text-foreground">Mot de passe</label>
-                  <a href="/forgot-password" className="text-xs font-bold text-primary hover:underline">Mot de passe oublié ?</a>
-                </div>
-                <PasswordInput
-                  id="login-password"
-                  name="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
-                    setError('')
-                    setCredentialError(false)
-                  }}
-                  aria-invalid={credentialError || undefined}
-                  aria-describedby={credentialError ? 'login-error' : undefined}
-                  placeholder="••••••••"
-                  className={`h-11 w-full rounded-xl border bg-card px-4 text-sm text-foreground shadow-xs placeholder:text-muted-foreground/70 transition-all focus:outline-none focus:ring-2 ${credentialError ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/20' : 'border-border/80 focus:border-primary/60 focus:ring-primary/25 hover:border-border'}`}
-                />
-              </div>
+            <div>
+              <label htmlFor="login-email" className="mb-2 block text-[12px] font-extrabold uppercase tracking-[0.12em] text-foreground">
+                Adresse email
+              </label>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                required
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value)
+                  setError('')
+                  setCredentialError(false)
+                }}
+                aria-invalid={credentialError || undefined}
+                aria-describedby={credentialError ? 'login-error' : undefined}
+                placeholder="vous@organisation.com"
+                className={`h-12 w-full rounded-lg border bg-background px-4 text-sm text-foreground shadow-none placeholder:text-muted-foreground/65 focus:outline-none focus:ring-2 ${credentialError ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/15' : 'border-border focus:border-primary focus:ring-primary/15'}`}
+              />
             </div>
 
-            <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-600">
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <label htmlFor="login-password" className="block text-[12px] font-extrabold uppercase tracking-[0.12em] text-foreground">Mot de passe</label>
+                <a href="/forgot-password" className="text-xs font-bold text-primary hover:underline">Mot de passe oublié ?</a>
+              </div>
+              <PasswordInput
+                id="login-password"
+                name="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value)
+                  setError('')
+                  setCredentialError(false)
+                }}
+                aria-invalid={credentialError || undefined}
+                aria-describedby={credentialError ? 'login-error' : undefined}
+                placeholder="••••••••"
+                className={`h-12 w-full rounded-lg border bg-background px-4 text-sm text-foreground shadow-none placeholder:text-muted-foreground/65 focus:outline-none focus:ring-2 ${credentialError ? 'border-destructive/60 focus:border-destructive focus:ring-destructive/15' : 'border-border focus:border-primary focus:ring-primary/15'}`}
+              />
+            </div>
+
+            <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
               <input
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(event) => setRememberMe(event.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-indigo-600"
+                className="mt-0.5 h-4 w-4 rounded border-border accent-[hsl(var(--primary))]"
               />
               <span>
-                <strong className="font-semibold text-slate-700">Se souvenir de moi</strong>
-                <span className="mt-0.5 block text-xs text-slate-500">Garde votre session active pendant 7 jours sur cet appareil.</span>
+                <strong className="font-bold text-foreground">Se souvenir de moi</strong>
+                <span className="mt-0.5 block text-xs">Session maintenue pendant 7 jours sur cet appareil.</span>
               </span>
             </label>
 
@@ -301,60 +221,39 @@ function LoginPage() {
               type="submit"
               id="login-submit"
               disabled={loading || (isCaptchaEnabled && !captchaToken)}
-              className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-white shadow-cta transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none"
-              style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
-              }}
+              className="group flex h-12 w-full items-center justify-between rounded-lg bg-primary px-5 text-sm font-extrabold text-primary-foreground shadow-cta transition-all hover:bg-[hsl(var(--primary-dark))] disabled:pointer-events-none disabled:opacity-60"
             >
+              <span>{loading ? 'Connexion…' : 'Entrer dans Taskina'}</span>
               {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Connexion...
-                </span>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
               ) : (
-                <span className="flex items-center gap-2">
-                  Se connecter
-                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                </span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               )}
             </button>
           </form>
 
-          <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"><span className="h-px flex-1 bg-border" />ou<span className="h-px flex-1 bg-border" /></div>
+          <div className="my-6 flex items-center gap-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />ou<span className="h-px flex-1 bg-border" />
+          </div>
           <GoogleSignInButton onCredential={handleGoogleCredential} />
 
-          {/* Register CTA */}
-          <div
-            className="mt-8 rounded-xl border p-4 text-center"
-            style={{
-              borderColor: 'hsl(var(--primary) / 0.20)',
-              background: 'hsl(var(--primary) / 0.04)',
-            }}
-          >
-            <p className="text-[13px] font-medium text-foreground">
-              Vous n'avez pas encore de compte ?
-            </p>
-            <a
-              href="/register"
-              className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-bold transition-colors"
-              style={{ color: 'hsl(var(--primary))' }}
-            >
-              Créer gratuitement mon compte
-              <ArrowRight className="h-3.5 w-3.5" />
+          <div className="mt-8 flex items-center justify-between gap-4 border-t border-border pt-6">
+            <div>
+              <p className="text-sm font-extrabold text-foreground">Nouveau sur Taskina ?</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Votre premier espace est gratuit.</p>
+            </div>
+            <a href="/register" className="inline-flex shrink-0 items-center gap-2 text-sm font-extrabold text-primary hover:underline">
+              Créer un compte <Check className="h-4 w-4 text-accent" />
             </a>
           </div>
 
-          <p className="mt-5 text-center text-[11px] text-slate-500">
-            <a href="/privacy" className="font-semibold hover:text-indigo-700 hover:underline">Politique de confidentialité</a>
-            <span className="mx-2">•</span>
-            <a href="/terms" className="font-semibold hover:text-indigo-700 hover:underline">Conditions d'utilisation</a>
+          <p className="mt-10 text-center text-[11px] text-muted-foreground">
+            <a href="/privacy" className="font-bold hover:text-primary hover:underline">Confidentialité</a>
+            <span className="mx-2">·</span>
+            <a href="/terms" className="font-bold hover:text-primary hover:underline">Conditions d’utilisation</a>
           </p>
-
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }

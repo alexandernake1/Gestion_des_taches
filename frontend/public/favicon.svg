@@ -1,10 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Taskina">
-  <defs>
-    <linearGradient id="a" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#6366f1"/>
-      <stop offset="1" stop-color="#7c3aed"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="16" fill="url(#a)"/>
-  <path d="M17 36h8l5-14 7 24 5-14h5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="64" height="64" rx="15" fill="#25694f"/>
+  <path d="M14 16h36v9H37v23h-9V25H14v-9Z" fill="#fff"/>
+  <circle cx="48" cy="48" r="6" fill="#e66839"/>
 </svg>
