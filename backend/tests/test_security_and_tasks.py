@@ -468,8 +468,8 @@ def test_public_registration_creates_personal_account_without_company(api_client
     assert user.company is None
     assert user.role == Role.EMPLOYEE
     assert user.terms_accepted_at is not None
-    assert user.terms_version == '2026-08-13'
-    assert user.privacy_version == '2026-08-13'
+    assert user.terms_version == '2026-09-18'
+    assert user.privacy_version == '2026-09-18'
     assert response.data['user']['company'] is None
 
 
@@ -830,7 +830,7 @@ def test_company_registration_creates_owner_and_free_subscription(api_client):
     owner = User.objects.get(email='owner-new@example.com')
     assert owner.role == Role.OWNER
     assert owner.terms_accepted_at is not None
-    assert owner.terms_version == '2026-08-13'
+    assert owner.terms_version == '2026-09-18'
     assert owner.company.contact_phone == '+22670000000'
     assert owner.company.subscription.status == 'active'
     assert 'access' not in response.data

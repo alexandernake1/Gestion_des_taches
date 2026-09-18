@@ -11,7 +11,7 @@ Périmètre : application React/Vite, API Django/DRF, authentification, isolati
 ### Décision actuelle
 
 - **Préproduction privée : GO conditionnel**, après sauvegarde puis déploiement de la nouvelle pile sur le VPS.
-- **Ouverture publique gratuite : NO-GO à cet instant**, jusqu’à la validation du HTTPS, du SMTP, des clés Turnstile, des mentions juridiques définitives et d’une restauration de sauvegarde démontrée.
+- **Ouverture publique gratuite : NO-GO à cet instant**, jusqu’à la validation du HTTPS, du SMTP, des clés Turnstile, de la formalité CIL applicable et d’une restauration de sauvegarde démontrée.
 - **Ouverture commerciale avec offres payantes : NO-GO**, car aucun prestataire de paiement réel n’est intégré.
 
 Le code est sensiblement plus sûr qu’au début de l’audit. Les défauts qui permettaient d’obtenir un forfait payant sans règlement sont corrigés et couverts par des tests. Tant que le paiement reste désactivé, le catalogue public ne montre que les forfaits gratuits.
@@ -244,9 +244,9 @@ Réserves :
 ### B0 — bloquants avant ouverture publique
 
 1. **HTTPS pas encore émis.** Le VPS est accessible en SSH et son pare-feu est prêt, mais l’ancien frontend occupe encore directement le port 80. La nouvelle pile Caddy doit être déployée avant de vérifier certificat, redirection HTTPS et cookies Secure depuis Internet.
-2. **Identité légale incomplète.** Raison sociale, forme, siège, immatriculation, directeur de publication, hébergeur, droit applicable et juridiction manquent.
+2. **Formalité CIL à confirmer.** L’identité de DISCOM est intégrée aux documents publics ; il reste à confirmer la déclaration ou l’exemption applicable au traitement des données personnelles auprès de la CIL du Burkina Faso.
 3. **Politique de confidentialité provisoire.** Liste/localisation des sous-traitants, transferts, autorité compétente et durées chiffrées restent à valider.
-4. **Adresse support non confirmée.** L’interface utilise désormais `support@taskina.net`, mais la boîte doit encore être créée et sa réception vérifiée.
+4. **Adresse de contact confirmée.** L’interface utilise `contact.discom@gmail.com` tant qu’une boîte professionnelle sur `taskina.net` n’a pas été créée et testée.
 5. **SMTP transactionnel absent.** La réinitialisation et les invitations ne sont pas validées avec un domaine d’envoi SPF/DKIM/DMARC.
 6. **Turnstile incomplet.** Sans paire de production, les formulaires publics reposent uniquement sur le throttling.
 7. **Déploiement VPS non exécuté.** Les images locales se construisent et Caddy valide sa configuration, mais la nouvelle pile complète doit encore être démarrée sur le VPS, puis contrôlée avec ses vraies variables et ses volumes existants.
@@ -332,7 +332,8 @@ Le dernier contrôle exige SMTP et Turnstile. Google OAuth reste facultatif. Pou
 
 Le GO public ne doit être donné que si toutes les cases suivantes sont vérifiées par une personne identifiée :
 
-- [ ] identité légale, CGU et politique de confidentialité finalisées ;
+- [x] identité légale de DISCOM intégrée, CGU et politique de confidentialité versionnées au 18 septembre 2026 ;
+- [ ] déclaration ou exemption CIL confirmée et consignée ;
 - [x] domaine et DNS définitifs ;
 - [ ] certificat public valide et renouvellement observé ;
 - [ ] cookies Secure, redirection HTTPS et en-têtes contrôlés depuis Internet ;

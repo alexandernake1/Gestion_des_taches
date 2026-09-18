@@ -2,7 +2,7 @@ import { ArrowLeft, CalendarDays, Mail } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { TaskinaWordmark } from '@/components/brand/TaskinaBrand'
 
-export const LEGAL_VERSION = '13 août 2026'
+export const LEGAL_VERSION = '18 septembre 2026'
 
 interface LegalDocumentLayoutProps {
   title: string
@@ -36,7 +36,7 @@ export function LegalDocumentLayout({ title, description, current, toc, children
           <p className="mt-4 text-base leading-7 text-slate-600">{description}</p>
           <div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold text-slate-500">
             <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-4 w-4" /> Version du {LEGAL_VERSION}</span>
-            <a href="mailto:support@taskina.net" className="inline-flex items-center gap-1.5 text-indigo-700 hover:underline"><Mail className="h-4 w-4" /> support@taskina.net</a>
+            <a href="mailto:contact.discom@gmail.com" className="inline-flex items-center gap-1.5 text-indigo-700 hover:underline"><Mail className="h-4 w-4" /> contact.discom@gmail.com</a>
           </div>
         </div>
 
@@ -52,7 +52,7 @@ export function LegalDocumentLayout({ title, description, current, toc, children
 
           <article className="rounded-lg border border-border bg-card p-6 shadow-card sm:p-9">
             <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-              <strong>Préproduction :</strong> le nom légal, l’adresse et l’identifiant d’immatriculation de l’entité exploitante devront être complétés avant l’ouverture commerciale du service.
+              <strong>Préproduction :</strong> Taskina est actuellement en phase de préparation au lancement. Aucun paiement réel n’est activé à ce stade.
             </div>
             <div className="space-y-10">{children}</div>
           </article>

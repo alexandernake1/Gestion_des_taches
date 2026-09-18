@@ -26,9 +26,9 @@ function PrivacyPage() {
       toc={toc}
     >
       <LegalSection id="responsable" title="1. Responsable du traitement">
-        <p><strong>Taskina</strong> est le nom du service. L’entité qui l’exploitera commercialement sera responsable des traitements liés aux comptes, à la sécurité et à la fourniture du SaaS.</p>
+        <p><strong>DISCOM</strong>, entreprise individuelle de droit burkinabè établie à Zone 1, Ouagadougou, Burkina Faso, exploite le service Taskina et est responsable des traitements liés aux comptes, à la sécurité et à la fourniture du SaaS. RCCM : BF OUA 1997 A. IFU : 00055004S. Représentant légal : Salifou KINDO.</p>
         <p>Pour une structure cliente, celle-ci reste responsable des contenus et données professionnelles qu’elle fait saisir par ses collaborateurs. Taskina agit alors comme prestataire technique selon les instructions de la structure.</p>
-        <p>Contact relatif aux données personnelles : <a href="mailto:support@taskina.net">support@taskina.net</a>.</p>
+        <p>Contact relatif aux données personnelles : <a href="mailto:contact.discom@gmail.com">contact.discom@gmail.com</a> ou <a href="tel:+22677767777">+226 77 76 77 77</a>.</p>
       </LegalSection>
 
       <LegalSection id="donnees" title="2. Données que nous traitons">
@@ -88,17 +88,17 @@ function PrivacyPage() {
 
       <LegalSection id="securite" title="8. Sécurité des données">
         <p>Taskina met en œuvre des mesures proportionnées aux risques : séparation des espaces clients, contrôle des rôles, mots de passe hachés, cookies d’authentification protégés, limitation des tentatives, protection anti-robot, journalisation administrative et sauvegardes.</p>
-        <p>Aucun système n’étant totalement invulnérable, tout incident suspect peut être signalé à <a href="mailto:support@taskina.net">support@taskina.net</a>. En production, les échanges devront être chiffrés par HTTPS.</p>
+        <p>Aucun système n’étant totalement invulnérable, tout incident suspect peut être signalé à <a href="mailto:contact.discom@gmail.com">contact.discom@gmail.com</a>. À l’ouverture publique, les échanges seront chiffrés par HTTPS.</p>
       </LegalSection>
 
       <LegalSection id="droits" title="9. Vos droits">
         <p>Selon la réglementation applicable, vous pouvez demander l’accès à vos données, leur rectification, leur effacement, leur portabilité, la limitation du traitement ou vous opposer à certains traitements.</p>
-        <p>La demande doit être envoyée à <a href="mailto:support@taskina.net">support@taskina.net</a>. Une vérification raisonnable de l’identité pourra être demandée. Vous pouvez également saisir l’autorité de protection des données compétente dans votre pays.</p>
+        <p>La demande doit être envoyée à <a href="mailto:contact.discom@gmail.com">contact.discom@gmail.com</a>. Une vérification raisonnable de l’identité pourra être demandée. Vous pouvez également saisir la Commission de l’Informatique et des Libertés du Burkina Faso ou l’autorité de protection des données compétente dans votre pays.</p>
       </LegalSection>
 
       <LegalSection id="modifications" title="10. Modifications et contact">
         <p>Cette politique peut évoluer avec les fonctionnalités, les prestataires ou les obligations applicables. Une modification importante sera signalée dans le service et une nouvelle acceptation pourra être demandée lorsque cela est nécessaire.</p>
-        <p>Questions : <a href="mailto:support@taskina.net">support@taskina.net</a>.</p>
+        <p>Questions : <a href="mailto:contact.discom@gmail.com">contact.discom@gmail.com</a>.</p>
       </LegalSection>
     </LegalDocumentLayout>
   )

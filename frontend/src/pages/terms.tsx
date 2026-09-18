@@ -33,8 +33,15 @@ function TermsPage() {
       </LegalSection>
 
       <LegalSection id="editeur" title="2. Éditeur et contact">
-        <p><strong>Taskina</strong> est le nom commercial du service en préproduction. La raison sociale, la forme juridique, le siège, l’identifiant d’immatriculation et les coordonnées complètes de l’entité exploitante devront être publiés avant son ouverture commerciale.</p>
-        <p>Contact : <a href="mailto:support@taskina.net">support@taskina.net</a>.</p>
+        <p><strong>Taskina</strong> est un service édité par <strong>DISCOM</strong>, entreprise individuelle de droit burkinabè, dont le siège est situé à Zone 1, Ouagadougou, Burkina Faso.</p>
+        <ul>
+          <li>RCCM : BF OUA 1997 A</li>
+          <li>IFU : 00055004S</li>
+          <li>Représentant légal et directeur de publication : Salifou KINDO</li>
+          <li>Téléphone : <a href="tel:+22677767777">+226 77 76 77 77</a></li>
+          <li>Email : <a href="mailto:contact.discom@gmail.com">contact.discom@gmail.com</a></li>
+          <li>Site de l’éditeur : <a href="http://www.discom.digital" target="_blank" rel="noreferrer">www.discom.digital</a></li>
+        </ul>
       </LegalSection>
 
       <LegalSection id="acceptation" title="3. Acceptation des conditions">
@@ -95,7 +102,7 @@ function TermsPage() {
 
       <LegalSection id="droit" title="12. Évolution, droit applicable et litiges">
         <p>Les présentes Conditions peuvent être mises à jour pour refléter l’évolution du service ou du cadre applicable. Une modification importante sera portée à la connaissance des utilisateurs et pourra nécessiter une nouvelle acceptation.</p>
-        <p>Le droit applicable, les coordonnées de médiation éventuelles et la juridiction compétente seront précisés avec l’identité juridique de l’exploitant avant l’ouverture commerciale. Les règles impératives protégeant l’utilisateur restent applicables.</p>
+        <p>Les présentes Conditions sont soumises au droit burkinabè. En cas de différend, les parties chercheront d’abord une solution amiable avant de saisir les juridictions compétentes conformément aux règles applicables. Les dispositions impératives protégeant l’utilisateur restent applicables.</p>
       </LegalSection>
     </LegalDocumentLayout>
   )

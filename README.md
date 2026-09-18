@@ -2,7 +2,7 @@
 
 Plateforme SaaS de pilotage d’activité : espaces personnels ou de structure, projets, tâches, validations, équipes, notifications, rapports et abonnements.
 
-> État au 18 septembre 2026 : `taskina.net` et `www.taskina.net` pointent vers le VPS. L’accès SSH est confirmé et le pare-feu autorise TCP 22/80/443 ainsi qu’UDP 443. Le serveur exécute encore l’ancien frontend HTTP sur le port 80 ; la livraison de cette version ajoutera Caddy et déclenchera l’émission du certificat. L’ouverture commerciale reste bloquée tant que les informations juridiques, le SMTP transactionnel, les clés anti-robot et un exercice de restauration ne sont pas validés. Aucun paiement réel n’est intégré ; les offres payantes restent donc masquées et inactivables.
+> État au 18 septembre 2026 : `taskina.net` et `www.taskina.net` pointent vers le VPS. L’accès SSH est confirmé et le pare-feu autorise TCP 22/80/443 ainsi qu’UDP 443. Le serveur exécute encore l’ancien frontend HTTP sur le port 80 ; la livraison de cette version ajoutera Caddy et déclenchera l’émission du certificat. L’identité légale de DISCOM est intégrée. L’ouverture commerciale reste bloquée tant que la formalité CIL applicable, le SMTP transactionnel, les clés anti-robot et un exercice de restauration ne sont pas validés. Aucun paiement réel n’est intégré ; les offres payantes restent donc masquées et inactivables.
 
 ## Architecture
 

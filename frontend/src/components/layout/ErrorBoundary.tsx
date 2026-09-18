@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
               Recharger la page
             </button>
             <a
-              href="mailto:support@taskina.net"
+              href="mailto:contact.discom@gmail.com"
               className="flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
             >
               Contacter le support

@@ -19,7 +19,7 @@ from domain.companies.models import (
 )
 
 
-LEGAL_DOCUMENT_VERSION = '2026-08-13'
+LEGAL_DOCUMENT_VERSION = '2026-09-18'
 
 
 def legal_acceptance_fields():
