@@ -1,4 +1,5 @@
 from io import StringIO
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -10,6 +11,15 @@ from django.test import override_settings
 from rest_framework.test import APIClient
 
 from common.middlewares import get_scope_token
+
+
+def test_backend_healthcheck_uses_configured_host_and_forwarded_https():
+    compose = (Path(__file__).resolve().parents[2] / 'docker-compose.yml').read_text(
+        encoding='utf-8'
+    )
+
+    assert "os.environ['ALLOWED_HOSTS'].split(',')[0]" in compose
+    assert "'X-Forwarded-Proto': 'https'" in compose
 
 
 def test_liveness_endpoint_is_public():
