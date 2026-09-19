@@ -167,10 +167,20 @@ async function request<T>(
   const text = await response.text();
   let data: unknown = null;
   if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
+    const contentType = response.headers.get('content-type')?.toLowerCase() || ''
+    const isHtmlResponse = contentType.includes('text/html') || /^\s*(?:<!doctype html|<html)/i.test(text)
+
+    if (isHtmlResponse && !response.ok) {
+      data = {
+        code: 'unexpected_server_response',
+        detail: "Le serveur a refusé la requête. Veuillez réessayer ou contacter l'assistance.",
+      }
+    } else {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
     }
   }
 

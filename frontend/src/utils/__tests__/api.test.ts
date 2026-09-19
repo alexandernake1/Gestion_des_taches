@@ -55,4 +55,20 @@ describe('API error normalization', () => {
       message: 'Adresse e-mail ou mot de passe incorrect.',
     })
   })
+
+  it('does not expose an HTML error page to the user', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      '<!doctype html><html><body><h1>Bad Request (400)</h1></body></html>',
+      {
+        status: 400,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      },
+    )))
+
+    await expect(api.post('/auth/login/', {})).rejects.toMatchObject({
+      status: 400,
+      code: 'unexpected_server_response',
+      message: "Le serveur a refusé la requête. Veuillez réessayer ou contacter l'assistance.",
+    })
+  })
 })
